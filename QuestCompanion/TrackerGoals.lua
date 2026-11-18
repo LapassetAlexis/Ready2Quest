@@ -35,7 +35,7 @@ local FR = {
 	JRN_HINT_WISH           = "Comble-la : %s.",
 	JRN_HINT_WISH_BOND      = "Comblée : +1 point de lien avec %s.",
 	JRN_GOAL_ORDER          = "Commande : %s",
-	JRN_GOAL_ORDER_TAG      = "à livrer",
+	JRN_GOAL_ORDER_GAIN     = "+%d",
 	JRN_HINT_ORDER          = "Ta Réserve peut la livrer (%d spécimen(s) conviennent) : Échoppe du dresseur, Commandes de la semaine.",
 	JRN_GOAL_STUDY          = "Étude %s : %s",
 	JRN_HINT_STUDY          = "Clic : l'espèce, page Créatures.",
@@ -55,7 +55,7 @@ local EN = {
 	JRN_HINT_WISH           = "Grant it: %s.",
 	JRN_HINT_WISH_BOND      = "Granted: +1 bond point with %s.",
 	JRN_GOAL_ORDER          = "Order: %s",
-	JRN_GOAL_ORDER_TAG      = "to deliver",
+	JRN_GOAL_ORDER_GAIN     = "+%d",
 	JRN_HINT_ORDER          = "Your Reserve can deliver it (%d matching specimen(s)): Trainer's Stall, This week's orders.",
 	JRN_GOAL_STUDY          = "%s study: %s",
 	JRN_HINT_STUDY          = "Click: the species, Creatures page.",
@@ -147,7 +147,8 @@ local function OrderGoal(self, list)
 					self:F("JRN_GOAL_ORDER", self:ShopOrderLabel(order)), 0, 1, nil, "shop")
 				if goal then
 					goal.rank, goal.page = RANK.order, "shop"
-					goal.progress = L.JRN_GOAL_ORDER_TAG
+					-- la récompense en paillettes (le libellé dit déjà « Commande »)
+					goal.progress = self:F("JRN_GOAL_ORDER_GAIN", order.reward or 0)
 					goal.reward = self:F("ORDER_REWARD", order.reward or 0)
 					goal.hint = { self:F("JRN_HINT_ORDER", n) }
 					goal.onClick = function() return ns:OpenJournalFor(goal) end

@@ -558,6 +558,14 @@ couleur n'a changé.
   du tableau de bord sur le parchemin (encre du filet à 10 %).
 - Bandeau du carnet effacé au premier coup reçu, et revenu après le combat.
 
+## La première heure (QuestCompanion 3.6.0)
+
+- **Bulle « Partir avec lui »** : la bulle des visites (360 px, sans compteur), au-dessus du compagnon : titre « On part ensemble ? », texte (le lien en une phrase), « Plus tard » au trait à gauche, « Partir avec lui » plein à droite. **Bulle de l'étude** : même bulle, un seul bouton « Compris ».
+- **Réserve vide** : le texte dit pourquoi (hors mode chasse, seulement le nouveau et le meilleur) ; bouton `sm` primaire « Mode chasse (30 min) » 64 px sous le haut du texte, caché en chasse.
+- **Échoppe à 0 paillette** : la ligne du haut devient « Gagner des paillettes : … ».
+- **Guide** : 14 tuiles de sommaire de 26 px au pas de 29 (au-dessus des deux boutons des visites).
+- **Suivi à l'écran** : 4 lignes au plus ; l'envie en tête (« Brindille veut manger », « +1 lien » ou « envie »), puis une commande livrable (« Commande : … », « +12 »), les objectifs d'avant, l'étude la plus proche (« Étude Raptor : 5 captures », 2/5), « Les Tarides : n à capturer » (ou « n pour le sceau » à 10 espèces ou moins).
+
 ## Envies du compagnon (QuestCompanion 3.5.0)
 
 - **Page Compagnon, colonne gauche** : section « Ses envies (des bonus, jamais une perte) » à y −366 ; 3 plaques de 109 × 62 au pas de 117 à y −393 (nom, temps en `F_TITLE`, objet court, barre de 3 px verte sur 60 minutes ; liseré vert quand l'état est actif ; infobulle : ce qui l'allume, sa friandise) ; ligne d'humeur 343 × 26 à y −461 (« Humeur », humeur teintée, 3 losanges or, « Encore n pour rayonner » / « Bonus actif ») ; ligne de l'envie à y −493 (« Son envie », l'objet, « +1 lien » en vert) ; « Ses effets » à y −535.

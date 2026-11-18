@@ -1,5 +1,16 @@
 # Ready2Quest — notes techniques et historique
 
+## QuestCompanion 3.6.0 — la première heure, le suivi et les missions (chantier C, lot 1A et fin de 1B)
+
+- `GuidedTour.lua` : la visite « capture » suit la capture express (`CaptureExpressOn` ne s'éteint plus pendant une visite) : `TOUR_A1X` (clic, Maj + clic, Ctrl + clic) ; les étapes de la carte (`CardStep`) ne viennent qu'en express coupée ou carte ouverte d'un Ctrl + clic. Deux bulles en attente (`tour30.pending`, `ns:TourQueue(id, info)`, `ns:TourPendingStart` dans `TourTick`) : « mate » (« Partir avec lui » / « Plus tard » après la toute première capture du compte, `CaptureResolve` enveloppé ; `finish` pose `CompanionSetAppearance("cap:<npc>[:s]")`) puis « study » (à la première tâche d'étude payée, `SpecimenStudyNote`). Options d'étape `noStep`, `noSkip` ; de visite `quietSkip`, `onSkip`.
+- `Discovery.lua` : la capture d'abord dans l'ordre ; six astuces nouvelles (`huntReserve`, `reserve`, `study`, `bond`, `shopEarn`, `orders`), chacune avec `learned` (drapeaux `page_reserve`, `study` sur `JournalPreviewMenagerie`, `bond` sur `CompanionSetAppearance("cap:…")`, `page_shop`, `order` posé par `TrackerGoals.lua`).
+- États vides : Réserve (`RES_EMPTY`, `RES_EMPTY_HUNTING`, bouton `rv.emptyHunt` → `HuntStart(RESERVE_EMPTY_HUNT = 30)`) ; Échoppe à 0 paillette (`SHOP_TOP_EMPTY` à la place de `SHOP_TOP`) ; Créatures (`JRN_MEN_EMPTY`, et `JRN_MEN_HINT_NONE` dans l'aide du bas sans aucune capture).
+- `JournalGuide.lua` : 14 sections (`reserve`, `shop`, `bond`, `study`, `trades` nouvelles, chiffres lus dans les constantes) ; sommaire resserré (`ROW_H` 26, `ROW_STEP` 29) ; `GUIDE_settings_3` complétée.
+- Vocabulaire : « exemplaire », « Ménagerie » et « ta collection » (au sens du Codex) sortis des textes ; `OPT_COMP_SIZE` = « Échelle » / « Scale ».
+- `TrackerGoals.lua` (nouveau, après `CompanionStates.lua`) : sources du suivi avec `goal.rank` (envie 1, commande livrable 2, objectifs d'avant 3 par défaut, étude 4, zone 5) ; `JournalTracker.lua` trie d'abord sur le rang. `ns:SpecimenStudyClosest()` (SpecimenStudy.lua, mise en cache par `serial`/`specSerial`), `ns:TrackerZoneCreatures(zoneID)`, `ns:OpenMenagerieSpecies(npc)`. L'objectif « stade : comble une envie » (`goal.happy`) est fondu dans la ligne de l'envie. Le fichier enveloppe aussi `ShopOrderDeliver` (mission de la semaine `orders`, astuce) et `SpecimenBondAdd` (mission `bond`).
+- Missions : `capSize` et `studyTask` (MissionsMenagerie.lua, tirées avec celles de la zone ; une zone vide garde le repli `captures`), `bond` (5, spécimen porté) et `radiant` (10 min, compté dans l'enveloppe de `CompanionTick`) dans la deuxième place, `orders` dans la semaine (capture allumée). Mission du caractère : `ns.DAILY_TRAIT_ROTATION` (trois sortes par caractère), `ns:MissionTraitDef(trait, day)` avec `ns.DailyDayNumber` (date ISO → jours depuis 1970).
+- Tests : `tests/modules/lot36_c.lua` ; scènes `qc-tracker-36`, `qc-journal-reserve-empty`, `qc-tour-mate`.
+
 ## QuestCompanion 3.5.1 — correctifs (lot 0 de `docs/audit-pokemon-like-3.5/PLAN.md`)
 
 - `CompanionStateExtend` : `data.extended[key]` (une fois par état ; effacé au callback `COMPANION_STATE`).
