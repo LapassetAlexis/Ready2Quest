@@ -733,6 +733,8 @@ function ns:MenagerieList(opts)
 			local keep = (state == "all") or (state == "captured" and item.captured)
 				or (state == "missing" and not item.captured) or (state == "tokill" and item.killed == 0)
 				or (state == "shiny" and item.shinySeen ~= nil)
+				-- 3.4.0 : « Étude à finir » : capturée, étude pas encore maîtrisée
+				or (state == "study" and item.captured and self.SpecimenStudy ~= nil and not self:SpecimenStudy(item.npc).mastered)
 			keep = keep and (rank == "all" or RANK_GROUP[item.class] == rank)
 			keep = keep and (ctype == nil or item.typeKey == ctype)
 			-- recherche : sur les noms connus seulement (une inconnue reste « ??? »)

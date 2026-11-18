@@ -188,6 +188,9 @@ do
 	local study = NS:SpecimenStudy(970)
 	Check("[R34] rétro : capturée et trois étoiles cochées, rien payé", study.done.caught and study.done.stars3
 		and NS:Paillettes() == before)
+	local line = NS:SpecimenStudyLine(970)
+	Check("[R34] fiche des Créatures : « Étude 2 / 5, reste : 5 captures, 3 tailles, 3 caractères · Records »",
+		line:find("Étude 2 / 5, reste : 5 captures, 3 tailles, 3 caractères", 1, true) == 1 and line:find("Records : ", 1, true) ~= nil, line)
 	for i, size in ipairs({ "small", "giant", "normal", "large" }) do
 		Add(970, 1, { trait = i % 2 == 0 and "lazy" or "curious", size = size })
 	end
@@ -196,6 +199,7 @@ do
 		study.mastered and study.n == 5 and NS:Paillettes() == before + 3 * 2 + 5 and NS:SpecimenStudyMastered() == 1,
 		NS:Paillettes() - before)
 	Check("[R34] records : plus petit et plus grand indice de tes captures", study.lo and study.hi and study.lo <= 81 and study.hi >= 119)
+	Check("[R34] maîtrisée : la fiche le dit", NS:SpecimenStudyLine(970):find("Espèce maîtrisée", 1, true) == 1)
 	local paid = NS:Paillettes()
 	Add(970, 1, { origin = "trade", trait = "daring", size = "giant" })
 	Check("[R34] un spécimen reçu ne compte pas", NS:SpecimenStudy(970).n == 5 and NS:Paillettes() == paid)

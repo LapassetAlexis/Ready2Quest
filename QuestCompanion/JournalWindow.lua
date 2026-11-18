@@ -359,7 +359,7 @@ local LIST_W = math.floor((INNER - (LIST_COLS - 1) * 12) / LIST_COLS)
 -- 3.0.1 : « addons » (Addons liés, JournalAddons.lua) sous le Guide
 local SECTIONS = { "evolution", "menagerie", "reserve", "shop", "feats", "day", "progress", "juke", "guide", "addons" }
 ns.JOURNAL_SECTIONS = SECTIONS
-local MEN_STATES = { "all", "todo", "pinned", "captured", "missing", "tokill", "shiny" }
+local MEN_STATES = { "all", "todo", "pinned", "captured", "missing", "tokill", "shiny", "study" }
 local MEN_RANKS = { "all", "normal", "elite", "rare", "boss" }
 local MEN_SORTS = { "no", "name", "level", "rank", "kills", "date" }
 
@@ -459,6 +459,7 @@ local FR2 = {
 	JRN_MEN_missing        = "À capturer",
 	JRN_MEN_tokill         = "À abattre",
 	JRN_MEN_shiny          = "Brillantes",
+	JRN_MEN_study          = "À étudier",
 	JRN_MEN_todo           = "À compléter",
 	JRN_MEN_pinned         = "Épinglées",
 	JRN_MEN_COUNT_CODEX    = "%d à compléter · %d épinglées",
@@ -554,6 +555,7 @@ local EN2 = {
 	JRN_MEN_missing        = "To capture",
 	JRN_MEN_tokill         = "To defeat",
 	JRN_MEN_shiny          = "Shiny",
+	JRN_MEN_study          = "To study",
 	JRN_MEN_todo           = "To complete",
 	JRN_MEN_pinned         = "Pinned",
 	JRN_MEN_COUNT_CODEX    = "%d to complete · %d pinned",
@@ -1239,6 +1241,20 @@ local function BuildMenagerie(self, frame, content)
 		Changed()
 	end)
 	At(pane.stateRow, content, 0, rowY)
+	-- 3.4.0 : huit puces (« À étudier ») : resserrées si elles débordent
+	-- (bourrage 14 au lieu de Theme.CHIP_PAD, écart 4)
+	if pane.stateRow.used > INNER then
+		local x, gap = 0, 4
+		for _, chip in ipairs(pane.stateRow.chips) do
+			local w = math.ceil(Theme.TextWidth(pane.stateRow, chip.text:GetText(), Theme.F_BODY) + 14)
+			chip:SetWidth(w)
+			chip:ClearAllPoints()
+			chip:SetPoint("LEFT", pane.stateRow, "LEFT", x, 0)
+			x = x + w + gap
+		end
+		pane.stateRow.used = x - gap
+		pane.stateRow:SetWidth(pane.stateRow.used)
+	end
 	local searchW = PREVIEW_W
 	pane.search = Theme.CreateSearchBox(pane, searchW, L.JRN_MEN_SEARCH, function(text)
 		frame.menSearch = text or ""
@@ -1278,7 +1294,7 @@ local function BuildMenagerie(self, frame, content)
 		row.text:ClearAllPoints()
 		row.text:SetPoint("LEFT", row, "LEFT", 58 + rowH - 8 + 8, 0)
 		-- 2.15.0 : la place de l'épingle et de « Localiser » (deux icônes)
-		row.text:SetWidth(GRID_W - 58 - rowH - 158 - 2 * (MEN_ICON + 4))
+		row.text:SetWidth(GRID_W - 58 - rowH - 158 - 2 * (MEN_ICON + 4) - 46)
 		row.label = row.text
 		-- nom (ou « ??? ») à la couleur de sa rareté, type à droite, et
 		-- l'étoile d'une brillante ; capturée : liseré vert à gauche (1.5.1)
@@ -1299,6 +1315,14 @@ local function BuildMenagerie(self, frame, content)
 		row.locate = MenIconButton(row, MEN_LOCATE_ICON, function(b) ns:JournalMenagerieRowLocate(b:GetParent()) end)
 		row.locate:SetPoint("RIGHT", row.pin, "LEFT", -4, 0)
 		row.locate.onTip = function(b) Tip(b, L.JRN_LOCATE, { L.JRN_LOCATE_TIP_creature }) end
+		-- 3.4.0 : l'étude de l'espèce, cinq losanges (pleins : tâche faite)
+		row.study = {}
+		for index = 1, #(ns.STUDY_TASKS or {}) do
+			local d = Theme.CreateDiamond(row, 6)
+			d:SetPoint("RIGHT", row.locate, "LEFT", -6 - (#ns.STUDY_TASKS - index) * 8, 0)
+			d:Hide()
+			row.study[index] = d
+		end
 		row.star = Theme.CreateDiamond(row, 8)
 		row.star:SetPoint("RIGHT", row, "RIGHT", -12, 0)
 		row.star:SetVertexColor(Theme.GOLD_LIGHT[1], Theme.GOLD_LIGHT[2], Theme.GOLD_LIGHT[3], 1)
@@ -2501,6 +2525,8 @@ function ns:JournalPreviewMenagerie(entry, keep)
 	if reserve and reserve > 0 then codex[#codex + 1] = self:F("JRN_MEN_RESERVE", reserve) end
 	if self.HuntPinned and self:HuntPinned(entry.npc) then codex[#codex + 1] = L.JRN_MEN_PINNED_LINE end
 	if entry.captured and self.CodexItemTodo and self:CodexItemTodo(entry) then codex[#codex + 1] = L.JRN_MEN_TODO_LINE end
+	-- 3.4.0 : l'étude de l'espèce (n / 5, ce qui reste, les records de taille)
+	if entry.captured and self.SpecimenStudyLine then codex[#codex + 1] = self:SpecimenStudyLine(entry.npc) end
 	if #codex > 0 then lines[#lines + 1] = table.concat(codex, " · ") end
 	-- « Chasse : … / Confort : … » de cette créature (CompanionEffects.lua) :
 	-- dès qu'elle est croisée, pour choisir quoi capturer
@@ -2702,6 +2728,19 @@ local function RefreshMenagerie(self, frame)
 			-- liseré vert : la version normale capturée ; losange doré : la
 			-- brillante, plein si capturée, au trait si seulement reconnue
 			if entry.captured and entry.normal ~= false then row.caught:Show() else row.caught:Hide() end
+			-- 3.4.0 : l'étude (espèce capturée)
+			local study = entry.captured and self.SpecimenStudy and self:SpecimenStudy(entry.npc)
+			for index, d in ipairs(row.study or {}) do
+				if study then
+					local done = study.done[ns.STUDY_TASKS[index]]
+					Theme.SetDiamond(d, not done)
+					local c = done and Theme.GREEN or Theme.MUTED
+					d:SetVertexColor(c[1], c[2], c[3], 1)
+					d:Show()
+				else
+					d:Hide()
+				end
+			end
 			if entry.shiny or entry.shinySeen then
 				Theme.SetDiamond(row.star, not entry.shiny)
 				row.star:Show()

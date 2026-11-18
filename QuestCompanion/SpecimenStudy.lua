@@ -44,6 +44,9 @@ local FR = {
 	STUDY_RECORD_BIG   = "Record : ton plus grand %s (taille %d).",
 	STUDY_RECORDS = "Records : %d à %d",
 	STUDY_TODO    = "Étude à finir",
+	STUDY_LINE    = "Étude %d / %d",
+	STUDY_LEFT    = "reste : %s",
+	STUDY_MASTERED_LINE = "Espèce maîtrisée",
 }
 local EN = {
 	STUDY_caught  = "Caught",
@@ -59,6 +62,9 @@ local EN = {
 	STUDY_RECORD_BIG   = "Record: your biggest %s (size %d).",
 	STUDY_RECORDS = "Records: %d to %d",
 	STUDY_TODO    = "Study to finish",
+	STUDY_LINE    = "Study %d / %d",
+	STUDY_LEFT    = "left: %s",
+	STUDY_MASTERED_LINE = "Species mastered",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.STUDY_STRINGS = { fr = FR, en = EN } end
@@ -257,6 +263,22 @@ end
 
 if ns.On then
 	ns.On("PLAYER_LOGIN", "study", function() pcall(ns.SpecimenStudyRetro, ns) end, "study:retro")
+end
+
+-- 3.4.0 : la ligne de la fiche des Créatures : « Étude 3 / 5, reste : 5
+-- captures, 3 tailles · Records : 88 à 121 »
+function ns:SpecimenStudyLine(npc)
+	local st = self:SpecimenStudy(npc)
+	local parts = {}
+	if st.mastered then
+		parts[1] = L.STUDY_MASTERED_LINE
+	else
+		local left = {}
+		for _, task in ipairs(ns.STUDY_TASKS) do if not st.done[task] then left[#left + 1] = L["STUDY_" .. task] end end
+		parts[1] = self:F("STUDY_LINE", st.count or 0, #ns.STUDY_TASKS) .. ", " .. self:F("STUDY_LEFT", table.concat(left, ", "))
+	end
+	if st.lo and st.hi then parts[#parts + 1] = self:F("STUDY_RECORDS", st.lo, st.hi) end
+	return table.concat(parts, " · ")
 end
 
 if ns.Mark then ns.Mark("SpecimenStudy") end
