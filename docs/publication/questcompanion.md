@@ -1,7 +1,7 @@
 <!--
 Fiche de la page QuestCompanion sur CurseForge et Wago (à copier à la main, voir docs/PUBLIER.md).
 Summary EN (obligatoire en anglais sur CurseForge, 256 caractères max, ici 201) :
-  Catch the monsters you defeat in WoW Forever: unique 1-3 star specimens, rare shinies, player trades, a companion that hunts and talks with you, 187 achievements, 40 titles and a travel journal. FR/EN.
+  Catch the monsters you defeat in WoW Forever: unique 1-3 star specimens, rare shinies, player trades, a companion that hunts and talks with you, 197 achievements, 52 titles and a travel journal. FR/EN.
 Catégories : Companions (principale), Quests & Leveling (additionnelle). Si Companions n'existe pas : Miscellaneous (principale).
 Licence : GPLv3. Logo : docs/publication/logo_questcompanion.png (le médaillon bleu et or de la 3.1 : à remettre sur les deux stores).
 Relation : Optional Dependency -> Ready2Quest (facultatif).
@@ -15,6 +15,14 @@ Une seule description, anglais d'abord puis français (règle des stores : l'ang
 ![A shiny creature tries its luck against the net](https://media.forgecdn.net/attachments/2161/225/f-gif.gif)
 
 For **WoW Forever** (1.60). English, French and Spanish. Free and standalone (`/qc`). Pairs well with [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
+
+## New in 3.6: always a goal
+- **The first hour**: a short tour of express capture, "Set out with it" on the first catch, tips at the right moment, helpful empty pages and five new Guide sections.
+- **Goals on screen**: the tracker shows your companion's wish, an order you can deliver, the study task closest to done and the creatures left to catch in the zone.
+- **Long goals**: trainer ranks past 500 species up to "All of Azeroth", backgrounds and frames for your trainer card, type medals up to tier 5, an edge for mastered species, new missions; 197 achievements and 52 titles.
+- **Glitter**: an off-week arrival at ×1.5, patronage, a paid reroll of orders, 15 glitter per seal from the third of a biome; mastered species are less wary; beyond 100 glitter of releases a day, a release pays half.
+- **Trainer card**: an airier layout.
+- **3.5.1 fixes**: the cuddle extends each state once, a shiny waits 10 minutes in the queue, one chat line per capture, fairer orders (no rare trait, Reserve counts, one reroll), arrivals rotate, your companion wears its specimen's nickname.
 
 ## New in 3.5: states, not gauges
 - **Your companion's needs are bonuses, never a loss**: its effects always count in full. Hunger, energy, mood and curiosity give way to three 45-minute states: **Fed** (a meal, "Well Fed", setting out with food), **Rested** (two minutes in town, at an inn or a camp), **Alert** (a new zone, place or stamp, a dungeon, an elite or rare, a chest; in hunt mode: 15 creatures in 10 minutes, a shiny, a new species).
@@ -89,7 +97,7 @@ For **WoW Forever** (1.60). English, French and Spanish. Free and standalone (`/
 - **Exploration**: every zone and its percentage. For the chosen zone: its milestones (treats, capture aids, a Feast), its places, the herbs and ores for your professions, its quests your character can do, and its chest. A 100% zone opens a chest where you **choose** a cosmetic item.
 - **Prefilled zones**: creatures, gathering nodes and quests of every zone are known from your first visit (Forever islands and zones included). No other addon needed.
 - **Missions**: two of the day in your zone plus one from your companion's personality, three of the week (always a shiny hunt among them); they reward treats, capture aids and glitter. An inn loyalty card, too.
-- **Achievements**: 187, with points, and 40 titles ("Trainer Dyokrion", "Dyokrion the Tracker"…) to show on your trainer card. What you did before is awarded silently at login, and the **Y** key opens them (if it was free).
+- **Achievements**: 197, with points, and 52 titles ("Trainer Dyokrion", "Dyokrion the Tracker"…) to show on your trainer card. What you did before is awarded silently at login, and the **Y** key opens them (if it was free).
 - **Jukebox**: the game's own music on demand, 434 tracks with search, favourites, playlists and shuffle (`/qc juke`).
 - **An on-screen tracker** with your closest goals.
 
@@ -126,6 +134,14 @@ Free software, **GPL-3.0**. Zone data (creatures, gathering, quests) is generate
 ![Une brillante tente sa chance contre le filet](https://media.forgecdn.net/attachments/2161/225/f-gif.gif)
 
 Pour **WoW Forever** (1.60). En français, en anglais et en espagnol. Gratuit et autonome (`/qc`). Va très bien avec [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
+
+## Nouveau en 3.6 : toujours un but
+- **La première heure** : une courte visite de la capture express, « Partir avec lui » à la première prise, des astuces au bon moment, des pages vides qui aident et cinq nouvelles sections au Guide.
+- **Des buts à l'écran** : le suivi montre l'envie du compagnon, une commande livrable, la tâche d'étude la plus proche d'être finie et les créatures de la zone qui restent à capturer.
+- **Des buts longs** : rangs de dresseur au-delà de 500 espèces jusqu'à « Tout Azeroth », fonds et cadres pour ta fiche de dresseur, médailles de type jusqu'au palier 5, un liseré pour les espèces maîtrisées, de nouvelles missions ; 197 hauts faits et 52 titres.
+- **Paillettes** : un arrivage hors semaine à ×1,5, le mécénat, une relance payante des commandes, 15 paillettes par sceau dès le troisième d'un biome ; les espèces maîtrisées se méfient moins ; au-delà de 100 paillettes de relâcher par jour, le relâcher paie moitié.
+- **Fiche de dresseur** : une mise en page plus aérée.
+- **Correctifs de la 3.5.1** : la caresse allonge chaque état une fois, une brillante attend 10 minutes dans la file, une ligne de chat par capture, des commandes plus justes (pas de caractère rare, la Réserve compte, une relance), l'arrivage tourne, ton compagnon porte le surnom de son exemplaire.
 
 ## Nouveau en 3.5 : des états, pas des jauges
 - **Ses envies sont des bonus, jamais une perte** : ses effets valent toujours en entier. Faim, énergie, moral et curiosité laissent place à trois états de 45 minutes : **Repu** (un repas, « Bien nourri », partir avec de quoi manger), **Reposé** (deux minutes en ville, à l'auberge ou au camp), **Éveillé** (une zone, un lieu ou un tampon nouveau, un donjon, un élite ou un rare, un coffre ; en mode chasse : 15 créatures en 10 minutes, une brillante, une espèce nouvelle).
@@ -188,7 +204,7 @@ Pour **WoW Forever** (1.60). En français, en anglais et en espagnol. Gratuit et
 - **Exploration** : toutes les zones et leur pourcentage. Pour la zone choisie : ses paliers (friandises, aides de capture, un Festin), ses lieux, les herbes et minerais de tes métiers, ses quêtes faisables par ton personnage, et son coffre. Une zone à 100 % ouvre un coffre où tu **choisis** un objet cosmétique.
 - **Zones préremplies** : créatures, points de récolte et quêtes de chaque zone sont connus dès ta première visite (îles et zones propres à Forever comprises). Aucun autre addon requis.
 - **Missions** : deux du jour dans ta zone et une de son caractère, trois de la semaine (dont toujours une chasse au brillant) ; elles rapportent friandises, aides de capture et paillettes. Et une carte de fidélité des auberges.
-- **Hauts faits** : 187, avec des points, et 40 titres (« Dresseur Dyokrion », « Dyokrion le Traqueur »…) à afficher sur ta fiche de dresseur. Ce que tu as déjà fait est attribué en silence à la connexion, et la touche **Y** les ouvre (si elle était libre).
+- **Hauts faits** : 197, avec des points, et 52 titres (« Dresseur Dyokrion », « Dyokrion le Traqueur »…) à afficher sur ta fiche de dresseur. Ce que tu as déjà fait est attribué en silence à la connexion, et la touche **Y** les ouvre (si elle était libre).
 - **Juke-box** : les musiques du jeu à la demande, 434 morceaux avec recherche, favoris, listes et lecture au hasard (`/qc juke`).
 - **Un suivi à l'écran** de tes objectifs les plus proches.
 
