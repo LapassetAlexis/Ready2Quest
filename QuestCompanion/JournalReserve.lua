@@ -75,7 +75,10 @@ ns.RESERVE_VIEWS = { "reserve", "trade" }
 -- 3.0.0 : boutons à la taille « sm » du thème (Theme.BUTTON_SIZES, 24)
 ns.RESERVE_LAYOUT = { tileW = 58, tileH = 84, gap = 7, portrait = 46, star = 10, starStep = 11, starY = -55,
 	shopH = 50, shopGap = 6, shopIcon = 34, shopButton = 104, actionH = Theme.BUTTON_SIZES.sm, actionGap = 4,
-	hintGap = 10 }
+	hintGap = 10,
+	emptyHuntY = 64 }     -- 3.6.0 : le bouton du mode chasse, sous le texte de la Réserve vide
+-- 3.6.0 : minutes du mode chasse lancé depuis la Réserve vide
+ns.RESERVE_EMPTY_HUNT = 30
 -- 3.1.0 : pavé de la taille sur une vignette (fond Theme.NAV presque opaque)
 ns.RESERVE_SIZE_TAG = { w = 20, h = 13, alpha = 0.85 }
 local LAY = ns.RESERVE_LAYOUT
@@ -102,7 +105,10 @@ local FR = {
 	RES_SPECIES_ALL      = "Toutes les espèces",
 	RES_FULL             = "Réserve pleine (%d/%d) : relâche des spécimens ou ajoute des places à l'Échoppe.",
 	RES_HINT             = "Clic sur un spécimen : sa fiche. Le meilleur de chaque espèce reste au Codex.",
-	RES_EMPTY            = "Ta Réserve est vide : les spécimens moins bons que ceux de ton Codex y arrivent.",
+	-- 3.6.0 : la Réserve vide dit pourquoi, et le bouton du mode chasse
+	RES_EMPTY            = "Ta Réserve est vide : hors mode chasse, le filet ne propose que les espèces nouvelles ou meilleures. En mode chasse, chaque créature abattue passe au filet, doublons compris.",
+	RES_EMPTY_HUNTING    = "Ta Réserve est vide pour l'instant : le mode chasse est en cours, chaque créature abattue passe au filet, doublons compris.",
+	RES_EMPTY_HUNT       = "Mode chasse (%d min)",
 	RES_EMPTY_FILTER     = "Aucun spécimen ne correspond à ce filtre.",
 	RES_PICK             = "Choisis un spécimen dans la grille.",
 	RES_BY               = "Capturé par %s",
@@ -162,6 +168,8 @@ local FR = {
 	PAILLETTES_MILESTONE_GAIN = "+%d paillettes : palier de zone (%d %%).",
 	-- 3.4.0 : l'échoppe de la semaine
 	SHOP_TOP             = "Les paillettes n'achètent ni lien ni caractère. Les aides ont un stock par jour.",
+	-- 3.6.0 : à zéro paillette, comment en gagner (en haut de la page)
+	SHOP_TOP_EMPTY       = "Gagner des paillettes : étude des espèces, missions, sceaux, relâcher.",
 	SHOP_NICK_DESC       = "Donne un nom à un spécimen, depuis sa fiche dans la Réserve. Offert une fois au lien Inséparable.",
 	SHOP_NICK_GO         = "La Réserve",
 	SHOP_NOTE_ORDERS     = "Un spécimen livré quitte la Réserve ; les trois commandes livrées : un cosmétique de l'arrivage, offert.",
@@ -189,7 +197,9 @@ local EN = {
 	RES_SPECIES_ALL      = "Every species",
 	RES_FULL             = "Reserve full (%d/%d): release specimens or add slots at the Stall.",
 	RES_HINT             = "Click a specimen: its card. The best of each species stays in the Codex.",
-	RES_EMPTY            = "Your Reserve is empty: specimens weaker than your Codex ones land here.",
+	RES_EMPTY            = "Your Reserve is empty: outside hunt mode, the net only offers new or better species. In hunt mode, every creature you defeat goes to the net, duplicates included.",
+	RES_EMPTY_HUNTING    = "Your Reserve is empty for now: hunt mode is on, every creature you defeat goes to the net, duplicates included.",
+	RES_EMPTY_HUNT       = "Hunt mode (%d min)",
 	RES_EMPTY_FILTER     = "No specimen matches this filter.",
 	RES_PICK             = "Pick a specimen in the grid.",
 	RES_BY               = "Captured by %s",
@@ -246,6 +256,7 @@ local EN = {
 	SHOP_REQ             = "Trainer's Stall: %d glitter",
 	PAILLETTES_MILESTONE_GAIN = "+%d glitter: zone milestone (%d%%).",
 	SHOP_TOP             = "Glitter buys neither bond nor personality. Aids have a daily stock.",
+	SHOP_TOP_EMPTY       = "Earn glitter: species study, missions, seals, releasing.",
 	SHOP_NICK_DESC       = "Name a specimen from its card in the Reserve. Free once at Inseparable bond.",
 	SHOP_NICK_GO         = "The Reserve",
 	SHOP_NOTE_ORDERS     = "A delivered specimen leaves the Reserve; all three orders delivered: an arrival cosmetic, free.",
@@ -720,6 +731,13 @@ local function Build(self, frame, content, ui)
 	rv.empty = Text(rv, Theme.F_BODY, Theme.MUTED_LIGHT, GRID_W - 20)
 	At(rv.empty, content, 10, gridTop - 20)
 	if rv.empty.SetWordWrap then rv.empty:SetWordWrap(true) end
+	-- 3.6.0 : Réserve vide (hors chasse) : le mode chasse d'un clic
+	rv.emptyHunt = Theme.CreateButton(rv, "auto", "sm", ns:F("RES_EMPTY_HUNT", ns.RESERVE_EMPTY_HUNT), function()
+		if ns.HuntStart then ns:HuntStart(ns.RESERVE_EMPTY_HUNT) end
+		ns:RefreshJournal()
+	end, "primary")
+	At(rv.emptyHunt, content, 10, gridTop - 20 - LAY.emptyHuntY)
+	rv.emptyHunt:Hide()
 	ui.Pager(rv, content)
 	rv.hint:SetText(L.RES_HINT)
 	-- le panneau de filtres, posé sur la grille (et sa rangée du bas)
@@ -1398,11 +1416,16 @@ local function RefreshReserve(self, frame, pane)
 	end
 	if #learn > 0 and self.ModelLearnCreatures then self:ModelLearnCreatures(learn) end
 	if #list == 0 and not panelOpen then
-		rv.empty:SetText(count == 0 and L.RES_EMPTY or L.RES_EMPTY_FILTER)
+		local hunting = self.HuntActive and self:HuntActive()
+		rv.empty:SetText(count ~= 0 and L.RES_EMPTY_FILTER or (hunting and L.RES_EMPTY_HUNTING or L.RES_EMPTY))
 		rv.empty:Show()
+		if rv.emptyHunt then
+			if count == 0 and not hunting and self.HuntStart then rv.emptyHunt:Show() else rv.emptyHunt:Hide() end
+		end
 	else
 		rv.empty:SetText("")
 		rv.empty:Hide()
+		if rv.emptyHunt then rv.emptyHunt:Hide() end
 	end
 	rv.pager:Update(frame.resOffset, rows, totalRows, maxOffset)
 	RefreshDetails(self, frame, rv, picked)
@@ -1461,6 +1484,8 @@ local function RefreshShop(self, frame)
 	local sv = frame.shopPane
 	if not sv then return end
 	sv.balance:SetValue(self:Paillettes())
+	-- 3.6.0 : à zéro paillette, la note « gagner des paillettes » passe en haut
+	sv.top:SetText((tonumber(self:Paillettes()) or 0) <= 0 and L.SHOP_TOP_EMPTY or L.SHOP_TOP)
 	local glyph = ns.PaillettesGlyph(14)
 	local orders = self.ShopOrders and self:ShopOrders()
 	local bonus = orders and not orders.bonus and self:ShopOrdersAllDone()

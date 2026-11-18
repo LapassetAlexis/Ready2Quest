@@ -13,17 +13,22 @@
 -- CompanionEffects, MenagerieCollection, Daily) : rien n'est recopié à la
 -- main, et la table des huit types est construite depuis celle des effets.
 -- Page externe du carnet : ns.JOURNAL_PANES.guide (JournalWindow.lua).
+-- 3.6.0 : quatorze sections ; le sommaire se resserre (ROW_H, ROW_STEP) pour
+-- tenir au-dessus des deux boutons des visites.
 local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L
 local Theme = ns.Theme
 
-local SECTIONS = { "net", "stars", "shiny", "effects", "seals", "titles", "missions", "card", "settings" }
+-- 3.6.0 : cinq sections de plus (Réserve et paillettes, Échoppe et commandes,
+-- Lien, Étude, Échanges), après celles de la capture
+local SECTIONS = { "net", "stars", "shiny", "reserve", "shop", "bond", "study", "trades", "effects", "seals", "titles",
+	"missions", "card", "settings" }
 ns.GUIDE_SECTIONS = SECTIONS
 
 local FR = {
 	JRN_SEC_guide          = "Guide",
-	JRN_SUB_guide          = "La capture expliquée : filet, étoiles, brillantes, compagnon, sceaux, titres, missions, fiche.",
+	JRN_SUB_guide          = "La capture expliquée : filet, étoiles, Réserve, Échoppe, lien, étude, échanges, compagnon, sceaux, missions.",
 	GUIDE_REPLAY           = "Tuto des captures",
 	GUIDE_REPLAY_TIP       = "Revoir le tutoriel des premières captures : il t'accompagne à ta prochaine occasion de capture (tout de suite si le filet attend).",
 	GUIDE_REPLAY_JOURNAL   = "Tuto du carnet",
@@ -41,7 +46,7 @@ local FR = {
 	GUIDE_COL_TITLE        = "Titre",
 	GUIDE_COL_GIFT         = "Récompense",
 	GUIDE_SEC_net          = "Le filet",
-	GUIDE_net_1            = "Plus de fenêtre qui s'ouvre toute seule. Quand un monstre abattu vaut le coup (une espèce qui manque à ta collection, une brillante, ou un spécimen qui pourrait battre le tien), il tombe dans le filet posé à côté de ton compagnon.",
+	GUIDE_net_1            = "Plus de fenêtre qui s'ouvre toute seule. Quand un monstre abattu vaut le coup (une espèce qui manque à ton Codex, une brillante, ou un spécimen qui pourrait battre le tien), il tombe dans le filet posé à côté de ton compagnon.",
 	GUIDE_net_2            = "Un pack entier se met en file (%d monstres au plus) ; chacun y reste %d s à partir de la fin du combat. Le bouton montre leur nombre, devient doré si une brillante attend et bat quelques secondes quand un monstre arrive. Il reste à l'écran si le compagnon est masqué.",
 	GUIDE_net_3            = "Capture express (par défaut) : un clic sur le filet lance tout de suite sur le meilleur candidat, même en combat ; rien ne s'ouvre, le verdict tient en une ligne au-dessus du filet. Maj+clic : tout le filet. Ctrl+clic : la carte de préparation (aides, Lancer, Passer). Clic droit : la liste (« × » ou Échap). /qc filet, /qc filet tout, /qc filet auto (le filet part seul ; une brillante attend ton clic). Le chat ne parle que des prises qui comptent.",
 	GUIDE_net_4            = "Capture express coupée (/qc filet express) : le bandeau « Capture possible » nomme la créature et ta chance ; le clic ouvre la carte de préparation, puis la scène ; à deux créatures ou plus, il propose « Tout capturer (N) ». Toujours : Sourdine coupe l'annonce et les sons pendant %s (/qc filet sourdine [min|off]) ; un carillon l'accompagne (réglage %s).",
@@ -55,6 +60,27 @@ local FR = {
 	GUIDE_shiny_2          = "Plus tu as abattu d'une espèce, plus ta chance monte : jusqu'à 1 sur %d après %d abattus. Un compagnon Draconien ou Mort-vivant, et une zone scellée (×%s), l'améliorent encore.",
 	GUIDE_shiny_3          = "Une brillante repérée porte un losange doré au-dessus de son nom (réglage %s) et reste reconnue pour toujours : la page Créatures la montre, capturée ou non, avec son filtre Brillantes.",
 	GUIDE_shiny_4          = "Chaque espèce a deux versions à capturer, la normale et la brillante, chacune avec ses étoiles. Une brillante capturée devient une apparence à part : ton compagnon prend une lumière dorée et scintille, et sa force gagne +%s.",
+	-- 3.6.0 : Réserve et paillettes, Échoppe et commandes, Lien, Étude, Échanges
+	GUIDE_SEC_reserve      = "Réserve et paillettes",
+	GUIDE_reserve_1        = "Chaque capture est un spécimen. Le meilleur de chaque espèce va au Codex (page Créatures) ; les autres vont dans ta Réserve (%d places au départ, plus à l'Échoppe). Hors mode chasse, le filet ne propose que les espèces nouvelles ou meilleures : la Réserve se remplit surtout en mode chasse (/qc chasse, ou Maj + clic droit sur le compagnon).",
+	GUIDE_reserve_2        = "En chasse, une espèce capturée trop souvent dans la journée devient méfiante : la capture suivante est plus dure. Varie les proies.",
+	GUIDE_reserve_3        = "Relâcher un spécimen rend des paillettes : %d, %d ou %d selon ses étoiles, %d pour une brillante. Ton spécimen du Codex, celui que porte ton compagnon et un spécimen engagé dans un échange ne se relâchent pas. /qc tri propose les moins précieux quand la place manque.",
+	GUIDE_reserve_4        = "Gagner des paillettes : l'étude des espèces (%d par tâche, %d de plus pour une espèce maîtrisée), les missions, les paliers de zone (%d), les commandes de la semaine, le relâcher, une friandise en trop.",
+	GUIDE_SEC_shop         = "Échoppe et commandes",
+	GUIDE_shop_1           = "L'Échoppe du dresseur (onglet du carnet) change tes paillettes en aides de capture (un stock par jour : %d %s, %d %s, %d %s), en places de Réserve (+%d), en surnom pour un spécimen (%d paillettes), et en l'arrivage de la semaine : deux cosmétiques du compagnon. Les paillettes n'achètent ni lien ni caractère.",
+	GUIDE_shop_2           = "Commandes de la semaine : trois demandes (un type et une taille, un caractère et des étoiles, une zone). Livre un spécimen de ta Réserve qui convient : il part pour de bon, contre %s paillettes. Les trois livrées : un cosmétique de l'arrivage, offert. Une relance gratuite par semaine, tant qu'aucune n'est livrée.",
+	GUIDE_SEC_bond         = "Le lien",
+	GUIDE_bond_1           = "Le lien se tisse avec le spécimen que porte ton compagnon : une de tes captures, choisie page Créatures (un clic sur elle). Une mascotte n'a pas de lien.",
+	GUIDE_bond_2           = "Points, %d par jour au plus : la route (1 point tous les %s km, %d par jour), une friandise donnée (%d), une caresse (%d), une quête rendue (%d), une capture réussie (%d). Une envie comblée en donne %d de plus, hors de ce plafond.",
+	GUIDE_bond_3           = "Niveaux : %s, %s (%d points), %s (%d), %s (%d), %s (%d). Le plus haut dépend des étoiles du spécimen : 1 étoile, jusqu'à %s ; 2 étoiles, %s ; 3 étoiles, %s.",
+	GUIDE_bond_4           = "%s : les effets de sa taille et le revers de son caractère s'ajoutent, l'atout de son caractère grandit, et un meilleur spécimen ne le remplace plus d'office au Codex. %s : un souvenir par jour au plus. %s : une marque et un surnom offert.",
+	GUIDE_SEC_study        = "L'étude",
+	GUIDE_study_1          = "Chaque espèce a cinq choses à apprendre : %s. Seules comptent tes propres captures : un échange ne prouve rien.",
+	GUIDE_study_2          = "Chaque tâche finie : %d paillettes ; les cinq, l'espèce est maîtrisée : %d de plus. Une brillante capturée rapporte aussi %d.",
+	GUIDE_study_3          = "La fiche d'une espèce (page Créatures) montre ses losanges, ce qui reste à faire et ses records de taille ; un nouveau record se dit dans le chat. Le suivi à l'écran montre la tâche la plus proche d'être finie.",
+	GUIDE_SEC_trades       = "Échanges",
+	GUIDE_trades_1         = "Échange des spécimens de ta Réserve avec un joueur qui a l'addon : cible-le et tape /qc echange (ou /qc echange <nom>), clic droit sur son portrait, ou « Échanger avec ma cible » dans la page Réserve. Jusqu'à %d spécimens de chaque côté ; rien ne part tant que les deux n'ont pas validé.",
+	GUIDE_trades_2         = "L'invitation dure %d s ; jamais en combat. Un spécimen reçu garde ses étoiles, sa taille et son caractère, mais ne compte pas pour l'étude. L'historique est dans la vue Échanges de la page Réserve. /qc echange oui | non | annuler.",
 	GUIDE_SEC_effects      = "Ton compagnon chasse avec toi",
 	GUIDE_effects_1        = "Une créature capturée que tu emmènes donne deux effets liés à son type : un de chasse et un de confort. Les valeurs ci-dessous sont celles d'une créature normale à 1 étoile, à pleine force ; entre parenthèses, le plafond.",
 	GUIDE_effects_H        = "La force",
@@ -84,7 +110,7 @@ local FR = {
 	GUIDE_SEC_settings     = "Réglages et commandes",
 	GUIDE_settings_1       = "Page Au jour le jour : %s (tout coupe, infobulle comprise) · %s · %s · %s · %s · %s · %s.",
 	GUIDE_settings_2       = "Page Compagnon de route : %s (%s), pour que la créature remplisse son cadre à l'écran, même une bête capturée de taille réelle ; la réglette %s (Muet coupe aussi les tutoriels).",
-	GUIDE_settings_3       = "Commandes : /qc filet (capture le meilleur candidat), /qc filet tout (tout capturer), /qc filet sourdine [min|off], /qc capture (ta collection et tes aides), /qc fiche [nom] (fiche de dresseur), /qc tuto [capture|carnet|reset] (les tutoriels guidés), /qc compagnon tuto (le tutoriel de base du compagnon), /qc blague (une blague du compagnon).",
+	GUIDE_settings_3       = "Commandes : /qc carnet (le carnet), /qc filet (capture le meilleur candidat), /qc filet tout (tout capturer), /qc filet express|auto, /qc filet sourdine [min|off], /qc chasse [5|15|30|60|on|stop] (mode chasse), /qc capture (ton Codex et tes aides), /qc tri (faire de la place dans la Réserve), /qc echange <nom> (échanger des spécimens), /qc fiche [nom] (fiche de dresseur), /qc titre, /qc hf (hauts faits), /qc coffre, /qc juke, /qc astuces on|off|reset, /qc tuto [capture|carnet|reset] (les tutoriels guidés), /qc compagnon tuto (le tutoriel de base du compagnon), /qc blague, /qc style azeroth|sobre, /qc noel.",
 	GUIDE_settings_4       = "Deux tutoriels guidés, une fois par compte : les premières captures (à ta première occasion de capture, du filet au verdict) et le carnet (à sa première ouverture, onglet par onglet). Jamais en combat ; Échap ou « Passer le tutoriel » les arrêtent. Les boutons « %s » et « %s », en bas à gauche, les rejouent. Sur le compagnon : clic droit, le carnet ; Maj + clic droit, le mode chasse.",
 	GUIDE_settings_5       = "Style de l'interface (page Compagnon de route) : %s (cadre doré, boutons en relief) ou %s (à plat), pour toute l'interface. /qc style azeroth|sobre.",
 	GUIDE_settings_6       = "Hauts faits (page du carnet) : /qc hf l'ouvre, /qc hf diag dit quelles statistiques du client sont lisibles ; ce qui attend encore sa vérification est grisé. Les hauts faits de collection valent pour tout ton compte, ceux de performance pour ce personnage. /qc titre choisit ton titre. Touche Y (si elle était libre) : les hauts faits. Bandeau, chat, fanfare, forme des titres et raccourcis : page Carnet de voyage.",
@@ -95,7 +121,7 @@ local FR = {
 }
 local EN = {
 	JRN_SEC_guide          = "Guide",
-	JRN_SUB_guide          = "Capture explained: net, stars, shinies, companion, seals, titles, missions, card.",
+	JRN_SUB_guide          = "Capture explained: net, stars, Reserve, Stall, bond, study, trades, companion, seals, missions.",
 	GUIDE_REPLAY           = "Captures tour",
 	GUIDE_REPLAY_TIP       = "Replay the first-captures tutorial: it walks you through your next capture opportunity (right away if the net is waiting).",
 	GUIDE_REPLAY_JOURNAL   = "Journal tour",
@@ -113,7 +139,7 @@ local EN = {
 	GUIDE_COL_TITLE        = "Title",
 	GUIDE_COL_GIFT         = "Reward",
 	GUIDE_SEC_net          = "The net",
-	GUIDE_net_1            = "No more pop-up. When a defeated monster is worth capturing (a species missing from your collection, a shiny, or a specimen that could beat yours), it lands in the net beside your companion.",
+	GUIDE_net_1            = "No more pop-up. When a defeated monster is worth capturing (a species missing from your Codex, a shiny, or a specimen that could beat yours), it lands in the net beside your companion.",
 	GUIDE_net_2            = "Whole packs queue up (%d monsters at most); each one stays %d s from the end of the fight. The button shows their count, turns gold when a shiny is waiting and pulses for a few seconds when a monster arrives. It stays on screen when the companion is hidden.",
 	GUIDE_net_3            = "Express capture (the default): clicking the net throws right away at the best candidate, even in combat; nothing opens, the result is one line above the net. Shift-click: the whole net. Ctrl-click: the preparation card (aids, Throw, Skip). Right-click: the list (\"×\" or Escape). /qc filet, /qc filet tout, /qc filet auto (the net throws itself; a shiny waits for your click). Chat only mentions captures that matter.",
 	GUIDE_net_4            = "Express capture off (/qc filet express): the \"Capture possible\" banner names the creature and your odds; the click opens the preparation card, then the scene; with two creatures or more it offers \"Capture all (N)\". Always: Mute silences the announcement and sounds for %s (/qc filet sourdine [min|off]); a chime comes with it (%s setting).",
@@ -127,6 +153,26 @@ local EN = {
 	GUIDE_shiny_2          = "The more of a species you have defeated, the higher your odds: up to 1 in %d after %d kills. A Dragonkin or Undead companion, and a sealed zone (×%s), improve them further.",
 	GUIDE_shiny_3          = "A spotted shiny carries a gold diamond above its name (%s setting) and stays known for good: the Creatures page shows it, captured or not, with its Shiny filter.",
 	GUIDE_shiny_4          = "Each species has two versions to capture, normal and shiny, each with its own stars. A captured shiny becomes a look of its own: your companion is golden-lit and sparkles, and its strength gains +%s.",
+	GUIDE_SEC_reserve      = "Reserve and glitter",
+	GUIDE_reserve_1        = "Each capture is a specimen. The best of each species goes to the Codex (Creatures page); the others go to your Reserve (%d slots to start with, more at the Stall). Outside hunt mode, the net only offers new or better species: the Reserve mostly fills up in hunt mode (/qc hunt, or Shift + right-click your companion).",
+	GUIDE_reserve_2        = "In hunt mode, a species captured too often in a day gets wary: the next capture is harder. Vary your prey.",
+	GUIDE_reserve_3        = "Releasing a specimen gives glitter: %d, %d or %d depending on its stars, %d for a shiny. Your Codex specimen, the one your companion wears and a specimen in a trade can't be released. /qc tri suggests the least precious ones when space runs out.",
+	GUIDE_reserve_4        = "Earning glitter: species study (%d per task, %d more for a mastered species), missions, zone milestones (%d), weekly orders, releasing, an extra treat.",
+	GUIDE_SEC_shop         = "Stall and orders",
+	GUIDE_shop_1           = "The Trainer's Stall (a journal tab) turns your glitter into capture aids (a daily stock: %d %s, %d %s, %d %s), Reserve slots (+%d), a nickname for a specimen (%d glitter), and the week's arrivals: two companion cosmetics. Glitter buys neither bond nor personality.",
+	GUIDE_shop_2           = "Weekly orders: three requests (a type and a size, a personality and stars, a zone). Deliver a matching specimen from your Reserve: it leaves for good, for %s glitter. All three delivered: an arrival cosmetic, free. One free reroll a week, as long as none is delivered.",
+	GUIDE_SEC_bond         = "The bond",
+	GUIDE_bond_1           = "The bond grows with the specimen your companion wears: one of your captures, chosen on the Creatures page (click it). A mascot has no bond.",
+	GUIDE_bond_2           = "Points, %d a day at most: the road (1 point every %s km, %d a day), a treat given (%d), a pat (%d), a quest turned in (%d), a successful capture (%d). A granted wish gives %d more, outside that cap.",
+	GUIDE_bond_3           = "Levels: %s, %s (%d points), %s (%d), %s (%d), %s (%d). The highest depends on the specimen's stars: 1 star, up to %s; 2 stars, %s; 3 stars, %s.",
+	GUIDE_bond_4           = "%s: its size effects and the downside of its personality kick in, the upside of its personality grows, and a better specimen no longer replaces it in the Codex on its own. %s: one keepsake a day at most. %s: a mark and a free nickname.",
+	GUIDE_SEC_study        = "Study",
+	GUIDE_study_1          = "Each species has five things to learn: %s. Only your own captures count: a trade proves nothing.",
+	GUIDE_study_2          = "Each task done: %d glitter; all five and the species is mastered: %d more. A captured shiny also gives %d.",
+	GUIDE_study_3          = "A species card (Creatures page) shows its diamonds, what is left to do and its size records; a new record is told in the chat. The on-screen tracker shows the task closest to done.",
+	GUIDE_SEC_trades       = "Trades",
+	GUIDE_trades_1         = "Trade specimens from your Reserve with a player who has the addon: target them and type /qc trade (or /qc trade <name>), right-click their portrait, or \"Trade with my target\" on the Reserve page. Up to %d specimens on each side; nothing leaves until both have confirmed.",
+	GUIDE_trades_2         = "The invitation lasts %d s; never in combat. A received specimen keeps its stars, size and personality, but does not count for study. The history is in the Trades view of the Reserve page. /qc trade yes | no | cancel.",
 	GUIDE_SEC_effects      = "Your companion hunts with you",
 	GUIDE_effects_1        = "A captured creature you take along gives two effects tied to its type: a hunt effect and a comfort effect. The values below are those of a normal 1-star creature at full strength; in brackets, the cap.",
 	GUIDE_effects_H        = "Strength",
@@ -155,7 +201,7 @@ local EN = {
 	GUIDE_SEC_settings     = "Settings and commands",
 	GUIDE_settings_1       = "Day by day page: %s (turns everything off, tooltip included) · %s · %s · %s · %s · %s · %s.",
 	GUIDE_settings_2       = "Road companion page: %s (%s), so the creature fills its on-screen frame, even a life-size captured beast; the %s slider (Silent also turns the tutorials off).",
-	GUIDE_settings_3       = "Commands: /qc filet (captures the best candidate), /qc filet tout (capture all), /qc filet sourdine [min|off], /qc capture (your collection and aids), /qc fiche [name] (trainer card), /qc tuto [capture|carnet|reset] (the guided tutorials), /qc compagnon tuto (the companion's base tutorial), /qc joke (a joke from your companion).",
+	GUIDE_settings_3       = "Commands: /qc carnet (the journal), /qc filet (captures the best candidate), /qc filet tout (capture all), /qc filet express|auto, /qc filet sourdine [min|off], /qc hunt [5|15|30|60|on|stop] (hunt mode), /qc capture (your Codex and aids), /qc tri (make room in the Reserve), /qc trade <name> (trade specimens), /qc fiche [name] (trainer card), /qc title, /qc hf (achievements), /qc coffre, /qc juke, /qc astuces on|off|reset, /qc tuto [capture|carnet|reset] (the guided tutorials), /qc compagnon tuto (the companion's base tutorial), /qc joke, /qc style azeroth|sobre, /qc noel.",
 	GUIDE_settings_4       = "Two guided tutorials, once per account: first captures (at your first capture opportunity, from the net to the verdict) and the journal (when you first open it, tab by tab). Never in combat; Escape or \"Skip tutorial\" stops them. The \"%s\" and \"%s\" buttons, bottom left, replay them. On the companion: right-click, the journal; Shift + right-click, hunt mode.",
 	GUIDE_settings_5       = "Interface style (Road companion page): %s (golden frame, bevelled buttons) or %s (flat), for the whole interface. /qc style azeroth|sobre.",
 	GUIDE_settings_6       = "Achievements (journal page): /qc hf opens it, /qc hf diag tells which client statistics are readable; what still awaits verification is greyed out. Collection achievements count for your whole account, performance ones for this character. /qc title picks your title. Y key (if it was free): achievements. Banner, chat, fanfare, title form and key bindings: Travel journal page.",
@@ -167,7 +213,7 @@ if ns.KEEP_STRINGS then ns.GUIDE_STRINGS = { fr = FR, en = EN } end
 
 -- Mesures (depuis le haut gauche de la zone utile, comme ui.At)
 local LIST_W, GAP = 210, 16
-local ROW_H, ROW_STEP = 30, 32
+local ROW_H, ROW_STEP = 26, 29   -- 3.6.0 : 14 sections (30, 32 pour 9)
 local TITLE_H = 30                -- le titre de la section, puis les blocs
 local P_GAP, H_BEFORE, H_AFTER = 8, 12, 2
 local TYPE_W, CELL_GAP, CELL_PAD = 100, 10, 5
@@ -259,6 +305,64 @@ function BUILD.shiny(self)
 		P(self:F("GUIDE_shiny_2", best, ns.SHINY_CHAIN_KILLS or 0, seal)),
 		P(self:F("GUIDE_shiny_3", L.OPT_DAILY_PLATE)),
 		P(self:F("GUIDE_shiny_4", Num(ns.EFFECT_SHINY_STRENGTH or 0))),
+	}
+end
+
+-- 3.6.0 : Réserve et paillettes, Échoppe et commandes, Lien, Étude, Échanges
+function BUILD.reserve(self)
+	local release = ns.PAILLETTES_RELEASE or {}
+	local study = ns.STUDY_REWARD or {}
+	return {
+		P(self:F("GUIDE_reserve_1", ns.CAPTURE_RESERVE_BASE or 50)),
+		P(L.GUIDE_reserve_2),
+		P(self:F("GUIDE_reserve_3", release[1] or 0, release[2] or 0, release[3] or 0, release.shiny or 0)),
+		P(self:F("GUIDE_reserve_4", study.task or 0, study.mastered or 0, ns.PAILLETTES_MILESTONE or 0)),
+	}
+end
+
+function BUILD.shop(self)
+	local stock = ns.SHOP_STOCK or {}
+	local function Aid(id) return self.CaptureAidLabel and self:CaptureAidLabel(id) or id end
+	local rewards = {}
+	for index, value in ipairs(ns.ORDER_REWARDS or {}) do rewards[index] = value end
+	return {
+		P(self:F("GUIDE_shop_1", stock.appat or 0, Aid("appat"), stock.lasso or 0, Aid("lasso"), stock.sifflet or 0, Aid("sifflet"),
+			(ns.SHOP_SLOTS and ns.SHOP_SLOTS.slots) or 10, ns.SHOP_NICK_PRICE or 15)),
+		P(self:F("GUIDE_shop_2", AndList(self, rewards))),
+	}
+end
+
+function BUILD.bond(self)
+	local src = ns.BOND_SOURCES or {}
+	local function Gain(key) return src[key] and src[key].gain or 0 end
+	local levels = ns.BOND_LEVELS or { 0, 10, 35, 80, 180 }
+	local function Name(level) return self.SpecimenBondName and self:SpecimenBondName(level) or tostring(level) end
+	local km = Num((ns.BOND_ROUTE_METERS or 1500) / 1000)
+	return {
+		P(L.GUIDE_bond_1),
+		P(self:F("GUIDE_bond_2", ns.BOND_DAILY or 10, km, src.route and src.route.cap or 0, Gain("treat"), Gain("pet"),
+			Gain("quest"), Gain("cap"), Gain("wish"))),
+		P(self:F("GUIDE_bond_3", Name(1), Name(2), levels[2] or 0, Name(3), levels[3] or 0, Name(4), levels[4] or 0,
+			Name(5), levels[5] or 0, Name(3), Name(4), Name(5))),
+		P(self:F("GUIDE_bond_4", Name(2), Name((ns.BOND_KEEPSAKE and ns.BOND_KEEPSAKE.level) or 3), Name(5))),
+	}
+end
+
+function BUILD.study(self)
+	local tasks = {}
+	for index, task in ipairs(ns.STUDY_TASKS or {}) do tasks[index] = string.lower(L["STUDY_" .. task] or task) end
+	local reward = ns.STUDY_REWARD or {}
+	return {
+		P(self:F("GUIDE_study_1", AndList(self, tasks))),
+		P(self:F("GUIDE_study_2", reward.task or 0, reward.mastered or 0, reward.shiny or 0)),
+		P(L.GUIDE_study_3),
+	}
+end
+
+function BUILD.trades(self)
+	return {
+		P(self:F("GUIDE_trades_1", ns.TRADE_MAX or 3)),
+		P(self:F("GUIDE_trades_2", ns.TRADE_INVITE_TTL or 60)),
 	}
 end
 

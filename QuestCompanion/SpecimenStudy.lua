@@ -21,6 +21,9 @@
 --   ns:SpecimenStudy(npc) -> { done = { [tâche] = bool }, count = n faites, mastered, n, sizes, traits, lo, hi, shiny }
 --   ns:SpecimenStudyMastered() -> espèces maîtrisées
 --   ns:SpecimenStudyNote(spec) (appelé à chaque capture)
+-- 3.6.0 : une tâche finie fait avancer la mission « finis une tâche d'étude »
+-- (MissionsMenagerie.lua) ; la toute première, une bulle l'explique une fois
+-- (GuidedTour.lua, visite « study »).
 local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L
@@ -239,8 +242,10 @@ function ns:SpecimenStudyNote(spec)
 			gained = gained + ns.STUDY_REWARD.task
 			self:PaillettesAdd(ns.STUDY_REWARD.task, "study")
 			self:Print(self:F("STUDY_DONE", name, L["STUDY_" .. task], ns.STUDY_REWARD.task))
+			if self.MissionEvent then pcall(self.MissionEvent, self, "studyTask", 1) end
 		end
 	end
+	if gained > 0 and self.TourQueue then pcall(self.TourQueue, self, "study") end
 	local masteredBit = #ns.STUDY_TASKS + 1
 	if PaidTasks(row) >= #ns.STUDY_TASKS and not Has(row.paid, masteredBit) then
 		row.paid = With(row.paid, masteredBit)
