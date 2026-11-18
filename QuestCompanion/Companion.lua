@@ -39,12 +39,31 @@ if ns.blocked then return end
 local L = ns.L
 local Theme = ns.Theme
 
-local NEED_KEYS  = { "hunger", "energy", "mood", "curiosity" }
-local NEED_MAX   = 100
-local NEED_FLOOR = 15        -- plancher : jamais vide, jamais « en détresse »
-local NEED_START = 80
+-- 3.5.0 (docs/design-envies-3.5) : trois ÉTATS, pas des jauges. Chaque envie
+-- garde sa valeur chiffrée, lue comme une DURÉE : au-dessus de NEED_ON (70)
+-- l'état est actif (Repu, Reposé, Éveillé) ; un déclencheur la met à
+-- NEED_FULL (100 : 45 minutes), une friandise à NEED_MAX (110 : 60 minutes) ;
+-- elle baisse de 30 / 45 par minute de jeu et s'arrête à 70. Rien ne
+-- s'empile, rien ne punit : sous 70, plus d'effet, c'est tout. Le moral
+-- sort des envies : l'humeur se lit au nombre d'états actifs.
+local NEED_KEYS  = { "hunger", "energy", "curiosity" }
+local NEED_ON    = 70        -- au-dessus : l'état est actif
+local NEED_FULL  = 100       -- un déclencheur : 45 minutes
+local NEED_MAX   = 110       -- une friandise : 60 minutes
+local NEED_FLOOR = NEED_ON   -- plancher : l'état s'éteint, la valeur s'arrête là
+local NEED_START = NEED_ON
+local STATE_MINUTES = 45
+local NEED_RATE = (NEED_FULL - NEED_ON) / STATE_MINUTES   -- 0,667 par minute
 -- baisse par minute de JEU (rien hors connexion)
-local DECAY = { hunger = 0.6, energy = 0.4, mood = 0.3, curiosity = 0.5 }
+local DECAY = { hunger = NEED_RATE, energy = NEED_RATE, curiosity = NEED_RATE }
+ns.COMPANION_NEED_KEYS = NEED_KEYS
+ns.COMPANION_STATE = { on = NEED_ON, full = NEED_FULL, max = NEED_MAX, minutes = STATE_MINUTES, rate = NEED_RATE,
+	restSeconds = 120,     -- Reposé : 2 minutes cumulées au repos (ville, auberge, camp)
+	huntKills = 15, huntWindow = 600,   -- Éveillé en chasse : 15 tuées ou capturées en 10 minutes
+	wishGap = 1200,        -- une nouvelle envie 20 minutes après la précédente
+	wishSoon = 15,         -- tous actifs : l'envie vise celui qui a moins de 15 minutes
+	wishBond = 1, wishBondDaily = 3,
+	schema = 2 }
 -- Chaque envie doit rester simple à remonter, même tout exploré, même au
 -- niveau maximum. La curiosité se nourrit aussi de nouveauté relative :
 -- revenir dans une zone pas vue depuis un moment, bouger, les donjons, les
@@ -60,11 +79,9 @@ local CURIOSITY = {
 	gather = 1,                            -- chaque ressource récoltée
 }
 ns.COMPANION_CURIOSITY = CURIOSITY
--- Plancher une fois toutes ses évolutions faites : il a tout vécu, il est serein
-local SERENE_FLOOR = 50
-ns.COMPANION_SERENE_FLOOR = SERENE_FLOOR
-local REST_GAIN   = 4        -- énergie par minute au repos (auberge, ville, camp)
-local EAT_GAIN    = 6        -- faim par minute pendant le repas
+-- 3.5.0 : plus de plancher « serein » ni de remontée au fil du repas ou du
+-- repos : un repas, deux minutes de repos remplissent l'état d'un coup
+local REST_GAIN   = 0
 local TICK        = 10       -- s entre deux mises à jour des besoins
 local MAX_STEP    = 60       -- s comptées au plus par image (écran de chargement)
 local BUBBLE_GAP  = 20       -- s minimum entre deux bulles ordinaires
@@ -122,7 +139,7 @@ local COOLDOWNS = {
 local TIP_GAP, TIP_JITTER = 600, 300   -- astuces : toutes les 10 à 15 min de jeu
 local GOAL_FIRST = 900                 -- premier rappel d'objectif après 15 min
 local NEED_LOW   = 35                  -- en dessous, il peut exprimer une envie
-local HAPPY_MIN  = 70                  -- évolution : les 4 envies au moins à ce niveau
+local HAPPY_MIN  = 70                  -- (3.4 et avant) ; 3.5.0 : la porte d'un stade est une envie comblée
 local NEED_GRACE = 120                 -- pas d'envie dans les 2 min après la connexion
 local NIGHT_GRACE = 600
 local IDLE_REST  = 300                 -- 5 min au repos sans rien dire : un mot
@@ -136,7 +153,7 @@ local SAME_NPC   = 120                 -- même PNJ (bavardage puis vendeur) : u
 local SAME_HUB   = 600                 -- même village ré-entré : pas de nouveau mot
 
 ns.COMPANION_RULES = {
-	floor = NEED_FLOOR, max = NEED_MAX, decay = DECAY, restGain = REST_GAIN, bubbleGap = BUBBLE_GAP,
+	floor = NEED_FLOOR, max = NEED_MAX, full = NEED_FULL, on = NEED_ON, decay = DECAY, restGain = REST_GAIN, bubbleGap = BUBBLE_GAP,
 	petCooldown = PET_COOLDOWN, sleepyAfter = SLEEPY_AFTER, sleepyMin = SLEEPY_MIN, sleepyMax = SLEEPY_MAX,
 	priority = PRIORITY, cooldowns = COOLDOWNS, tipGap = TIP_GAP, tipJitter = TIP_JITTER, needLow = NEED_LOW,
 	needGrace = NEED_GRACE, idleRest = IDLE_REST, convoStep = CONVO_STEP, tutoStep = TUTO_STEP,
@@ -719,6 +736,11 @@ function ns:CompanionData()
 		char.companion = data
 	end
 	if type(data.needs) ~= "table" then data.needs = {} end
+	-- 3.5.0 : le jour de la mise à jour, aucun état d'office (tout à 70), le moral s'en va
+	if (tonumber(data.needsV) or 1) < ns.COMPANION_STATE.schema then
+		for key in pairs(data.needs) do data.needs[key] = nil end
+		data.needsV = ns.COMPANION_STATE.schema
+	end
 	for _, key in ipairs(NEED_KEYS) do
 		local v = tonumber(data.needs[key])
 		data.needs[key] = v and Clamp(v, NEED_FLOOR, NEED_MAX) or NEED_START
@@ -756,29 +778,61 @@ function ns:CompanionName()
 	return self:CompanionOwnName()
 end
 
--- Un besoin ne passe jamais sous le plancher ni au-dessus de 100
+-- 3.5.0 : un état obtenu (un déclencheur : 45 minutes ; `value` = NEED_MAX
+-- pour une friandise : 60 minutes). Jamais au-dessus, rien ne s'empile.
+-- Rend true si l'état vient de s'allumer ou de repartir à plein.
+function ns:CompanionGrant(key, value)
+	local needs = self:CompanionData().needs
+	if needs[key] == nil then return false end
+	value = Clamp(tonumber(value) or NEED_FULL, NEED_FLOOR, NEED_MAX)
+	if needs[key] >= value then return false end
+	local was = needs[key] > NEED_ON
+	needs[key] = value
+	self:CompanionRefreshHover()
+	if ns.FireCallback then ns:FireCallback("COMPANION_STATE", key, was) end
+	return true
+end
+
+-- Ancien appel (un gain chiffré) : un gain obtient l'état, une perte le raccourcit.
+-- Le moral n'est plus une envie : rien.
 function ns:CompanionAdd(key, amount)
 	local needs = self:CompanionData().needs
 	if needs[key] == nil then return end
-	needs[key] = Clamp(needs[key] + (tonumber(amount) or 0), NEED_FLOOR, NEED_MAX)
+	amount = tonumber(amount) or 0
+	if amount > 0 then return self:CompanionGrant(key) end
+	needs[key] = Clamp(needs[key] + amount, NEED_FLOOR, NEED_MAX)
 	self:CompanionRefreshHover()
-	-- prêt à évoluer : une envie comblée peut être la dernière qui manquait
-	local data = self:CompanionData()
-	if data.stageReady and (tonumber(amount) or 0) > 0 and self:CompanionIsHappy() then
-		self:CompanionCheckStage(PlayerLevel(), true)
-	end
 end
 
+-- 3.5.0 : un état est actif ; minutes qui restent (au rythme de baisse du moment)
+function ns:CompanionStateOn(key)
+	local v = self:CompanionData().needs[key]
+	return v ~= nil and v > NEED_ON
+end
+function ns:CompanionStateMinutes(key)
+	local v = self:CompanionData().needs[key]
+	if not v or v <= NEED_ON then return 0 end
+	local factor = self.CompanionDecayFactor and self:CompanionDecayFactor(key) or 1
+	local rate = (DECAY[key] or NEED_RATE) * math.max(0.05, factor)
+	return (v - NEED_ON) / rate
+end
+function ns:CompanionStatesOn()
+	local count = 0
+	for _, key in ipairs(NEED_KEYS) do if self:CompanionStateOn(key) then count = count + 1 end end
+	return count, #NEED_KEYS
+end
+
+-- L'humeur : Tranquille (0 état), Content (1), Joyeux (2), Rayonnant (3) ;
+-- « sleepy » au retour d'une longue absence prime
+ns.COMPANION_MOODS = { "calm", "happy", "joyful", "radiant" }
 function ns:CompanionMood()
 	local data = self:CompanionData()
 	if data.sleepy then return "sleepy" end
-	local sum = 0
-	for _, key in ipairs(NEED_KEYS) do sum = sum + data.needs[key] end
-	local avg = sum / #NEED_KEYS
-	-- pas d'humeur « triste » : le bas de l'échelle est juste rêveur
-	if avg >= 75 then return "radiant" end
-	if avg >= 50 then return "happy" end
-	return "dreamy"
+	return ns.COMPANION_MOODS[self:CompanionStatesOn() + 1]
+end
+function ns:CompanionRadiant()
+	local data = self:CompanionData()
+	return not data.sleepy and self:CompanionStatesOn() == #NEED_KEYS
 end
 
 -- ---------------------------------------------------------------------------
@@ -803,30 +857,27 @@ function ns:CompanionStageLabel(stage)
 	return L[def.label]
 end
 
--- Heureux = les quatre envies au moins à HAPPY_MIN, et réveillé
+-- 3.5.0 : la porte d'un stade n'est plus « les quatre envies à 70 » mais une
+-- envie comblée depuis que le niveau est atteint (data.stageWish, posé par
+-- CompanionWishMet). Le compte : les états actifs.
 function ns:CompanionHappyCount()
-	local data, count = self:CompanionData(), 0
-	for _, key in ipairs(NEED_KEYS) do
-		if (data.needs[key] or 0) >= HAPPY_MIN then count = count + 1 end
-	end
-	return count, #NEED_KEYS
+	return self:CompanionStatesOn()
 end
 
 function ns:CompanionIsHappy()
-	local count, total = self:CompanionHappyCount()
-	return count == total and not self:CompanionData().sleepy
+	local data = self:CompanionData()
+	return data.stageWish == true and not data.sleepy
 end
 
--- Survol de l'objectif « heureux » : chaque envie, et comment la remplir
+-- Survol de l'objectif : chaque état, et comment l'obtenir
 function ns:CompanionHappyHints()
-	local data, lines = self:CompanionData(), {}
+	local lines = {}
 	for _, key in ipairs(NEED_KEYS) do
-		local value = math.floor(data.needs[key] or 0)
-		local label = L["COMP_NEED_" .. key]
-		if value >= HAPPY_MIN then
-			lines[#lines + 1] = self:F("COMP_HAPPY_OK", label, value)
+		local label = L["COMP_STATE_" .. key]
+		if self:CompanionStateOn(key) then
+			lines[#lines + 1] = self:F("COMP_STATE_HINT_ON", label, math.ceil(self:CompanionStateMinutes(key)))
 		else
-			lines[#lines + 1] = self:F("COMP_HAPPY_LINE", label, value, L["COMP_HOW_" .. key])
+			lines[#lines + 1] = self:F("COMP_STATE_HINT_OFF", label, L["COMP_HOW_" .. key])
 		end
 	end
 	return lines
@@ -850,17 +901,17 @@ function ns:CompanionCheckStage(level, celebrate)
 	if target <= data.stage then data.stageReady = nil; return false end   -- jamais de retour en arrière
 	if not self:CompanionIsHappy() then
 		if data.stageReady ~= target then
-			data.stageReady = target
+			data.stageReady, data.stageWish = target, nil
 			if celebrate ~= false then
 				local label = L[(ns.COMPANION_STAGES[target] or {}).label] or ""
-				self:Print(self:F("COMP_MSG_READY", self:CompanionName(), label, HAPPY_MIN))
+				self:Print(self:F("COMP_MSG_READY", self:CompanionName(), label))
 				self:CompanionSay("READY", { force = true, args = { label } })
 			end
 			if self.RefreshJournalTracker then pcall(self.RefreshJournalTracker, self) end
 		end
 		return false
 	end
-	data.stage, data.stageReady = target, nil
+	data.stage, data.stageReady, data.stageWish = target, nil, nil
 	self:CompanionApplyModel()
 	-- 3.1.0 : la plaque du médaillon forgé dit le stade (« stade · niveau »)
 	self:CompanionRefreshLabels()
@@ -2734,16 +2785,16 @@ function ns:CompanionRefreshHover()
 	local data = self:CompanionData()
 	hover.title:SetText(self:CompanionName())
 	hover.sub:SetText(Theme.T_GOLD .. self:CompanionStageLabel() .. "|r · " .. tostring(L["COMP_MOOD_" .. self:CompanionMood()]))
-	local happyMin = HAPPY_MIN
+	-- 3.5.0 : chaque état et le temps qui lui reste (barre : sur 60 minutes)
 	for _, key in ipairs(NEED_KEYS) do
 		local bar = hover.bars[key]
-		local value = tonumber(data.needs[key]) or 0
-		bar:SetValue(value / NEED_MAX)
-		-- comblée (compte pour son bonheur) : ambre ; sinon gris
-		local c = value >= happyMin and Theme.GOLD or Theme.MUTED_LIGHT
+		local minutes = self:CompanionStateMinutes(key)
+		bar:SetValue(math.min(1, minutes / 60))
+		local c = minutes > 0 and Theme.GOLD or Theme.MUTED_LIGHT
 		bar:SetColor(c[1], c[2], c[3], 1)
-		bar.value:SetText(math.floor(value + 0.5) .. " %")
+		bar.value:SetText(minutes > 0 and self:F("COMP_STATE_MIN", math.ceil(minutes)) or L.COMP_STATE_OFF)
 	end
+	if hover.wish then hover.wish:SetText(self:CompanionWishLine() or "") end
 	self:CompanionLayoutHover()
 end
 
@@ -3376,15 +3427,16 @@ end
 -- Repas : un gros coup de faim comblé au début, puis un peu chaque minute
 function ns:CompanionCheckAuras()
 	local eating, fed, drinkOnly = self:CompanionAuraState()
+	-- 3.5.0 : un repas (pas la boisson seule) ou « Bien nourri » : Repu
 	if eating and not self.companionEating then
-		self:CompanionAdd("hunger", 35)
+		if not drinkOnly then self:CompanionGrant("hunger") end
 		self:CompanionSay(drinkOnly and "DRINK" or "EAT", { cd = "eat" })
 	end
-	if fed and not self.companionFed then self:CompanionAdd("hunger", 15) end
+	if fed and not self.companionFed then self:CompanionGrant("hunger") end
 	self.companionEating, self.companionFed = eating, fed
 	local atCamp = self.AtCamp and self:AtCamp() or false
 	if atCamp and not self.companionAtCamp then
-		self:CompanionAdd("energy", 10)
+		self:CompanionGrant("energy")
 		self:CompanionSay("CAMP")
 	end
 	self.companionAtCamp = atCamp
@@ -3403,20 +3455,29 @@ function ns:CompanionTick(seconds)
 	local data = self:CompanionData()
 	local minutes = seconds / 60
 	local resting = self:CompanionResting()
-	-- toutes ses évolutions faites : il ne descend plus sous SERENE_FLOOR
-	local floor = (tonumber(data.stage) or 1) >= #ns.COMPANION_STAGES and SERENE_FLOOR or NEED_FLOOR
+	-- 3.5.0 : chaque état baisse (sa durée), jusqu'à 70 ; deux minutes
+	-- cumulées au repos (ville, auberge, camp) : Reposé
 	for _, key in ipairs(NEED_KEYS) do
 		local delta = -DECAY[key] * minutes * (self.CompanionDecayFactor and self:CompanionDecayFactor(key) or 1)
-		if key == "energy" and resting then delta = REST_GAIN * minutes end
-		if key == "hunger" and self.companionEating then delta = EAT_GAIN * minutes end
-		data.needs[key] = Clamp(data.needs[key] + delta, floor, NEED_MAX)
+		data.needs[key] = Clamp(data.needs[key] + delta, NEED_FLOOR, NEED_MAX)
 	end
-	-- prêt à évoluer : le repos ou le repas a pu combler la dernière envie
+	local rt0 = RT()
+	if resting and not data.sleepy then
+		rt0.restSec = (tonumber(rt0.restSec) or 0) + seconds
+		local need = ns.COMPANION_STATE.restSeconds / (self.CompanionRestSpeed and self:CompanionRestSpeed() or 1)
+		if rt0.restSec >= need then
+			rt0.restSec = 0
+			if not self:CompanionStateOn("energy") or self:CompanionStateMinutes("energy") < STATE_MINUTES - 1 then
+				self:CompanionGrant("energy")
+			end
+		end
+	end
+	-- prêt à évoluer : une envie comblée a pu ouvrir le stade
 	if data.stageReady and self:CompanionIsHappy() then self:CompanionCheckStage(PlayerLevel(), true) end
+	if self.CompanionWishTick then self:CompanionWishTick() end
 	-- arrivée en griffon : la fin d'un vol se voit au tick suivant
 	local rt = RT()
 	local onTaxi = Call(rawget(_G, "UnitOnTaxi"), "player") == true
-	if rt.onTaxi and not onTaxi then self:CompanionAdd("curiosity", CURIOSITY.flight) end
 	-- 3.1.1 : départ ou arrivée d'un vol : rangé ou rendu (filet compris)
 	if (rt.onTaxi == true) ~= onTaxi then self:CompanionTaxiChanged() end
 	rt.onTaxi = onTaxi
@@ -3444,19 +3505,16 @@ function ns:CompanionChatter(seconds)
 	self:CompanionTryNight()
 end
 
--- Envie : le besoin le plus bas sous le seuil, jamais en somnolant
+-- 3.5.0 : son envie (une à la fois, CompanionStates.lua) se dit au moment
+-- où elle naît ; il la redit au plus toutes les need_each secondes
 function ns:CompanionTryNeed()
 	local data = self:CompanionData()
 	if data.sleepy or InCombat() then return false end
+	local key = self.CompanionWish and self:CompanionWish()
+	if not key then return false end
 	local rt, now = RT(), Clock()
-	local lowKey, lowValue
-	for _, key in ipairs(NEED_KEYS) do
-		local value = data.needs[key]
-		local cooling = rt.cool["need_" .. key] and now < rt.cool["need_" .. key]
-		if value < NEED_LOW and not cooling and (not lowValue or value < lowValue) then lowKey, lowValue = key, value end
-	end
-	if not lowKey then return false end
-	return (self:CompanionSay("NEED_" .. lowKey, { cd = { "need", "need_" .. lowKey } }))
+	if rt.cool["need_" .. key] and now < rt.cool["need_" .. key] then return false end
+	return (self:CompanionSay("NEED_" .. key, { cd = { "need", "need_" .. key } }))
 end
 
 -- Astuces : rien avant TIP_GAP (+ un peu de hasard) depuis la précédente
@@ -3626,7 +3684,6 @@ function ns:CompanionPet()
 	if rt.seq and rt.seq.kind == "convo" then rt.seq = nil end
 	local wasSleepy = self:CompanionData().sleepy
 	self:CompanionWake(false)
-	self:CompanionAdd("mood", 8)
 	self:CompanionAnimate("cheer", 2)
 	-- réveillé en sursaut : une seule bulle, pas de bavardage
 	if wasSleepy then
@@ -3670,7 +3727,6 @@ function ns:CompanionOnLoot(message)
 	if type(self.ParseSelfLoot) ~= "function" then return end
 	local link = self:ParseSelfLoot(message)
 	if link and LinkQuality(link) >= 3 then   -- rare ou mieux : un vrai moment
-		self:CompanionAdd("mood", 10)
 		-- 3.2.0 : un bleu ou un violet, il crie son nom (CompanionShouts.lua)
 		if not (self.CompanionShoutLoot and self:CompanionShoutLoot(link, LinkQuality(link))) then
 			self:CompanionSay("LOOT", { cd = "loot" })
@@ -3708,17 +3764,14 @@ function ns:CompanionOnZone(newArea)
 	if newArea then
 		if mapID and not data.seenZones[mapID] then
 			data.seenZones[mapID] = true
-			self:CompanionAdd("curiosity", CURIOSITY.newZone)
+			self:CompanionGrant("curiosity")
 			self:CompanionSay("VIEW")
-		elseif mapID and RealTime() - (tonumber(data.zoneVisit[mapID]) or 0) >= CURIOSITY.revisitAfter then
-			-- de retour dans une zone pas vue depuis un moment
-			self:CompanionAdd("curiosity", CURIOSITY.revisit)
 		end
 		if mapID then data.zoneVisit[mapID] = RealTime() end
 		-- chaque entrée en donjon (pas les allers-retours de la porte)
 		if self.InInstance and self:InInstance() and (not rt.lastDungeon or now - rt.lastDungeon >= CURIOSITY.dungeonGap) then
 			rt.lastDungeon = now
-			self:CompanionAdd("curiosity", CURIOSITY.dungeon)
+			self:CompanionGrant("curiosity")
 			-- 2.13.0 : un mot en entrant (CompanionLines DUNGEON, et la voix)
 			local instance = Call(rawget(_G, "GetInstanceInfo"))
 			if type(instance) ~= "string" or instance == "" then instance = nil end
@@ -3732,11 +3785,7 @@ function ns:CompanionOnZone(newArea)
 		local key = tostring(mapID) .. ":" .. sub
 		if not data.seenSub[key] then
 			data.seenSub[key] = true
-			self:CompanionAdd("curiosity", CURIOSITY.newSub)   -- sans bulle : il y en aurait trop
-		elseif sub ~= rt.lastSub and (not rt.lastSubGain or now - rt.lastSubGain >= CURIOSITY.subzoneGap) then
-			-- bouger, tout simplement
-			rt.lastSubGain = now
-			self:CompanionAdd("curiosity", CURIOSITY.subzone)
+			self:CompanionGrant("curiosity")   -- sans bulle : il y en aurait trop
 		end
 		rt.lastSub = sub
 	end
@@ -3748,7 +3797,7 @@ local ELITE_CLASSES = { elite = true, rareelite = true, rare = true, worldboss =
 function ns:CompanionEliteKilled()
 	if not Call(rawget(_G, "UnitIsDead"), "target") then return false end
 	if not ELITE_CLASSES[ns.Plain(Call(rawget(_G, "UnitClassification"), "target")) or ""] then return false end
-	self:CompanionAdd("curiosity", CURIOSITY.elite)
+	self:CompanionGrant("curiosity")
 	return true
 end
 
@@ -3757,7 +3806,6 @@ function ns:CompanionOnLevel(level)
 	-- 3.1.0 : le niveau de l'événement (UnitLevel peut encore rendre l'ancien
 	-- pendant PLAYER_LEVEL_UP) : la plaque du médaillon forgé le lit
 	self.companionLevelSeen = { level = level, at = Clock() }
-	self:CompanionAdd("mood", 25)
 	self:CompanionWake(false)
 	local evolved = self:CompanionCheckStage(level, true)
 	self:CompanionRefreshLabels()
@@ -3772,7 +3820,7 @@ end
 
 function ns:CompanionOnStamp(stamp)
 	if type(stamp) ~= "table" or stamp.new == false then return end
-	self:CompanionAdd("curiosity", stamp.kind == "rare" and 15 or 10)
+	self:CompanionGrant("curiosity")
 	local fresh = self:CompanionCheckUnlocks()
 	-- la bulle du déblocage a priorité sur celle du tampon
 	if #fresh == 0 then self:CompanionSay("STAMP", { args = { tostring(stamp.name or "?") } }) end
@@ -3785,7 +3833,7 @@ function ns:CompanionOnKill(name)
 	local rt, now = RT(), Clock()
 	if rt.lastKill and now - rt.lastKill < 2 then return false end
 	rt.lastKill = now
-	self:CompanionAdd("mood", 1)
+	if self.CompanionHuntCount then self:CompanionHuntCount() end
 	self:CompanionEliteKilled()
 	if ns.Plain then name = ns.Plain(name) end
 	if type(name) ~= "string" or name == "" then name = nil end
@@ -3951,9 +3999,9 @@ function ns:CompanionNextUnlocks()
 	local stage = data.stage or self:CompanionStageFor(level)
 	local nextStage = ns.COMPANION_STAGES[stage + 1]
 	if data.stageReady and ns.COMPANION_STAGES[data.stageReady] then
-		local happy, total = self:CompanionHappyCount()
+		-- 3.5.0 : il ne lui manque qu'une envie comblée
 		list[#list + 1] = { label = L[ns.COMPANION_STAGES[data.stageReady].label], kind = "stage", id = data.stageReady,
-			stat = "happy", have = math.min(happy, total - 1), need = total, source = "player", ready = true }
+			stat = "wish", have = 0, need = 1, source = "player", ready = true }
 	elseif nextStage and level < nextStage.level then
 		list[#list + 1] = { label = L[nextStage.label], kind = "stage", id = stage + 1, stat = "level",
 			have = level, need = nextStage.level, source = "player" }
@@ -3971,7 +4019,7 @@ end
 ns:RegisterCallback("DEPARTURE", function(self)
 	if not ModuleOn() then return end
 	if self:CompanionFoodInBags() > 0 then
-		self:CompanionAdd("hunger", 10)
+		self:CompanionGrant("hunger")   -- 3.5.0 : partir avec de quoi manger : Repu
 		self:CompanionSay("DEPART")
 	else
 		self:CompanionSay("NOFOOD")
@@ -3979,7 +4027,6 @@ ns:RegisterCallback("DEPARTURE", function(self)
 end)
 ns:RegisterCallback("RETURN", function(self)
 	if not ModuleOn() then return end
-	self:CompanionAdd("energy", 5)
 	self:CompanionSay("RETURN")
 end)
 ns:RegisterCallback("STAMP", function(self, stamp)
@@ -4439,7 +4486,6 @@ local HANDLERS = {
 		if rt and rt.tutoPending then ns:CompanionStartTutorial(false) end
 	end,
 	QUEST_TURNED_IN        = function()
-		ns:CompanionAdd("mood", 12)
 		ns:CompanionWake(false)
 		ns:CompanionSay("QUEST")
 	end,

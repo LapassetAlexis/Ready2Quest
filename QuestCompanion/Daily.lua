@@ -287,7 +287,7 @@ function ns:InnStamp()
 	if inn.day == today then return nil end
 	inn.day = today
 	inn.card, inn.total = inn.card + 1, inn.total + 1
-	self:CompanionAdd("energy", ns.INN_ENERGY)
+	self:CompanionGrant("energy")   -- 3.5.0 : le tampon d'auberge du jour : Reposé
 	if self.CompanionFx then self:CompanionFx("hearts") end
 	if inn.card >= ns.INN_CARD then
 		inn.card = 0
@@ -492,7 +492,6 @@ local function Advance(self, mission, have)
 	companion.missionsDone = (tonumber(companion.missionsDone) or 0) + 1
 	self:MissionGrant(mission.source == "trait" and "trait" or "zone")
 	if self.WeeklyEvent then pcall(self.WeeklyEvent, self, "dailies", 1) end
-	self:CompanionAdd("curiosity", ns.MISSION_CURIOSITY)
 	if self.CompanionFx then self:CompanionFx("bounce") end
 	local daily = self:DailyData()
 	local all = true

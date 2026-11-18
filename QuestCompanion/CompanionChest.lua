@@ -265,7 +265,7 @@ function ns:ChestPick(zoneID, reward)
 	self:CompanionData().unlocked[key] = true
 	chest.opened, chest.reward = true, key
 	-- un coffre ouvert, c'est une découverte
-	if self.CompanionAdd and ns.COMPANION_CURIOSITY then self:CompanionAdd("curiosity", ns.COMPANION_CURIOSITY.chest) end
+	if self.CompanionGrant then self:CompanionGrant("curiosity") end
 	-- une nouvelle apparence se porte tout de suite : c'est le plaisir du coffre
 	if reward.kind == "app" then
 		self:CompanionData().appearance = reward.id

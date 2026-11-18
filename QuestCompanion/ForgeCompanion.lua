@@ -88,9 +88,12 @@ ns.FORGE_LEVEL_SEEN_S = 30
 ns.FORGE_MOOD_TAB = { h = 16, tuck = 3, pad = 9 }
 -- humeur -> plaque (Theme.FORGE_PLATE) et encre ; encre ≥ 7:1 sur les
 -- niveaux de la plaque sous un libellé (tests/modules/companion_forge.lua)
+-- 3.5.0 : quatre humeurs (Tranquille, Content, Joyeux, Rayonnant), et la somnolence
 ns.FORGE_MOOD_TINTS = {
-	radiant = { plate = "green",    ink = function() return Theme.FORGE_INK.green end },
+	radiant = { plate = "gold",     ink = function() return Theme.FORGE_INK.gold end },
+	joyful  = { plate = "green",    ink = function() return Theme.FORGE_INK.green end },
 	happy   = { plate = "bronze",   ink = function() return Theme.PARCHMENT end },
+	calm    = { plate = "arcane",   ink = function() return Theme.FORGE_INK.arcane end },
 	dreamy  = { plate = "arcane",   ink = function() return Theme.FORGE_INK.arcane end },
 	sleepy  = { plate = "disabled", ink = function() return Theme.TEXT end },
 }

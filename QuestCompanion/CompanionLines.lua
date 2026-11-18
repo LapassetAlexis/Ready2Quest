@@ -626,16 +626,17 @@ P.NEED_energy = {
 	{ "On fait une pause ? Je fais des rêves de coussins.", "Break time? I'm dreaming of cushions." },
 	{ "Si je ronfle en marchant, c'est normal.", "If I snore while walking, that's normal." },
 }
+-- 3.5.0 : le moral n'est plus une envie : ces répliques saluent l'arrivée en Rayonnant (CompanionStates.lua)
 P.NEED_mood = {
-	{ "Tu me fais un câlin ? Juste un petit.", "A cuddle? Just a tiny one?" },
-	{ "Raconte-moi une quête ! Une qui finit bien.", "Tell me a quest! One with a happy ending." },
-	{ "Une quête rendue, ça me ferait sourire.", "A quest turned in would make me smile." },
-	{ "Tu es là, c'est déjà bien. Mais un câlin…", "You're here, that's already great. But a cuddle…" },
-	{ "Une petite caresse, et je te pardonne tes chutes.", "One little pat and I forgive your falls." },
-	{ "Je boude un peu. Un câlin réglerait tout.", "I'm sulking a bit. A cuddle would fix it." },
-	{ "On rend une quête ? J'adore les fins heureuses.", "Turn in a quest? I love happy endings." },
-	{ "Fais-moi rire. Trébuche, tiens. Non, je plaisante.", "Make me laugh. Trip over, go on. No, kidding." },
-	{ "Clique sur moi. Juste pour voir si tu m'aimes.", "Click me. Just to check you love me." },
+	{ "Repu, reposé, éveillé : je rayonne !", "Fed, rested, alert: I'm radiant!" },
+	{ "Tout va bien. Vraiment tout. On capture ?", "All is well. Truly all. Shall we capture?" },
+	{ "Je brille ! Les brillantes n'ont qu'à bien se tenir.", "I'm glowing! Shinies had better watch out." },
+	{ "Ventre plein, pattes reposées, yeux grands ouverts.", "Full belly, rested paws, eyes wide open." },
+	{ "C'est le moment de lancer le filet, je le sens.", "Now's the time to throw the net, I can feel it." },
+	{ "Je ne pourrais pas être plus heureux. Enfin… si, un câlin.", "I couldn't be happier. Well… a cuddle, maybe." },
+	{ "Rayonnant ! Note-le dans ton carnet.", "Radiant! Write it in your journal." },
+	{ "Tout est parfait. Profitons-en avant que ça s'use.", "Everything's perfect. Let's enjoy it before it wears off." },
+	{ "Aujourd'hui, même les murlocs me semblent gentils.", "Today even murlocs seem nice to me." },
 }
 P.NEED_curiosity = {
 	{ "On n'a rien vu de neuf depuis longtemps… on explore ?", "Haven't seen anything new in ages… explore?" },

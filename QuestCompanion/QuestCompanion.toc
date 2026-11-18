@@ -116,5 +116,6 @@ SpecimenBond.lua
 SpecimenStudy.lua
 ShopWeek.lua
 ReserveBrowse.lua
+CompanionStates.lua
 NamesES.lua
 Locales_es.lua

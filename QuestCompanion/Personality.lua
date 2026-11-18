@@ -113,20 +113,20 @@ ns.RegisterDefaults({
 	companionTraitPick   = 0,     -- 0 : formé par ton jeu ; sinon PERSONALITY_ORDER[n]
 })
 
--- need : l'envie préférée ; fx : ampleur des mouvements ; exclusive : apparence
+-- need : l'envie préférée (3.5.0 : son état dure 60 minutes ; le moral n'est plus, ceux qui l'aimaient ont pris un état) ; fx : ampleur des mouvements ; exclusive : apparence
 local TRAITS = {
 	curious     = { need = "curiosity", fx = 1.2 },
 	glutton     = { need = "hunger",    fx = 1.0 },
-	daring      = { need = "mood",      fx = 1.4 },
+	daring      = { need = "hunger",    fx = 1.4 },
 	lazy        = { need = "energy",    fx = 0.6 },
-	teasing     = { need = "mood",      fx = 1.2 },
-	cuddly      = { need = "mood",      fx = 1.0 },
+	teasing     = { need = "curiosity", fx = 1.2 },
+	cuddly      = { need = "energy",    fx = 1.0 },
 	wise        = { need = "curiosity", fx = 0.7, exclusive = "owl" },
-	parrot      = { need = "mood",      fx = 1.3, exclusive = "parrot" },
+	parrot      = { need = "curiosity", fx = 1.3, exclusive = "parrot" },
 	mystic      = { need = "curiosity", fx = 0.8, exclusive = "wisp" },
 	zen         = { need = "energy",    fx = 0.5, exclusive = "turtle" },
 	sly         = { need = "curiosity", fx = 0.9, exclusive = "snake" },
-	mischievous = { need = "mood",      fx = 1.5, exclusive = "sprite" },
+	mischievous = { need = "curiosity", fx = 1.5, exclusive = "sprite" },
 	fearful     = { need = "energy",    fx = 1.3, exclusive = "chicken" },
 	tinker      = { need = "curiosity", fx = 0.9, exclusive = "squirrel_mech" },
 }
@@ -251,6 +251,12 @@ Wrap("CompanionAdd", function(original, self, key, amount)
 		if key == "curiosity" then self:PersonaScore("curious", amount * ns.PERSONALITY_SCORES.curiosity) end
 	end
 	return original(self, key, amount)
+end)
+-- 3.5.0 : un état obtenu forme aussi son caractère (Éveillé : curieux)
+Wrap("CompanionGrant", function(original, self, key, value)
+	local done = original(self, key, value)
+	if done and key == "curiosity" then self:PersonaScore("curious", 10 * ns.PERSONALITY_SCORES.curiosity) end
+	return done
 end)
 
 -- l'envie préférée baisse moins vite (CompanionTick)
@@ -387,7 +393,8 @@ function ns:PersonaTickNotice(now, state)
 	if not trait then return false end
 	local data = self:CompanionData()
 	if trait == "glutton" then
-		if (tonumber(data.needs.hunger) or 100) < 60 then return self:PersonaNotice("glutton") end
+		-- 3.5.0 : pas Repu
+		if self.CompanionStateOn and not self:CompanionStateOn("hunger") then return self:PersonaNotice("glutton") end
 	elseif trait == "lazy" then
 		if now - (state.lastRest or now) >= 2400 then return self:PersonaNotice("lazy") end
 	elseif trait == "cuddly" then
