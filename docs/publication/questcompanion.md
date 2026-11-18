@@ -1,7 +1,7 @@
 <!--
 Fiche de la page QuestCompanion sur CurseForge et Wago (à copier à la main, voir docs/PUBLIER.md).
 Summary EN (obligatoire en anglais sur CurseForge, 256 caractères max, ici 201) :
-  Catch the monsters you defeat in WoW Forever: unique 1-3 star specimens, rare shinies, player trades, a companion that hunts and talks with you, 180 achievements, 40 titles and a travel journal. FR/EN.
+  Catch the monsters you defeat in WoW Forever: unique 1-3 star specimens, rare shinies, player trades, a companion that hunts and talks with you, 187 achievements, 40 titles and a travel journal. FR/EN.
 Catégories : Companions (principale), Quests & Leveling (additionnelle). Si Companions n'existe pas : Miscellaneous (principale).
 Licence : GPLv3. Logo : docs/publication/logo_questcompanion.png (le médaillon bleu et or de la 3.1 : à remettre sur les deux stores).
 Relation : Optional Dependency -> Ready2Quest (facultatif).
@@ -15,6 +15,22 @@ Une seule description, anglais d'abord puis français (règle des stores : l'ang
 ![A shiny creature tries its luck against the net](https://media.forgecdn.net/attachments/2161/225/f-gif.gif)
 
 For **WoW Forever** (1.60). English, French and Spanish. Free and standalone (`/qc`). Pairs well with [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
+
+## New in 3.4: your travel partner
+- **A Reserve you can sort finely**: search by name, nickname or zone; a **Filters** panel (stars, version, size, personality, type, rank, zone, catch date, bond, state) with a count on every chip; sort by stars, date, name, size, bond, duplicates or value, both ways; ready-made views (Duplicates, Releasable, Better than Codex, Recent, Protected) and your own **My view**. The same panel helps you pick what to offer in a trade.
+- **Batch selection**: the **Select** button, or Ctrl + click and Shift + click on tiles; protect, trade (3 at most) or release in one go. Shinies and protected specimens are left aside when releasing.
+- **Protect** a specimen (lock) and give it a **nickname** (15 glitter, free once at Inseparable bond).
+- **A bond with your companion**: the specimen you wear bonds with you while you travel, feed it treats, pet it, finish quests and capture (Stranger, Familiar, Partner, Loyal, Inseparable; how far depends on its stars). The bond strengthens its personality, up to ×2. A bonded specimen stays in your Codex: a better one waits in the Reserve, and replacing it asks first.
+- **Personality and size matter**: each personality has an upside and, from Familiar bond, a downside; size too (big ones help with elites and rares, small ones calm wariness). At Stranger bond a specimen is worth exactly what it was before. The specimen card shows it all: upside in green, downside in orange, size and its index (75 to 125), bond.
+- **Species study** on the Creatures page: caught, three stars, 5 catches, 3 sizes, 3 personalities; glitter for each task and for a mastered species, size records, a **To study** filter and seven new achievements.
+- **This week's Trainer's Stall**: a daily stock of capture aids, Reserve slots at 40 then 20 more each time (150 at most), two cosmetics that change every week, and **three weekly orders** (deliver a specimen for 12 to 16 glitter; all three: a free cosmetic).
+- **A bigger Reserve**: 50 slots to start with, and releasing pays more (2 / 4 / 10 glitter, 25 for a shiny).
+
+![The Reserve: search, filters, sorting, views, and the specimen card with its upside, downside and bond](https://media.forgecdn.net/attachments/2229/334/qc34-reserve-png.png)
+
+![The Trainer's Stall: daily stock, this week's arrivals and orders](https://media.forgecdn.net/attachments/2229/335/qc34-echoppe-png.png)
+
+![Creatures: species study, the To study filter and size records](https://media.forgecdn.net/attachments/2229/336/qc34-creatures-png.png)
 
 ## New in 3.3: in Spanish
 - **Quest Companion speaks Spanish** on esES and esMX clients: interface, every companion line, joke and shout, titles, jukebox and place lore. Creature and quest names come from the game's official Spanish names.
@@ -46,12 +62,6 @@ For **WoW Forever** (1.60). English, French and Spanish. Free and standalone (`/
 
 ![The preparation card: quality, odds, aids, Throw or Skip](https://media.forgecdn.net/attachments/2192/335/qc30-carte-capture-png.png)
 
-![The Reserve: your specimens with their size, character and origin](https://media.forgecdn.net/attachments/2192/331/qc30-reserve-png.png)
-
-![The Trainer's Stall: spend your glitter](https://media.forgecdn.net/attachments/2192/332/qc30-echoppe-png.png)
-
-![Creatures: every creature, numbered, hidden until you meet it](https://media.forgecdn.net/attachments/2192/333/qc30-creatures-png.png)
-
 ## The travel companion
 
 - **It talks**: short bubbles, never in combat, when you kill, eat, rest, talk to an NPC, discover a zone, sit by a campfire… Your captured creature talks like what it is (beast, undead, demon, elemental, dragonkin…), with a joke now and then (`/qc joke`) and a line of lore on your first arrival somewhere notable. Lore text from [Warcraft Wiki](https://warcraft.wiki.gg) (CC BY-SA 4.0), selected and translated by [Spoken](https://github.com/rusty-key/spoken-wow) by Rusty Key — thanks!
@@ -72,7 +82,7 @@ For **WoW Forever** (1.60). English, French and Spanish. Free and standalone (`/
 - **Exploration**: every zone and its percentage. For the chosen zone: its milestones (treats, capture aids, a Feast), its places, the herbs and ores for your professions, its quests your character can do, and its chest. A 100% zone opens a chest where you **choose** a cosmetic item.
 - **Prefilled zones**: creatures, gathering nodes and quests of every zone are known from your first visit (Forever islands and zones included). No other addon needed.
 - **Missions**: two of the day in your zone plus one from your companion's personality, three of the week (always a shiny hunt among them); they reward treats, capture aids and glitter. An inn loyalty card, too.
-- **Achievements**: 180, with points, and 40 titles ("Trainer Dyokrion", "Dyokrion the Tracker"…) to show on your trainer card. What you did before is awarded silently at login, and the **Y** key opens them (if it was free).
+- **Achievements**: 187, with points, and 40 titles ("Trainer Dyokrion", "Dyokrion the Tracker"…) to show on your trainer card. What you did before is awarded silently at login, and the **Y** key opens them (if it was free).
 - **Jukebox**: the game's own music on demand, 434 tracks with search, favourites, playlists and shuffle (`/qc juke`).
 - **An on-screen tracker** with your closest goals.
 
@@ -103,6 +113,16 @@ Free software, **GPL-3.0**. Zone data (creatures, gathering, quests) is generate
 ![Une brillante tente sa chance contre le filet](https://media.forgecdn.net/attachments/2161/225/f-gif.gif)
 
 Pour **WoW Forever** (1.60). En français, en anglais et en espagnol. Gratuit et autonome (`/qc`). Va très bien avec [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
+
+## Nouveau en 3.4 : ton compagnon de route
+- **Une Réserve qui se trie finement** : recherche par nom, surnom ou zone ; un panneau **Filtres** (étoiles, version, taille, caractère, type, rang, zone, date de capture, lien, état) avec un compte sur chaque puce ; tri par étoiles, date, nom, taille, lien, doublons ou valeur, dans les deux sens ; des vues toutes prêtes (Doublons, Relâchables, Meilleurs que le Codex, Récents, Protégés) et **Ma vue**, la tienne. Le même panneau aide à choisir quoi proposer dans un échange.
+- **Sélection par lot** : le bouton **Sélection**, ou Ctrl + clic et Maj + clic sur les vignettes ; protéger, échanger (3 au plus) ou relâcher d'un coup. Les brillants et les spécimens protégés sont laissés de côté au relâcher.
+- **Protège** un spécimen (cadenas) et donne-lui un **surnom** (15 paillettes, offert une fois au lien Inséparable).
+- **Un lien avec ton compagnon** : le spécimen que tu portes se lie à toi quand tu voyages, lui donnes des friandises, le caresses, finis des quêtes et captures (Inconnu, Familier, Complice, Fidèle, Inséparable ; jusqu'où dépend de ses étoiles). Le lien renforce son caractère, jusqu'à ×2. Un spécimen lié reste au Codex : un meilleur attend en Réserve, et le remplacer se demande d'abord.
+- **Le caractère et la taille comptent** : chaque caractère a un atout et, dès le lien Familier, un revers ; la taille aussi (les grands aident contre les élites et les rares, les petits calment la méfiance). Au lien Inconnu, un spécimen vaut exactement ce qu'il valait avant. La fiche du spécimen montre tout : atout en vert, revers en orange, taille et son indice (75 à 125), lien.
+- **Étude d'espèce** dans la page Créatures : capturée, trois étoiles, 5 captures, 3 tailles, 3 caractères ; des paillettes pour chaque tâche et pour une espèce maîtrisée, des records de taille, un filtre **À étudier** et sept nouveaux hauts faits.
+- **L'Échoppe de la semaine** : un stock par jour pour les aides de capture, des places de Réserve à 40 puis 20 de plus à chaque achat (150 au plus), deux cosmétiques qui changent chaque semaine, et **trois commandes par semaine** (livre un spécimen pour 12 à 16 paillettes ; les trois : un cosmétique offert).
+- **Une Réserve plus grande** : 50 places au départ, et relâcher rapporte plus (2 / 4 / 10 paillettes, 25 pour un brillant).
 
 ## Nouveau en 3.3 : en espagnol
 - **Quest Companion parle espagnol** sur les clients esES et esMX : interface, toutes les répliques, blagues et cris du compagnon, titres, juke-box et histoire des lieux. Les noms des créatures et des quêtes sont les noms officiels espagnols du jeu.
@@ -148,7 +168,7 @@ Pour **WoW Forever** (1.60). En français, en anglais et en espagnol. Gratuit et
 - **Exploration** : toutes les zones et leur pourcentage. Pour la zone choisie : ses paliers (friandises, aides de capture, un Festin), ses lieux, les herbes et minerais de tes métiers, ses quêtes faisables par ton personnage, et son coffre. Une zone à 100 % ouvre un coffre où tu **choisis** un objet cosmétique.
 - **Zones préremplies** : créatures, points de récolte et quêtes de chaque zone sont connus dès ta première visite (îles et zones propres à Forever comprises). Aucun autre addon requis.
 - **Missions** : deux du jour dans ta zone et une de son caractère, trois de la semaine (dont toujours une chasse au brillant) ; elles rapportent friandises, aides de capture et paillettes. Et une carte de fidélité des auberges.
-- **Hauts faits** : 180, avec des points, et 40 titres (« Dresseur Dyokrion », « Dyokrion le Traqueur »…) à afficher sur ta fiche de dresseur. Ce que tu as déjà fait est attribué en silence à la connexion, et la touche **Y** les ouvre (si elle était libre).
+- **Hauts faits** : 187, avec des points, et 40 titres (« Dresseur Dyokrion », « Dyokrion le Traqueur »…) à afficher sur ta fiche de dresseur. Ce que tu as déjà fait est attribué en silence à la connexion, et la touche **Y** les ouvre (si elle était libre).
 - **Juke-box** : les musiques du jeu à la demande, 434 morceaux avec recherche, favoris, listes et lecture au hasard (`/qc juke`).
 - **Un suivi à l'écran** de tes objectifs les plus proches.
 
