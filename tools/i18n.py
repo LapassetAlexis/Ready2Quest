@@ -232,6 +232,15 @@ def qc_extras(folder):
             out.append("\t[%s] = { m = %s, f = %s }," % (code, lua_string(t["m"]), lua_string(t.get("f") or t["m"])))
         out.append("}")
         out.append("")
+    else:
+        # sans lot misc : les tables déjà écrites restent (juke-box, titres)
+        path = os.path.join(ROOT, "QuestCompanion", "Locales_es.lua")
+        if os.path.exists(path):
+            current = open(path, encoding="utf-8").read()
+            m = re.search(r"-- groupes du juke-box.*?\nns\.FEAT_TITLES_ES = \{.*?\n\}\n", current, re.S)
+            if m:
+                out.extend(m.group(0).rstrip("\n").split("\n"))
+                out.append("")
     lore = os.path.join(folder, "lore-001.es.json")
     if os.path.exists(lore):
         texts = json.load(open(lore, encoding="utf-8"))
