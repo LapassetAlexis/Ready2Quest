@@ -4966,7 +4966,7 @@ ns.RegisterLocaleStrings("es", {
 	["SHOP_DIS_owned"] = "Ya lo tienes",
 	["SHOP_DIS_short"] = "Te faltan %d de purpurina",
 	["SHOP_FULL"] = "Bolsa llena (%d/%d): usa alguna antes.",
-	["SHOP_NOTE"] = "Cómo ganar purpurina: libera ejemplares (1 / 3 / 8, brillante 20), misiones (3 por misión diaria, más por las tres y por las semanales), hitos de zona (2).",
+	["SHOP_NOTE"] = "Cómo ganar purpurina: libera ejemplares (2 / 4 / 10, brillante 25), misiones (3 por misión diaria, más por las tres y por las semanales), hitos de zona (2).",
 	["SHOP_OFF"] = "La captura está desactivada en las opciones.",
 	["SHOP_OWNED"] = "Tuyo",
 	["SHOP_OWNED_TIP"] = "Ya es tuyo.",

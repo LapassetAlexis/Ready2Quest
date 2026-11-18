@@ -515,11 +515,11 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 		return lines[1]
 	end
 	local buy = rows.sifflet.buy
-	Want(style .. " : Sifflet (40) pour 30 : désactivé, grisé, « Il te manque 10 paillettes » au survol",
+	Want(style .. " : Sifflet (35) pour 30 : désactivé, grisé, « Il te manque 5 paillettes » au survol",
 		rows.sifflet.state == "short" and not buy:IsEnabled() and buy.disabledLook and not buy.inactive
-		and buy.qcEnabled == false and buy.size == "sm" and TipOf(buy) == "Il te manque 10 paillettes",
+		and buy.qcEnabled == false and buy.size == "sm" and TipOf(buy) == "Il te manque 5 paillettes",
 		tostring(buy:IsEnabled()) .. " / " .. tostring(TipOf(buy)))
-	Want(style .. " : prix au-dessus du solde : tous désactivés (40, 50, 60, 80), à portée : actifs (5, 15)",
+	Want(style .. " : prix au-dessus du solde : tous désactivés (35, 40, 60, 80), à portée : actifs (4, 12)",
 		not rows.slots.buy:IsEnabled() and not rows.frame_glitter.buy:IsEnabled() and not rows.bg_starfall.buy:IsEnabled()
 		and rows.appat.buy:IsEnabled() and rows.lasso.buy:IsEnabled() and not rows.appat.buy.disabledLook)
 	NS:CaptureData().items = NS:CaptureData().items or {}
@@ -542,13 +542,13 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 	-- le solde bouge, page ouverte : les boutons suivent (gain, puis achat)
 	NS:PaillettesAdd(20, "test")
 	if Mock.RunTimers then Mock:RunTimers() end
-	Want(style .. " : +20 paillettes, page ouverte : Sifflet et places (50) actifs, pastille à 50", buy:IsEnabled()
+	Want(style .. " : +20 paillettes, page ouverte : Sifflet et places (40) actifs, pastille à 50", buy:IsEnabled()
 		and rows.slots.buy:IsEnabled() and not rows.frame_glitter.buy:IsEnabled() and sv.balance.value:GetText() == "50",
 		tostring(buy:IsEnabled()) .. " / " .. tostring(sv.balance.value:GetText()))
 	rows.slots.buy:GetScript("OnClick")(rows.slots.buy)
 	rows.slots.yes:GetScript("OnClick")(rows.slots.yes)
-	Want(style .. " : après l'achat des places (50) : solde 0, tout désactivé", NS:Paillettes() == 0
-		and not buy:IsEnabled() and not rows.lasso.buy:IsEnabled() and TipOf(rows.lasso.buy) == "Il te manque 15 paillettes")
+	Want(style .. " : après l'achat des places (40) : solde 10, sifflet et lasso désactivés", NS:Paillettes() == 10
+		and not buy:IsEnabled() and not rows.lasso.buy:IsEnabled() and TipOf(rows.lasso.buy) == "Il te manque 2 paillettes")
 	NS:PaillettesAdd(30, "test")
 	if Mock.RunTimers then Mock:RunTimers() end
 	rows.lasso.buy:GetScript("OnClick")(rows.lasso.buy)

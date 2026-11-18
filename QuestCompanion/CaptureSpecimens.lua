@@ -7,9 +7,9 @@
 --   * la qualité est tirée AU COUP FATAL, selon le rang du monstre
 --     (CAPTURE_QUALITY_ODDS), et rend la capture plus dure (CAPTURE_QUALITY_FACTOR) ;
 --   * le CODEX garde, par espèce et par version (normale, brillante), le
---     spécimen de référence ; les autres vont dans la RÉSERVE (20 places au
+--     spécimen de référence ; les autres vont dans la RÉSERVE (50 places au
 --     départ, + places achetées plus tard) ; relâcher un spécimen de la
---     Réserve rend des PAILLETTES (1 / 3 / 8 / 20) ;
+--     Réserve rend des PAILLETTES (2 / 4 / 10 / 25) ;
 --   * le filet ne vient plus que si ça vaut le coup (CaptureQueue.lua,
 --     CaptureQueueReason) : espèce nouvelle, brillante, spécimen meilleur que
 --     le tien, espèce épinglée (liste de chasse), ou MODE CHASSE ;
@@ -67,7 +67,7 @@
 --   ns:SpecimenSetReference(id) -> true | false, raison ("missing"|"already")
 --       « Mettre au Codex » : il devient la référence, l'ancienne va en Réserve
 --   ns:SpecimenWorn(id) -> bool (référence portée comme apparence par un personnage)
---   ns:SpecimenReleaseValue(id|spec) -> paillettes rendues (1/3/8, brillant 20)
+--   ns:SpecimenReleaseValue(id|spec) -> paillettes rendues (2/4/10, brillant 25)
 --   ns:SpecimenCanRelease(id) -> true | false, raison ("missing"|"reference"|"worn"|"better")
 --       2.15.0 : "better" = meilleur que la référence du Codex (relâcher ne
 --       fait jamais baisser tes étoiles : « Mets-le au Codex avant »)
@@ -116,7 +116,8 @@ if ns.blocked then return end
 local L = ns.L
 
 ns.SPECIMEN_SCHEMA = 1
-ns.CAPTURE_RESERVE_BASE = 20
+-- 3.3.1 : 20 -> 50 (la Réserve se remplissait en une demi-heure de chasse)
+ns.CAPTURE_RESERVE_BASE = 50
 -- qualité tirée au coup fatal (en %), selon le rang du monstre
 ns.CAPTURE_QUALITY_ODDS = {
 	normal = { 65, 28, 7 },
@@ -129,7 +130,8 @@ ns.CAPTURE_QUALITY_GROUP = { trivial = "normal", minus = "normal", normal = "nor
 ns.CAPTURE_QUALITY_FACTOR = { 1, 0.8, 0.6 }
 -- (guide, tutoriel : les chances d'un monstre ordinaire, comme avant 2.15)
 -- relâcher : paillettes par étoiles (un brillant vaut toujours `shiny`)
-ns.PAILLETTES_RELEASE = { 1, 3, 8, shiny = 20 }
+-- 3.3.1 : 1 / 3 / 8 / 20 -> 2 / 4 / 10 / 25 (~3 en moyenne au lieu de ~2)
+ns.PAILLETTES_RELEASE = { 2, 4, 10, shiny = 25 }
 -- mode chasse : durées proposées (minutes), comme la sourdine
 ns.HUNT_CHOICES = { 5, 15, 30, 60 }
 -- méfiance : −15 % par capture de la même espèce dans la journée, plancher ×0,4

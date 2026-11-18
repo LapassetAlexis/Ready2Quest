@@ -37,12 +37,13 @@ local Theme = ns.Theme
 -- ---------------------------------------------------------------------------
 -- la paillette : l'icône du diamant du client (relevée dans le listfile de Forever)
 ns.PAILLETTES_ICON = "Interface\\Icons\\INV_Misc_Gem_Diamond_02"
--- l'échoppe : prix en paillettes (à équilibrer)
+-- l'échoppe : prix en paillettes ; 3.3.1 : aides 5/15/40 -> 4/12/35,
+-- places +5 pour 50 -> +10 pour 40 (~13 relâchers)
 ns.PAILLETTES_SHOP = {
-	{ id = "appat",   kind = "aid", aid = "appat",   price = 5,  icon = "Interface\\Icons\\INV_Misc_Food_14" },
-	{ id = "lasso",   kind = "aid", aid = "lasso",   price = 15, icon = "Interface\\Icons\\Spell_Nature_StrangleVines" },
-	{ id = "sifflet", kind = "aid", aid = "sifflet", price = 40, icon = "Interface\\Icons\\INV_Misc_Horn_01" },
-	{ id = "slots",   kind = "slots", slots = 5,     price = 50, icon = "Interface\\Icons\\INV_Misc_Bag_10" },
+	{ id = "appat",   kind = "aid", aid = "appat",   price = 4,  icon = "Interface\\Icons\\INV_Misc_Food_14" },
+	{ id = "lasso",   kind = "aid", aid = "lasso",   price = 12, icon = "Interface\\Icons\\Spell_Nature_StrangleVines" },
+	{ id = "sifflet", kind = "aid", aid = "sifflet", price = 35, icon = "Interface\\Icons\\INV_Misc_Horn_01" },
+	{ id = "slots",   kind = "slots", slots = 10,    price = 40, icon = "Interface\\Icons\\INV_Misc_Bag_10" },
 	{ id = "frame_glitter", kind = "cosmetic", cos = "frame", cosId = "shop_glitter", price = 80,
 		icon = "Interface\\Icons\\INV_Misc_Gem_Diamond_02" },
 	{ id = "bg_starfall",   kind = "cosmetic", cos = "bg",    cosId = "shop_starfall", price = 60,
@@ -139,7 +140,7 @@ local FR = {
 	SHOP_SLOTS_DESC      = "Ta Réserve compte %d places.",
 	SHOP_COS_frame       = "Cadre du compagnon, pour tous tes personnages.",
 	SHOP_COS_bg          = "Fond du compagnon, pour tous tes personnages.",
-	SHOP_NOTE            = "Gagner des paillettes : relâcher des spécimens (1 / 3 / 8, brillant 20), les missions (3 par mission du jour, plus aux trois et à la semaine), les paliers de zone (2).",
+	SHOP_NOTE            = "Gagner des paillettes : relâcher des spécimens (2 / 4 / 10, brillant 25), les missions (3 par mission du jour, plus aux trois et à la semaine), les paliers de zone (2).",
 	SHOP_BOUGHT          = "Échoppe du dresseur : %s (−%d paillettes, reste %d).",
 	SHOP_REQ             = "Échoppe du dresseur : %d paillettes",
 	PAILLETTES_MILESTONE_GAIN = "+%d paillettes : palier de zone (%d %%).",
@@ -215,7 +216,7 @@ local EN = {
 	SHOP_SLOTS_DESC      = "Your Reserve has %d slots.",
 	SHOP_COS_frame       = "Companion frame, for all your characters.",
 	SHOP_COS_bg          = "Companion background, for all your characters.",
-	SHOP_NOTE            = "Earning glitter: release specimens (1 / 3 / 8, shiny 20), missions (3 per daily mission, more for all three and weekly ones), zone milestones (2).",
+	SHOP_NOTE            = "Earning glitter: release specimens (2 / 4 / 10, shiny 25), missions (3 per daily mission, more for all three and weekly ones), zone milestones (2).",
 	SHOP_BOUGHT          = "Trainer's Stall: %s (−%d glitter, %d left).",
 	SHOP_REQ             = "Trainer's Stall: %d glitter",
 	PAILLETTES_MILESTONE_GAIN = "+%d glitter: zone milestone (%d%%).",
