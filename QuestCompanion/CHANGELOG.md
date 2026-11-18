@@ -1,5 +1,18 @@
 # QuestCompanion
 
+## 3.6.0 — Toujours un but
+
+- **La première heure** : la visite de la capture suit la capture express (un clic lance, Maj + clic vise toute la file, Ctrl + clic ouvre la carte). Après ta toute première capture, ton compagnon te propose de partir avec elle (« Partir avec lui » / « Plus tard »). Une bulle explique l'étude d'espèce la première fois. Six astuces nouvelles (mode chasse, Réserve, étude, lien, échoppe, commandes), la capture en premier.
+- **Plus de page vide qui ne dit rien** : Réserve vide (avec un bouton « Mode chasse (30 min) »), Créatures sans capture, Échoppe à zéro paillette. Le Guide gagne cinq sections (Réserve et paillettes, Échoppe et commandes, Lien, Étude, Échanges). Un seul vocabulaire partout : Créatures, Codex, Réserve, spécimen ; la taille du compagnon à l'écran devient « Échelle ».
+- **Le suivi à l'écran** propose un but en plus de tes objectifs : l'envie de ton compagnon, une commande que ta Réserve peut livrer, la tâche d'étude la plus proche, les créatures à capturer dans la zone (et le sceau quand il en reste 10 ou moins).
+- **Des buts longs** : rangs de dresseur au-delà de 500 espèces (750, 1 000, 1 500, 2 000, 2 500, 3 000 et « Tout Azeroth »), un titre chacun ; fonds et cadres pour ta fiche de dresseur (les 7 récompenses « à venir » sont livrées, et les autres joueurs les voient) ; médailles de type, paliers 4 et 5 ; les hauts faits de l'étude et du lien ont enfin leurs récompenses (titres « le Savant » et « l'Inséparable », un ornement, un cadre, un fond, une aide).
+- **Espèce maîtrisée** : un liseré d'or dans la liste des Créatures, et en chasse elle se méfie moins.
+- **Missions** : capturer une créature qui n'est pas de taille Normale, gagner 5 points de lien, finir une tâche d'étude, être Rayonnant 10 minutes, livrer une commande ; la mission du caractère change chaque jour.
+- **Échoppe** : les cosmétiques d'arrivage s'achètent hors de leur semaine, une fois et demie plus cher ; le mécénat (100 paillettes le point de mécène, titres à 10, 50 et 100 points) ; une relance de commande en plus de la gratuite : 10 paillettes.
+- **Relâcher** : au-delà de 100 paillettes de relâcher dans la journée, il paie moitié (la fiche le dit). Les sceaux rapportent 15 paillettes à partir du troisième d'un biome.
+
+*English:* the first hour: the capture tour follows express capture, your companion offers to travel with your very first capture, a bubble explains species study, six new tips with capture first. No more silent empty pages (Reserve with a hunt-mode button, Creatures, Stall); five new Guide sections; one vocabulary everywhere. The on-screen tracker adds a goal: your companion's wish, a deliverable order, the closest study task, creatures left to catch in the zone. Long goals: trainer ranks beyond 500 species up to "All of Azeroth", backgrounds and frames for your trainer card (shown to other players too), type medals tiers 4 and 5, rewards for the study and bond achievements. Mastered species get a gold edge and are less wary in hunt mode. New missions. Stall: off-week arrival cosmetics at 1.5× the price, patronage (100 glitter per patron point, titles at 10, 50 and 100), extra order rerolls for 10 glitter. Releasing pays half beyond 100 glitter of releases in a day; seals pay 15 glitter from the third of a biome.
+
 ## 3.5.1 — Correctifs
 
 - **Caresse renforcée** (Câlin, démons) : elle allonge chaque état une seule fois, jusqu'à ce qu'il soit regagné (avant, une caresse toutes les 15 secondes gardait Rayonnant pour toujours).
