@@ -1510,6 +1510,18 @@ Snap.scenes["qc-journal-reserve"] = function(T) return OwnDraws(T, function(T)
 	return frame, "QuestCompanion : carnet, page Réserve"
 end) end
 
+-- 3.2.1 : Réserve presque pleine, « Faire de la place » sur sa rangée
+Snap.scenes["qc-journal-reserve-full"] = function(T) return OwnDraws(T, function(T)
+	local frame = QCJournal(T, "reserve", function(ns)
+		local npcs = { 3236, 3110, 3242, 3415, 3255 }
+		for index = 1, (ns.RESERVE_MAX or 30) - 1 do
+			ns:SpecimenAdd({ npc = npcs[index % #npcs + 1], stars = index % 3 + 1, name = "Spécimen " .. index,
+				origin = "capture", by = "Testeur", zone = 1413, at = 1793000000 + index })
+		end
+	end)
+	return frame, "QuestCompanion : carnet, Réserve presque pleine (Faire de la place)"
+end) end
+
 -- 3.1.0 : page Juke-box
 Snap.scenes["qc-journal-juke"] = function(T) return OwnDraws(T, function(T)
 	local frame = QCJournal(T, "juke")
