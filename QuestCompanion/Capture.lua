@@ -882,7 +882,6 @@ function ns:CaptureResolve(rolling)
 		if not rolling.starsBefore then self:Print(self:F("CAPTURE_MSG_OK", target.name)) end
 		self:CompanionSay(target.shiny and "CAPTURE_SHINY" or "CAPTURE_OK", { force = true, args = { target.name } })
 		if self.CompanionFx then self:CompanionFx("bounce"); self:CompanionFx("hearts") end
-		self:CompanionAdd("mood", 5)
 		if fresh and data.count % ns.CAPTURE_GIFT_EVERY == 0 then
 			-- besace de sifflets pleine : le message le dit (CaptureGrant)
 			local result = self:CaptureGrant("sifflet", { quiet = true, silent = true })

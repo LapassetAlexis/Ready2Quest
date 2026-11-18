@@ -68,7 +68,8 @@ do
 		math.random = EF.random
 		local data = NS:CompanionData()
 		data.tutoDone, data.stage = true, 1
-		for key in pairs(data.needs) do data.needs[key] = 80 end
+		-- 3.5.0 : aucun état actif (70) : pas de Rayonnant, les effets de type seuls
+		for key in pairs(data.needs) do data.needs[key] = 70 end
 		NS:TreatData().treatsInit = true
 		NS:DB().companionCaptureAnim = false
 		NS:CompanionUpdateVisibility()
@@ -150,15 +151,15 @@ do
 		Check("[EFF] Humanoïde élite : capture des Humanoïdes +15 %, friandise en plus aux paliers", e.typeKey == "humanoid"
 			and e.hunt.id == "capture_humanoid" and Near(e.hunt.value, 0.15) and e.hunt.label == "capture des Humanoïdes +15 %"
 			and e.comfort.id == "treat_zone" and Near(e.comfort.value, 0.225), e.hunt.label)
+		-- 3.5.0 : les envies ne retirent plus rien ; le second nombre compte les états actifs
 		local needs = NS:CompanionData().needs
-		local full = Near(NS:CompanionEffectNeeds(), 1)
-		needs.hunger, needs.energy = 30, 49
+		local factor0, ok0 = NS:CompanionEffectNeeds()
+		needs.hunger, needs.energy = 100, 100
 		local factor, ok = NS:CompanionEffectNeeds()
-		local follows = Near(NS:CompanionEffectsFor("cap:5002").hunt.value, 0.15 * 0.75)
-		for key in pairs(needs) do needs[key] = 15 end
-		Check("[EFF] envies : ≥ 50 % pleine force, deux en dessous 75 % (la valeur suit), jamais sous la moitié", full
-			and Near(factor, 0.75) and ok == 2 and follows and Near(NS:CompanionEffectNeeds(), 0.5))
-		for key in pairs(needs) do needs[key] = 80 end
+		local follows = Near(NS:CompanionEffectsFor("cap:5002").hunt.value, 0.15)
+		Check("[EFF] états : force toujours entière (aucun, deux actifs), le compte des états suit", Near(factor0, 1)
+			and ok0 == 0 and Near(factor, 1) and ok == 2 and follows)
+		for key in pairs(needs) do needs[key] = 70 end
 		EF.Add(5005, nil, "elite")
 		EF.Add(5006, "Dragonkin", "worldboss", true)
 		local general = NS:CompanionEffectsFor("cap:5005").mascot == true
@@ -242,6 +243,14 @@ do
 		Check("[EFF] sifflet : toujours assuré ; plafond de 95 % tenu", chance == 1 and sure == true
 			and Pct({ class = "normal", level = 1, type = "Humanoïde" }) <= 95
 			and math.floor(NS:CaptureChance({ class = "normal", level = 1, type = "Humanoïde" }, "lasso", 60) * 100 + 0.5) == 95)
+		-- Rayonnant (les trois états) : capture ×1,10 après les effets, plafond 95 % tenu
+		local needs = NS:CompanionData().needs
+		for key in pairs(needs) do needs[key] = 100 end
+		local radiant = Pct({ class = "normal", level = 20, type = "Humanoïde" }) == 66
+			and Pct({ class = "normal", level = 1, type = "Humanoïde" }) == 95
+		for key in pairs(needs) do needs[key] = 70 end
+		Check("[EFF] Rayonnant : capture ×1,10 après les effets (60 → 66 %), jamais au-dessus de 95 %", radiant
+			and Pct({ class = "normal", level = 20, type = "Humanoïde" }) == 60)
 		EF.Add(5202, "Démon", "elite")
 		EF.Take("cap:5202")
 		Check("[EFF] Démon élite : élites ×1,18 (25 → 30 %), pas sur un normal", Pct({ class = "elite", level = 20, type = "Bête" }) == 30
@@ -256,6 +265,13 @@ do
 		EF.Add(5204, "Mort-vivant", "rare")
 		EF.Take("cap:5204")
 		local undead = Near(NS:ShinyChance("normal", 0, "undead"), 1.3 / 150) and Near(NS:ShinyChance("normal", 0, "beast"), 1 / 150)
+		-- Rayonnant : la brillante ×1,20, par-dessus l'effet de type
+		local needs2 = NS:CompanionData().needs
+		for key in pairs(needs2) do needs2[key] = 100 end
+		local radiantShiny = Near(NS:ShinyChance("normal", 0, "undead"), 1.3 * 1.2 / 150)
+			and Near(NS:ShinyChance("normal", 0, "beast"), 1.2 / 150)
+		for key in pairs(needs2) do needs2[key] = 70 end
+		Check("[EFF] Rayonnant : chance de brillante ×1,20, effet de type compris", radiantShiny)
 		local seenType
 		local before = NS.ShinyChance
 		EF.units.target = { guid = EF.Guid(7001), ctype = "Mort-vivant" }
@@ -353,46 +369,51 @@ do
 		local needs = NS:CompanionData().needs
 		needs.hunger = 80
 		NS:CompanionTick(600)
-		Check("[EFF] Bête rare : la faim baisse 20 % moins vite (le tick le suit), les autres envies comme avant", Near(hunger, 0.8)
+		Check("[EFF] Bête rare : Repu s'use 20 % moins vite (le tick le suit), les autres états comme avant", Near(hunger, 0.8)
 			and Near(NS:CompanionDecayFactor("energy"), 1)
 			and Near(needs.hunger, 80 - base.hunger * 10 * NS:CompanionDecayFactor("hunger")), tostring(needs.hunger))
 		EF.Add(5402, "Géant", "normal")
 		EF.Take("cap:5402")
-		local ratio = NS:CompanionDecayFactor("mood")
+		local ratio = NS:CompanionDecayFactor("curiosity")
 		NS:CompanionData().appearance = NS.COMPANION_APPEARANCES[1].id
 		NS:CompanionEffectsSync()
 		Mock.now = Mock.now + NS.EFFECT_DELAY + 1
-		local mascot = NS:CompanionDecayFactor("mood")
-		Check("[EFF] Géant : toutes les envies 5 % moins vite", Near(ratio / mascot, 0.95 / 0.96), ratio .. " / " .. mascot)
+		local mascot = NS:CompanionDecayFactor("curiosity")
+		Check("[EFF] Géant : tous les états s'usent 5 % moins vite", Near(ratio / mascot, 0.95 / 0.96), ratio .. " / " .. mascot)
 		EF.Add(5403, "Mécanique", "normal")
 		EF.Take("cap:5403")
+		-- 3.5.0 : Reposé vient après 120 s de repos, divisées par 1,15 (≈ 104 s)
 		EF.resting = true
-		needs.energy = 40
-		NS:CompanionTick(60)
-		-- l'énergie à 40 : une envie sous 50 %, force à 87,5 %
-		Check("[EFF] Mécanique : au repos, l'énergie remonte 15 % plus vite (moins, envie basse)",
-			Near(needs.energy, 40 + NS.COMPANION_RULES.restGain * (1 + 0.15 * 0.875)), tostring(needs.energy))
+		needs.energy = 70
+		NS.companionRT = nil
+		local speed = NS:CompanionRestSpeed()
+		NS:CompanionTick(100)
+		local notYet = needs.energy == 70
+		NS:CompanionTick(5)
+		Check("[EFF] Mécanique : au repos, Reposé vient 15 % plus vite (104 s au lieu de 120)", Near(speed, 1.15)
+			and notYet and needs.energy == 100, speed .. " / " .. tostring(needs.energy))
 		EF.resting = false
 		EF.Add(5404, "Démon", "normal")
 		EF.Take("cap:5404")
-		needs.mood, needs.energy, needs.hunger = 50, 80, 80
+		-- 3.5.0 : la caresse allonge l'état actif qui finit le premier de 25 % de 45 min (+7,5)
+		needs.hunger, needs.energy, needs.curiosity = 100, 90, 70
 		NS.companionLastPet = nil
 		NS:CompanionPet()
-		local pet = Near(needs.mood, 50 + 8 * 1.25)
-		-- le garde-manger (Maj + clic) rend vrai aussi : pas de moral gratuit ; caresse refusée (délai) non plus
+		local pet = Near(needs.energy, 97.5) and needs.hunger == 100 and needs.curiosity == 70
+		-- le garde-manger (Maj + clic) rend vrai aussi : rien de gratuit ; caresse refusée (délai) non plus
 		local savedShift = rawget(_G, "IsShiftKeyDown")
 		_G.IsShiftKeyDown = function() return true end
-		needs.mood = 50
+		needs.energy = 90
 		NS.companionLastPet = nil
 		local opened = NS:CompanionPet()
 		_G.IsShiftKeyDown = savedShift
 		if NS.treatMenu then NS.treatMenu:Hide() end
-		local pantryFree = opened and needs.mood == 50
+		local pantryFree = opened and needs.energy == 90
 		NS:CompanionPet()
-		local after = needs.mood
+		local after = needs.energy
 		NS:CompanionPet()
-		Check("[EFF] Démon : une caresse +25 % de moral ; ni le garde-manger (Maj + clic) ni une caresse trop rapprochée",
-			pet and pantryFree and needs.mood == after, tostring(needs.mood))
+		Check("[EFF] Démon : une caresse allonge l'état le plus court de 25 % ; ni le garde-manger (Maj + clic) ni une caresse trop rapprochée",
+			pet and pantryFree and needs.energy == after, tostring(needs.energy))
 		NS.CompanionTrait = savedTrait
 	end
 
@@ -450,6 +471,15 @@ do
 		NS:CompanionEffectsTick()
 		Check("[EFF] page Compagnon : chasse, confort, force et compte à rebours qui avance, puis « Actifs »", page and counting
 			and evo.effState.text:find("Actifs$") ~= nil, evo.effState.text)
+		-- Rayonnant : l'en-tête le dit à la place de la force
+		local needs = NS:CompanionData().needs
+		for key in pairs(needs) do needs[key] = 100 end
+		NS:CompanionEffectsTick()
+		NS:CompanionEffectsRefreshPane(evo)
+		local radiantHead = evo.effState.text
+		for key in pairs(needs) do needs[key] = 70 end
+		Check("[EFF] page Compagnon, Rayonnant : « Rayonnant : capture +10 %, brillantes +20 % · Actifs »",
+			radiantHead == "Rayonnant : capture +10 %, brillantes +20 % · Actifs", radiantHead)
 		f:Hide()
 		local lines = NS:CompanionEffectsLines({ npc = 5601, known = true, class = "elite", type = "Humanoïde" }, false)
 		Check("[EFF] fiche : « Chasse / Confort » avec ses valeurs, la brillante plus forte, une inconnue rien",

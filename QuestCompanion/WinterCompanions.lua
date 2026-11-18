@@ -39,7 +39,7 @@ ns.WINTER_SEASON_TTL = 60          -- s : la saison relue au plus une fois par m
 ns.WINTER_VOICE_SHARE = 0.8        -- part des bulles prises dans la voix de saison
 ns.WINTER_SACK_TREAT = 0.5         -- la hotte : friandise (sinon une aide de capture)
 ns.WINTER_NIGHT_FROM, ns.WINTER_NIGHT_TO = 20, 6   -- nuit du nez qui brille (heure du jeu)
-ns.WINTER_MELT = 1.5               -- en zone chaude, le moral du bonhomme de neige baisse ×1,5
+ns.WINTER_MELT = 1.5               -- en zone chaude, les trois états du bonhomme de neige s'usent ×1,5 (3.5.0)
 ns.WINTER_FEAT_TIME = 3600         -- s de jeu avec un compagnon de saison pour le haut fait
 ns.WINTER_FEAT_CAPTURES = 10       -- ou captures avec lui
 ns.WINTER_TICK = 15                -- s entre deux relevés (fin de saison, visite)
@@ -736,8 +736,8 @@ do
 		local temp = self:WinterZoneTemp()
 		if temp == "cold" then
 			factor = factor * (1 - found[1].value)
-		elseif temp == "hot" and key == "mood" then
-			factor = factor * ns.WINTER_MELT   -- il fond
+		elseif temp == "hot" then
+			factor = factor * ns.WINTER_MELT   -- il fond : 3.5.0, ses trois états s'usent plus vite (le moral n'est plus)
 		end
 		return factor
 	end

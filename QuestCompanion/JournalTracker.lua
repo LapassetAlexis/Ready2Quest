@@ -94,7 +94,7 @@ local FR = {
 	JRN_HINT_XP            = "XP avant le prochain niveau : %d",
 	JRN_GOAL_ZONE          = "Exploration : %s",
 	JRN_GOAL_REACH_LEVEL   = "Atteins le niveau %d",
-	JRN_GOAL_HAPPY         = "Rends %s heureux pour évoluer",
+	JRN_GOAL_HAPPY         = "Comble une envie de %s pour qu'il évolue",
 	JRN_REWARD             = "Récompense : %s",
 	JRN_REWARD_STAGE       = "%s devient %s",
 	JRN_STAT_happy         = "envies comblées",
@@ -154,7 +154,7 @@ local EN = {
 	JRN_HINT_XP            = "XP to next level: %d",
 	JRN_GOAL_ZONE          = "%s exploration",
 	JRN_GOAL_REACH_LEVEL   = "Reach level %d",
-	JRN_GOAL_HAPPY         = "Make %s happy so it can grow",
+	JRN_GOAL_HAPPY         = "Grant one of %s's wishes so it can grow",
 	JRN_REWARD             = "Reward: %s",
 	JRN_REWARD_STAGE       = "%s becomes %s",
 	JRN_STAT_happy         = "needs filled",
@@ -386,7 +386,7 @@ local function CompanionGoals(self, list)
 					-- un stade : l'objectif est l'action, le stade la récompense
 					local name = self.CompanionName and self:CompanionName() or "?"
 					goal.reward = self:F("JRN_REWARD_STAGE", name, unlock.label)
-					if unlock.stat == "happy" then
+					if unlock.stat == "happy" or unlock.stat == "wish" then   -- 3.5.0 : une envie comblée
 						goal.label = self:F("JRN_GOAL_HAPPY", name)
 						goal.short = goal.label
 						goal.hint = self.CompanionHappyHints and self:CompanionHappyHints() or {}

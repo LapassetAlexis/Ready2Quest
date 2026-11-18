@@ -1,7 +1,8 @@
 -- Compagnon : friandises et garde-manger (Treats.lua). Paliers de zone 25/50/75 %
--- (envie la plus basse, Festin à 75 %), garde-manger plafonné (le surplus est
--- mangé), donner (envie à 100, carte qui flaire, Gourmande), rattrapage une
--- fois avec une bulle de résumé, coffre doré, Maj + clic, répliques.
+-- (l'état le plus court, Festin à 75 %), garde-manger plafonné (le surplus
+-- devient 1 paillette, 3.5.0), donner (l'état pour 60 minutes, Bonbon, carte
+-- qui flaire, Gourmande), rattrapage une fois avec une bulle de résumé, coffre
+-- doré, Maj + clic, répliques.
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local TR = { savedRewards = rawget(NS, "COMPANION_REWARDS"), savedTrait = NS.CompanionTrait,
@@ -58,9 +59,22 @@ function TR.Reset(opts)
 	NS:CompanionUpdateVisibility()
 	TR.Quiet()
 end
-function TR.SetNeeds(h, e, m, c)
+-- 3.5.0 : les paillettes du garde-manger plein (raison "pantry") ; les paliers
+-- de zone en donnent aussi par ailleurs (JournalReserve), comptées à part
+function TR.PantryGlitter()
+	local count = { n = 0 }
+	local add = NS.PaillettesAdd
+	NS.PaillettesAdd = function(self, n, reason)
+		if reason == "pantry" then count.n = count.n + (tonumber(n) or 0) end
+		return add(self, n, reason)
+	end
+	count.stop = function() NS.PaillettesAdd = add end
+	return count
+end
+-- 3.5.0 : trois états (70 : éteint, 100 : 45 min, 110 : 60 min)
+function TR.SetNeeds(h, e, c)
 	local needs = NS:CompanionData().needs
-	needs.hunger, needs.energy, needs.mood, needs.curiosity = h, e, m, c
+	needs.hunger, needs.energy, needs.curiosity = h, e, c
 end
 function TR.Done()
 	for index = #NS.ZONE_PARTS, 1, -1 do
@@ -86,30 +100,40 @@ do
 	data.pantry.bonbon, data.pantry.festin = 9, -2
 	NS:TreatData()
 	Check("[TREAT] valeurs hors bornes ramenées", data.pantry.bonbon == 3 and data.pantry.festin == 0, data.pantry.bonbon)
-	TR.SetNeeds(60, 40, 80, 90)
+	-- 3.5.0 : la friandise de l'état qui a le moins de minutes (éteint d'abord)
+	TR.SetNeeds(100, 70, 90)
 	local energy = NS:TreatForLowestNeed() == "infusion"
-	TR.SetNeeds(50, 50, 50, 20)
+	TR.SetNeeds(100, 100, 80)
 	local curiosity = NS:TreatForLowestNeed() == "carte"
-	TR.SetNeeds(30, 30, 30, 30)
-	Check("[TREAT] envie la plus basse : énergie -> infusion, curiosité -> carte, égalité : la faim d'abord", energy
-		and curiosity and NS:TreatForLowestNeed() == "biscuit")
+	TR.SetNeeds(70, 70, 70)
+	local tie = NS:TreatForLowestNeed() == "biscuit"
+	TR.SetNeeds(100, 100, 100)
+	Check("[TREAT] état le plus court : Reposé éteint -> infusion, Éveillé -> carte, égalité : Repu d'abord", energy
+		and curiosity and tie and NS:TreatForLowestNeed() == "biscuit")
 	Check("[TREAT] libellés", NS:TreatLabel("festin") == "Festin" and NS:TreatLabel("bonbon") == "Bonbon pétillant")
 end
 
--- 2. Gagner : rangé, ou mangé si plein ---------------------------------------------------------
+-- 2. Gagner : rangé, ou une paillette si plein -----------------------------------------------------
 do
 	Say("-- friandises : gagner")
 	TR.Reset()
-	TR.SetNeeds(40, 40, 40, 40)
-	Check("[TREAT] gagnée : rangée, annoncée, l'envie ne bouge pas", NS:TreatGrant("biscuit") == "stored"
+	TR.SetNeeds(70, 70, 70)
+	Check("[TREAT] gagnée : rangée, annoncée, l'état ne bouge pas", NS:TreatGrant("biscuit") == "stored"
 		and NS:TreatCount("biscuit") == 1 and NS.companionBubbleKey == "TREAT_GOT"
-		and NS.companionBubbleText:find("Biscuit de voyage", 1, true) and NS:CompanionData().needs.hunger == 40,
-		NS.companionBubbleText)
+		and (NS.companionBubbleText or ""):find("Biscuit de voyage", 1, true) and NS:CompanionData().needs.hunger == 70,
+		tostring(NS.companionBubbleKey) .. " / " .. tostring(NS.companionBubbleText))
 	NS:TreatData().pantry.biscuit = 3
 	TR.Quiet()
-	Check("[TREAT] plein : mangée tout de suite, la faim à 100, « tant pis, je la mange »", NS:TreatGrant("biscuit") == "eaten"
-		and NS:TreatCount("biscuit") == 3 and NS:CompanionData().needs.hunger == 100 and NS.companionBubbleKey == "TREAT_FULL",
-		NS.companionBubbleKey)
+	local glitter = NS:Paillettes()
+	Mock.output = {}
+	local result = NS:TreatGrant("biscuit")
+	local said = false
+	for _, line in ipairs(Mock.output) do
+		if tostring(line):find("Garde-manger plein : Biscuit de voyage devient 1 paillette.", 1, true) then said = true end
+	end
+	Check("[TREAT] plein : pas mangée, 1 paillette, la ligne du chat, Repu toujours éteint", result == "glitter"
+		and NS:TreatCount("biscuit") == 3 and NS:Paillettes() == glitter + 1 and said
+		and NS:CompanionData().needs.hunger == 70 and NS.companionBubbleKey == nil, tostring(result))
 	TR.Quiet()
 	Check("[TREAT] sans bulle (quiet)", NS:TreatGrant("bonbon", { quiet = true }) == "stored" and NS.companionBubbleKey == nil)
 	local unknown = NS:TreatGrant("gateau") == nil
@@ -123,67 +147,73 @@ end
 do
 	Say("-- friandises : donner")
 	TR.Reset()
-	TR.SetNeeds(30, 30, 30, 30)
+	TR.SetNeeds(70, 70, 70)
 	local refused = NS:TreatGive("infusion") == false
 	local pantry = NS:TreatData().pantry
 	pantry.infusion, pantry.bonbon, pantry.festin, pantry.carte = 1, 1, 1, 1
 	local needs = NS:CompanionData().needs
-	Check("[TREAT] rien à donner : refusé ; infusion donnée : énergie à 100, le reste pareil, sa bulle", refused
-		and NS:TreatGive("infusion") and pantry.infusion == 0 and needs.energy == 100 and needs.hunger == 30
-		and needs.mood == 30 and NS.companionBubbleKey == "TREAT_EAT_infusion", NS.companionBubbleKey)
+	Check("[TREAT] rien à donner : refusé ; infusion donnée : Reposé 60 min (110), le reste pareil, sa bulle", refused
+		and NS:TreatGive("infusion") and pantry.infusion == 0 and needs.energy == 110 and needs.hunger == 70
+		and needs.curiosity == 70 and needs.mood == nil and NS.companionBubbleKey == "TREAT_EAT_infusion",
+		tostring(NS.companionBubbleKey))
+	-- Bonbon : chaque état actif repart à 45 min (100) ; un état éteint reste éteint
+	TR.SetNeeds(80, 70, 95)
 	TR.Quiet()
 	NS:TreatGive("bonbon")
-	local bonbon = needs.mood == 100 and NS.companionBubbleKey == "TREAT_EAT_bonbon"
-	TR.SetNeeds(30, 30, 30, 30)
+	local bonbon = needs.hunger == 100 and needs.energy == 70 and needs.curiosity == 100
+		and NS.companionBubbleKey == "TREAT_EAT_bonbon"
+	TR.SetNeeds(70, 70, 70)
 	TR.Quiet()
 	NS:TreatGive("festin")
-	Check("[TREAT] bonbon : moral à 100 ; Festin : les 4 envies à 100, sa bulle", bonbon and needs.hunger == 100
-		and needs.energy == 100 and needs.mood == 100 and needs.curiosity == 100 and pantry.festin == 0
-		and NS.companionBubbleKey == "TREAT_EAT_festin", NS.companionBubbleKey)
+	Check("[TREAT] bonbon : les états actifs à 100, l'éteint reste éteint ; Festin : les 3 états à 110, sa bulle", bonbon
+		and needs.hunger == 110 and needs.energy == 110 and needs.curiosity == 110 and pantry.festin == 0
+		and NS.companionBubbleKey == "TREAT_EAT_festin", tostring(NS.companionBubbleKey))
 	-- carte : elle flaire la part la moins avancée de la zone
+	TR.SetNeeds(70, 70, 70)
 	TR.have[9101] = 1
 	TR.Quiet()
 	NS:TreatGive("carte")
 	local alert = NS.companionFrame and NS.companionFrame.alert
-	Check("[TREAT] carte : curiosité à 100, le « ! » du flair, elle flaire ce qui reste", needs.curiosity == 100
+	Check("[TREAT] carte : Éveillé 60 min (110), le « ! » du flair, elle flaire ce qui reste", needs.curiosity == 110
 		and alert ~= nil and alert:IsShown() and NS.companionBubbleKey == "TREAT_SNIFF"
-		and NS.companionBubbleText:find("Partie A", 1, true), NS.companionBubbleText)
+		and (NS.companionBubbleText or ""):find("Partie A", 1, true), tostring(NS.companionBubbleText))
 	TR.have[9101] = 4
 	pantry.carte = 1
 	TR.Quiet()
 	NS:TreatGive("carte")
 	Check("[TREAT] zone finie : la bulle de la carte", NS.companionBubbleKey == "TREAT_EAT_carte", NS.companionBubbleKey)
-	-- Gourmande : double plaisir
+	-- Gourmande : plus de moral en prime, la même friandise que les autres caractères
 	NS.CompanionTrait = function() return "glutton" end
-	TR.SetNeeds(30, 30, 30, 30)
+	TR.SetNeeds(70, 70, 70)
 	pantry.biscuit = 1
 	NS:TreatGive("biscuit")
-	local glutton = needs.hunger == 100 and needs.mood == 30 + NS.TREAT_RULES.gluttonMood
+	local glutton = needs.hunger == 110 and needs.energy == 70 and needs.curiosity == 70 and needs.mood == nil
 	NS.CompanionTrait = function() return "lazy" end
-	TR.SetNeeds(30, 30, 30, 30)
+	TR.SetNeeds(70, 70, 70)
 	pantry.biscuit = 1
 	NS:TreatGive("biscuit")
-	Check("[TREAT] Gourmande : le moral monte aussi ; autre caractère : il ne bouge pas", glutton and needs.mood == 30, needs.mood)
+	Check("[TREAT] Gourmande : Repu 60 min, rien de plus ; autre caractère : pareil", glutton and needs.hunger == 110
+		and needs.energy == 70 and needs.curiosity == 70)
 end
 
 -- 4. Paliers de zone --------------------------------------------------------------------------
 do
 	Say("-- friandises : paliers de zone")
 	TR.Reset()
-	TR.SetNeeds(80, 20, 80, 80)
+	TR.SetNeeds(100, 70, 100)
 	TR.have[9101] = 0
 	NS:RefreshJournalTracker()
 	local zero = NS:TreatTotal() == 0
 	TR.have[9101] = 1
 	NS:RefreshJournalTracker()
-	Check("[TREAT] 0 % : rien ; 25 % : la friandise de l'envie la plus basse, palier noté", zero
+	Check("[TREAT] 0 % : rien ; 25 % : la friandise de l'état éteint, palier noté", zero
 		and NS:TreatCount("infusion") == 1 and NS:TreatTotal() == 1 and NS:TreatData().milestones[9101] == 25, NS:TreatTotal())
 	NS:RefreshJournalTracker()
 	Check("[TREAT] recalcul : pas deux fois", NS:TreatTotal() == 1)
-	TR.SetNeeds(10, 80, 80, 80)
+	TR.SetNeeds(70, 100, 100)
 	TR.have[9101] = 3
 	local gained = NS:TreatCheckZone(9101)
-	Check("[TREAT] 25 -> 75 % : deux paliers d'un coup, 50 % : biscuit (faim basse), 75 % : Festin", #gained == 2
+	Check("[TREAT] 25 -> 75 % : deux paliers d'un coup, 50 % : biscuit (Repu éteint), 75 % : Festin", #gained == 2
 		and gained[1].mark == 50 and gained[2].mark == 75 and gained[1].kind == "biscuit" and gained[2].kind == "festin"
 		and NS:TreatCount("festin") == 1)
 	TR.have[9101] = 4
@@ -197,37 +227,40 @@ end
 do
 	Say("-- friandises : rattrapage")
 	TR.Reset({ fresh = true })
-	TR.SetNeeds(60, 60, 60, 60)
+	TR.SetNeeds(70, 70, 70)
 	TR.have[9101], TR.have[9102] = 2, 4
 	NS.JournalKnownZones = function() return { { id = 9101 }, { id = 9102 }, { id = 9103 } } end
 	TR.have[9103] = 4
+	local glitter = TR.PantryGlitter()
 	NS:RefreshJournalTracker()
+	glitter.stop()
 	local data = NS:TreatData()
 	-- 9101 : 25 + 50 ; 9102 : 25 + 50 + 75 ; 9103 (une part) : rien
 	Check("[TREAT] rattrapage : fait une fois, paliers notés", data.treatsInit == true and data.milestones[9101] == 50
 		and data.milestones[9102] == 75 and data.milestones[9103] == nil)
-	-- envies égales : 4 biscuits pour 25/50 %, le 4e ne rentre plus
-	Check("[TREAT] … 5 friandises, la 4e mangée, une seule bulle de résumé", NS:TreatTotal() == 4
-		and NS:TreatCount("biscuit") == 3 and NS:TreatCount("festin") == 1 and NS:CompanionData().needs.hunger == 100
-		and NS.companionBubbleKey == "TREAT_RETRO" and NS.companionBubbleText:find("5 friandises", 1, true)
-		and NS.companionBubbleText:find("mangé 1", 1, true), NS.companionBubbleText)
+	-- états égaux : 4 biscuits pour 25/50 %, le 4e ne rentre plus : 1 paillette
+	Check("[TREAT] … 5 friandises, la 4e devient une paillette, Repu toujours éteint, une seule bulle de résumé",
+		NS:TreatTotal() == 4 and NS:TreatCount("biscuit") == 3 and NS:TreatCount("festin") == 1
+		and glitter.n == 1 and NS:CompanionData().needs.hunger == 70
+		and NS.companionBubbleKey == "TREAT_RETRO" and (NS.companionBubbleText or ""):find("5 friandises… et 1 en trop", 1, true),
+		tostring(NS.companionBubbleText))
 	TR.Quiet()
 	NS:RefreshJournalTracker()
 	Check("[TREAT] pas de second rattrapage", NS:TreatTotal() == 4 and NS.companionBubbleKey == nil,
 		tostring(NS:TreatTotal()) .. " " .. tostring(NS.companionBubbleKey))
 
-	-- envies différentes : chaque palier vise la plus basse du moment
+	-- états différents : chaque palier vise l'état éteint
 	TR.Reset({ fresh = true })
-	TR.SetNeeds(60, 50, 70, 80)
+	TR.SetNeeds(100, 70, 90)
 	NS.JournalKnownZones = function() return { { id = 9101 } } end
 	TR.have[9101] = 2
 	NS:TreatCatchUp()
-	Check("[TREAT] rien de mangé : bulle « trouvé »", NS:TreatCount("infusion") == 2 and NS.companionBubbleKey == "TREAT_RETRO_KEPT"
-		and NS.companionBubbleText:find("2", 1, true), NS.companionBubbleText)
+	Check("[TREAT] rattrapage : bulle « trouvé »", NS:TreatCount("infusion") == 2 and NS.companionBubbleKey == "TREAT_RETRO_KEPT"
+		and (NS.companionBubbleText or ""):find("2", 1, true), tostring(NS.companionBubbleText))
 
-	-- beaucoup de zones : le garde-manger déborde, le surplus est mangé
+	-- beaucoup de zones : le garde-manger déborde, le surplus devient des paillettes
 	TR.Reset({ fresh = true })
-	TR.SetNeeds(60, 60, 60, 60)
+	TR.SetNeeds(70, 70, 70)
 	local list = {}
 	for id = 9201, 9206 do
 		MAPS[id] = { mapID = id, name = "Zone " .. id, parentMapID = 1414, mapType = 3 }
@@ -236,12 +269,17 @@ do
 		list[#list + 1] = { id = id }
 	end
 	NS.JournalKnownZones = function() return list end
+	glitter = TR.PantryGlitter()
 	local found, eaten = NS:TreatCatchUp()
-	Check("[TREAT] 6 zones finies : 18 friandises, Festins 2 gardés et 4 mangés, rien au-dessus des plafonds", found == 18
-		and NS:TreatCount("festin") == 2 and eaten >= 4 and NS:TreatCount("biscuit") <= 3 and NS:TreatCount("infusion") <= 3
-		and NS:TreatCount("bonbon") <= 3 and NS:TreatCount("carte") <= 3, tostring(found) .. " / " .. tostring(eaten))
-	Check("[TREAT] … « et j'en ai mangé » ; déjà fait : nil", NS.companionBubbleKey == "TREAT_RETRO"
-		and NS.companionBubbleText:find(tostring(eaten), 1, true) and NS:TreatCatchUp() == nil, NS.companionBubbleText)
+	glitter.stop()
+	-- 12 biscuits (3 gardés, 9 en paillettes), 6 Festins (2 gardés, 4 en paillettes)
+	-- 3.5.0 : le second nombre compte les friandises changées en paillettes
+	Check("[TREAT] 6 zones finies : 18 friandises, 3 biscuits et 2 Festins gardés, 13 paillettes, rien de mangé",
+		found == 18 and eaten == 13 and NS:TreatCount("festin") == 2 and NS:TreatCount("biscuit") == 3
+		and glitter.n == 13 and NS:CompanionData().needs.hunger == 70,
+		tostring(found) .. " / " .. tostring(eaten) .. " / " .. glitter.n)
+	Check("[TREAT] … une bulle « 18 friandises… et 13 en trop » ; déjà fait : nil", NS.companionBubbleKey == "TREAT_RETRO"
+		and (NS.companionBubbleText or ""):find("18 friandises… et 13 en trop", 1, true) and NS:TreatCatchUp() == nil, tostring(NS.companionBubbleText))
 	TR.Reset({ fresh = true })
 	NS.JournalKnownZones = function() return {} end
 	TR.Quiet()

@@ -74,9 +74,9 @@ do
 	Say("-- au jour le jour : auberges")
 	DY.Reset()
 	local _, inn = NS:DailyData()
-	NS:CompanionData().needs.energy = 40
-	Check("[DAY] aubergiste : un tampon, +20 d'énergie, sa bulle « 1/7 »", NS:CompanionOnNpc("innkeeper") == true
-		and inn.card == 1 and inn.total == 1 and NS:CompanionData().needs.energy == 40 + NS.INN_ENERGY
+	NS:CompanionData().needs.energy = 70
+	Check("[DAY] aubergiste : un tampon, Reposé (45 min), sa bulle « 1/7 »", NS:CompanionOnNpc("innkeeper") == true
+		and inn.card == 1 and inn.total == 1 and NS:CompanionData().needs.energy == 100
 		and NS.companionBubbleKey == "INN_STAMP" and ((NS.companionBubbleText or ""):find("1/7", 1, true)
 		or (NS.companionBubbleText or ""):find("1 sur 7", 1, true)), NS.companionBubbleText)
 	DY.Quiet()
@@ -162,7 +162,7 @@ do
 	-- missions de zone : espèces (mesurée) et nommé (événement)
 	daily.missions[1] = { kind = "species", zoneID = 9800, need = 3, have = 0, source = "zone", start = DY.counts.killed }
 	daily.missions[2] = { kind = "named", zoneID = 9800, need = 1, have = 0, source = "zone", start = 0 }
-	NS:CompanionData().needs = { hunger = 80, energy = 20, mood = 80, curiosity = 50 }
+	NS:CompanionData().needs = { hunger = 100, energy = 70, curiosity = 90 }
 	DY.counts.killed = DY.counts.killed + 2
 	NS:RefreshJournalTracker()
 	local measured = daily.missions[1].have == 2 and not daily.missions[1].done
@@ -171,8 +171,10 @@ do
 	NS:RefreshJournalTracker()
 	Check("[MIS] espèces : mesurées au rafraîchissement, 3/3 : faite", measured and daily.missions[1].done == true
 		and daily.missions[1].have == 3)
-	Check("[MIS] … une friandise (envie la plus basse), de la curiosité, « mission accomplie »", NS:TreatCount("infusion") == 1
-		and NS:CompanionData().needs.curiosity == 50 + NS.MISSION_CURIOSITY and NS.companionBubbleKey == "MISSION_DONE",
+	-- 3.5.0 : une mission accomplie ne donne plus Éveillé
+	Check("[MIS] … une friandise (l'état éteint : Reposé), aucun état ne bouge, « mission accomplie »", NS:TreatCount("infusion") == 1
+		and NS:CompanionData().needs.curiosity == 90 and NS:CompanionData().needs.energy == 70
+		and NS.companionBubbleKey == "MISSION_DONE",
 		NS.companionBubbleKey)
 	Mock.world.mapID = 9801
 	NS:MissionEvent("elites", 1, 9801)

@@ -558,6 +558,13 @@ couleur n'a changé.
   du tableau de bord sur le parchemin (encre du filet à 10 %).
 - Bandeau du carnet effacé au premier coup reçu, et revenu après le combat.
 
+## Envies du compagnon (QuestCompanion 3.5.0)
+
+- **Page Compagnon, colonne gauche** : section « Ses envies (des bonus, jamais une perte) » à y −366 ; 3 plaques de 109 × 62 au pas de 117 à y −393 (nom, temps en `F_TITLE`, objet court, barre de 3 px verte sur 60 minutes ; liseré vert quand l'état est actif ; infobulle : ce qui l'allume, sa friandise) ; ligne d'humeur 343 × 26 à y −461 (« Humeur », humeur teintée, 3 losanges or, « Encore n pour rayonner » / « Bonus actif ») ; ligne de l'envie à y −493 (« Son envie », l'objet, « +1 lien » en vert) ; « Ses effets » à y −535.
+- **Fiche au survol** : sous-titre stade · humeur, 3 barres (« 18 min » ou « — »), l'envie.
+- **Tableau de bord** : « Nom · humeur », 3 rangées d'état (barre verte sur 60 minutes), « Envie : … ».
+- **Médaillon forgé** : étiquette d'humeur sur la plaque or (Rayonnant), verte (Joyeux), bronze (Content), arcane (Tranquille), désactivée (somnolent).
+
 ## Réserve, Créatures, Échoppe (QuestCompanion 3.4.0)
 
 - **Réserve** (contenu de 710 px, grille de 484 à gauche, fiche de 210 à droite) : rangée des vues (y −106 : Réserve | Échanges, cadeau de la 3.0, pastille du solde) ; rangée 1 (y −140) : recherche, « Filtres (n) », tri, sens (flèche du client), « Vues » ; rangée 2 (y −172) : deux pastilles au plus (128 px, clic : le groupe s'efface) puis « +n », « Effacer », le compte « 37 sur 62 » (rouge à 5 places de la limite : l'ancienne ligne d'alerte), « Sélection » / « Tout (n) » ; grille 7 × 4 à y −204.

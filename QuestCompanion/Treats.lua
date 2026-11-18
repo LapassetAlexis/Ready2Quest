@@ -14,7 +14,11 @@
 --     friandises au hasard, au lieu de rien ;
 --   * à la mise à jour, les paliers déjà franchis sont rattrapés une fois,
 --     avec une seule bulle de résumé ;
---   * Gourmand : chaque friandise remonte aussi le moral (double plaisir).
+-- 3.5.0 (docs/design-envies-3.5) : une friandise donne son ÉTAT pour 60
+-- minutes (Biscuit : Repu, Infusion : Reposé, Carte : Éveillé ; Festin : les
+-- trois ; Bonbon : chaque état actif repart à plein) ; à 25 et 50 %, celle de
+-- l'état éteint (sinon de celui qui finit le premier) ; garde-manger plein :
+-- la friandise en trop devient 1 paillette. Le moral n'est plus une envie.
 local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L
@@ -22,12 +26,12 @@ local Theme = ns.Theme
 
 local TREAT_CAP, FESTIN_CAP = 3, 2
 local MILESTONES = { 25, 50, 75 }
-local GLUTTON_MOOD = 15
 local KINDS = { "biscuit", "infusion", "bonbon", "carte", "festin" }
 local BASIC = { "biscuit", "infusion", "bonbon", "carte" }
 -- friandise -> envie qu'elle comble (le Festin : toutes)
-local NEED_OF = { biscuit = "hunger", infusion = "energy", bonbon = "mood", carte = "curiosity" }
-local KIND_OF = { hunger = "biscuit", energy = "infusion", mood = "bonbon", curiosity = "carte" }
+local NEED_OF = { biscuit = "hunger", infusion = "energy", bonbon = "all", carte = "curiosity" }
+local KIND_OF = { hunger = "biscuit", energy = "infusion", curiosity = "carte" }
+local STATE_KEYS = { "hunger", "energy", "curiosity" }
 local ICONS = {
 	biscuit  = "Interface\\Icons\\INV_Misc_Food_11",
 	infusion = "Interface\\Icons\\INV_Drink_07",
@@ -35,7 +39,7 @@ local ICONS = {
 	carte    = "Interface\\Icons\\INV_Misc_Map_01",
 	festin   = "Interface\\Icons\\INV_Misc_Food_15",
 }
-ns.TREAT_RULES = { cap = TREAT_CAP, festinCap = FESTIN_CAP, milestones = MILESTONES, gluttonMood = GLUTTON_MOOD }
+ns.TREAT_RULES = { cap = TREAT_CAP, festinCap = FESTIN_CAP, milestones = MILESTONES }
 ns.TREAT_KINDS = KINDS
 ns.TREAT_ICONS = ICONS
 
@@ -45,11 +49,12 @@ local FR = {
 	TREAT_bonbon         = "Bonbon pétillant",
 	TREAT_carte          = "Carte au trésor",
 	TREAT_festin         = "Festin",
-	TREAT_DESC_biscuit   = "Faim à 100 %.",
-	TREAT_DESC_infusion  = "Énergie à 100 %.",
-	TREAT_DESC_bonbon    = "Moral à 100 %, et des cœurs.",
-	TREAT_DESC_carte     = "Curiosité à 100 %, et elle flaire ce qui reste dans la zone.",
-	TREAT_DESC_festin    = "Les quatre envies à 100 %.",
+	TREAT_DESC_biscuit   = "Repu pendant 60 minutes.",
+	TREAT_DESC_infusion  = "Reposé pendant 60 minutes.",
+	TREAT_DESC_bonbon    = "Chaque état actif repart à 45 minutes, et des cœurs.",
+	TREAT_DESC_carte     = "Éveillé pendant 60 minutes, et il flaire ce qui reste dans la zone.",
+	TREAT_DESC_festin    = "Les trois états pendant 60 minutes.",
+	TREAT_FULL_GLITTER   = "Garde-manger plein : %s devient 1 paillette.",
 	TREAT_MENU_TITLE     = "Garde-manger",
 	TREAT_MENU_HINT      = "Clic : donner. Les paliers de zone (25, 50, 75 %) en rapportent.",
 	TREAT_COUNT          = "%d / %d",
@@ -61,11 +66,12 @@ local EN = {
 	TREAT_bonbon         = "Fizzy candy",
 	TREAT_carte          = "Treasure map",
 	TREAT_festin         = "Feast",
-	TREAT_DESC_biscuit   = "Hunger to 100%.",
-	TREAT_DESC_infusion  = "Energy to 100%.",
-	TREAT_DESC_bonbon    = "Mood to 100%, with hearts.",
-	TREAT_DESC_carte     = "Curiosity to 100%, and it sniffs out what's left in the zone.",
-	TREAT_DESC_festin    = "All four needs to 100%.",
+	TREAT_DESC_biscuit   = "Fed for 60 minutes.",
+	TREAT_DESC_infusion  = "Rested for 60 minutes.",
+	TREAT_DESC_bonbon    = "Every active state goes back to 45 minutes, with hearts.",
+	TREAT_DESC_carte     = "Alert for 60 minutes, and it sniffs out what's left in the zone.",
+	TREAT_DESC_festin    = "All three states for 60 minutes.",
+	TREAT_FULL_GLITTER   = "Pantry full: %s turns into 1 glitter.",
 	TREAT_MENU_TITLE     = "Pantry",
 	TREAT_MENU_HINT      = "Click: give. Zone milestones (25, 50, 75%) earn more.",
 	TREAT_COUNT          = "%d / %d",
@@ -80,10 +86,6 @@ local P = {
 		{ "Hop, au garde-manger : %s !", "Into the pantry: %s!" },
 		{ "Ooh, %s ! Je garde ça pour plus tard.", "Ooh, %s! I'm saving it for later." },
 		{ "%s ! Merci, je range ça.", "%s! Thanks, I'll put it away." },
-	},
-	TREAT_FULL = {  -- %s = la friandise
-		{ "Plus de place pour : %s… tant pis, je mange ça !", "No room left for: %s… oh well, I'll eat it!" },
-		{ "Garde-manger plein ! %s ? Hop, dans le ventre.", "Pantry's full! %s? Straight into my tummy." },
 	},
 	TREAT_EAT_biscuit = {
 		{ "Croc ! Ça cale bien.", "Crunch! That hits the spot." },
@@ -109,8 +111,8 @@ local P = {
 		{ "Mon flair me dit : %s, il en reste par ici !", "My nose says: %s, there's more around here!" },
 		{ "Je sens quelque chose… %s !", "I can smell something… %s!" },
 	},
-	TREAT_RETRO = { -- %d = friandises trouvées, %d = mangées tout de suite
-		{ "J'ai fait des provisions : %d friandises… et j'en ai mangé %d !", "I've stocked up: %d treats… and I ate %d of them!" },
+	TREAT_RETRO = { -- %d = friandises trouvées, %d = en trop, changées en paillettes (3.5.0)
+		{ "J'ai fait des provisions : %d friandises… et %d en trop, changées en paillettes !", "I've stocked up: %d treats… and %d extra ones, turned into glitter!" },
 	},
 	TREAT_RETRO_KEPT = { -- %d = friandises trouvées
 		{ "Regarde ! J'ai trouvé %d friandises sur notre route.", "Look! I found %d treats along our way." },
@@ -177,10 +179,9 @@ end
 -- La friandise de l'envie la plus basse (à égalité, l'ordre faim, énergie,
 -- moral, curiosité)
 function ns:TreatForLowestNeed()
-	local needs = self:CompanionData().needs
 	local best, low
-	for _, need in ipairs({ "hunger", "energy", "mood", "curiosity" }) do
-		local v = tonumber(needs[need]) or 0
+	for _, need in ipairs(STATE_KEYS) do
+		local v = self.CompanionStateMinutes and self:CompanionStateMinutes(need) or 0
 		if not low or v < low then best, low = need, v end
 	end
 	return KIND_OF[best]
@@ -210,13 +211,16 @@ end
 function ns:TreatEat(kind, opts)
 	opts = opts or {}
 	if not NEED_OF[kind] and kind ~= "festin" then return false end
+	local S = ns.COMPANION_STATE or { full = 100, max = 110 }
 	if kind == "festin" then
-		for _, need in ipairs({ "hunger", "energy", "mood", "curiosity" }) do self:CompanionAdd(need, 100) end
+		for _, need in ipairs(STATE_KEYS) do self:CompanionGrant(need, S.max) end
+	elseif kind == "bonbon" then
+		for _, need in ipairs(STATE_KEYS) do
+			if self:CompanionStateOn(need) then self:CompanionGrant(need, S.full) end
+		end
 	else
-		self:CompanionAdd(NEED_OF[kind], 100)
+		self:CompanionGrant(NEED_OF[kind], S.max)
 	end
-	local trait = self.CompanionTrait and self:CompanionTrait()
-	if trait == "glutton" then self:CompanionAdd("mood", GLUTTON_MOOD) end
 	if self.CompanionFx then
 		if kind == "bonbon" then self:CompanionFx("hearts")
 		elseif kind == "festin" then self:CompanionFx("bounce"); self:CompanionFx("crumbs")
@@ -241,9 +245,10 @@ function ns:TreatGrant(kind, opts)
 	local pantry = self:TreatData().pantry
 	if pantry[kind] == nil then return nil end
 	if pantry[kind] >= self:TreatCap(kind) then
-		self:TreatEat(kind, { quiet = true })
-		if not opts.quiet then self:CompanionSay("TREAT_FULL", { args = { self:TreatLabel(kind) } }) end
-		return "eaten"
+		-- 3.5.0 : plus de repas d'office : 1 paillette
+		if self.PaillettesAdd then self:PaillettesAdd(1, "pantry") end
+		if not opts.quiet then self:Print(self:F("TREAT_FULL_GLITTER", self:TreatLabel(kind))) end
+		return "glitter"
 	end
 	pantry[kind] = pantry[kind] + 1
 	if not opts.quiet then self:CompanionSay("TREAT_GOT", { args = { self:TreatLabel(kind) } }) end
@@ -298,7 +303,7 @@ function ns:TreatCatchUp()
 	for _, zone in ipairs(self:JournalKnownZones()) do
 		for _, gain in ipairs(self:TreatCheckZone(zone.id, { quiet = true })) do
 			found = found + 1
-			if gain.result == "eaten" then eaten = eaten + 1 end
+			if gain.result == "glitter" then eaten = eaten + 1 end   -- 3.5.0 : en trop, changées en paillettes
 		end
 	end
 	if found > 0 then

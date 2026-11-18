@@ -93,7 +93,7 @@ local FR = {
 	TOUR_A5_T            = "Le mode chasse",
 	TOUR_A5              = "Maj + clic droit sur ton compagnon : le mode chasse. De 5 min à 1 h, chaque monstre abattu va au filet. Méfiance : chaque capture d'une même espèce dans la journée rend la suivante plus dure.",
 	-- visite du carnet (titres : le nom de l'onglet)
-	TOUR_B_evolution     = "Ton compagnon : son humeur, ses envies (faim, énergie, moral, curiosité) et ses effets. « Choisir… » change son allure.",
+	TOUR_B_evolution     = "Ton compagnon : son humeur, ses trois états (Repu, Reposé, Éveillé), son envie du moment et ses effets. « Choisir… » change son allure.",
 	TOUR_B_menagerie     = "Le Codex : ton meilleur spécimen de chaque espèce. « À compléter » montre ce qui manque ; épingle une espèce pour qu'elle passe toujours au filet, « Localiser » dit où la trouver.",
 	TOUR_B_reserve       = "Tes spécimens en plus. « Mettre au Codex » en fait ta référence ; « Relâcher » rend des paillettes, à dépenser à l'Échoppe du dresseur (onglet suivant). Chaque spécimen a son caractère (un petit effet quand ton compagnon le porte) et sa taille : un minuscule ou un géant, c'est rare ! Et pour échanger avec un autre joueur : /qc echange <nom> (vue Échanges).",
 	TOUR_B_shop          = "Tes paillettes s'y dépensent : aides de capture, places de Réserve, allure du compagnon. Ton solde est en haut à droite ; un article hors de portée te dit ce qui manque.",
@@ -137,7 +137,7 @@ local EN = {
 	TOUR_A4_fail         = "It got away, it happens. When it works, a capture goes to the Codex (your best of each species) or to your Reserve. Right-click your companion: the journal.",
 	TOUR_A5_T            = "Hunt mode",
 	TOUR_A5              = "Shift + right-click your companion: hunt mode. From 5 min to 1 h, every defeated monster goes to the net. Wariness: each capture of the same species in a day makes the next one harder.",
-	TOUR_B_evolution     = "Your companion: its mood, its needs (hunger, energy, mood, curiosity) and its effects. \"Choose…\" changes its look.",
+	TOUR_B_evolution     = "Your companion: its mood, its three states (Fed, Rested, Alert), its current wish and its effects. \"Choose…\" changes its look.",
 	TOUR_B_menagerie     = "The Codex: your best specimen of each species. \"To complete\" shows what's missing; pin a species so it always comes to the net, \"Locate\" tells where to find it.",
 	TOUR_B_reserve       = "Your extra specimens. \"Set in Codex\" makes one your reference; \"Release\" gives glitter, to spend at the Trainer's Stall (next tab). Each specimen has its own character (a small effect when your companion wears it) and size: a tiny or a giant one is rare! And to trade with another player: /qc trade <name> (Trades view).",
 	TOUR_B_shop          = "Spend your glitter here: capture aids, Reserve slots, your companion's look. Your balance is at the top right; an item out of reach tells you what's missing.",

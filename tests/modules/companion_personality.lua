@@ -29,7 +29,7 @@ function PE.Reset()
 		NS[field] = nil
 	end
 	NS.companionRT, NS.companionSession, NS.personaState, NS.companionFx = nil, nil, nil, nil
-	NS.companionLastPet, NS.companionEating = nil, nil
+	NS.companionLastPet, NS.companionEating, NS.companionWishNext = nil, nil, nil
 	PE.Quiet()
 	NS:CompanionData().tutoDone = true
 	local w = Mock.world
@@ -93,11 +93,15 @@ do
 	NS:CompanionOnKill()
 	S.ok("élite vaincu : Téméraire +2 de plus", math.abs(persona.scores.daring - 2.3) < 1e-6, persona.scores.daring)
 	Mock.world.target = nil
+	-- 3.5.0 : Éveillé obtenu (pas une curiosité chiffrée) : Curieux +1
+	NS:CompanionData().needs.curiosity = NS.COMPANION_STATE.on
 	local curious = persona.scores.curious or 0
-	NS:CompanionAdd("curiosity", 20)
-	S.ok("curiosité nourrie : Curieux", math.abs(persona.scores.curious - curious - 2) < 1e-6, persona.scores.curious)
+	NS:CompanionGrant("curiosity")
+	S.ok("Éveillé obtenu : Curieux", math.abs(persona.scores.curious - curious - 1) < 1e-6, persona.scores.curious)
+	NS:CompanionGrant("curiosity")
+	S.ok("déjà Éveillé à plein : rien de plus", math.abs(persona.scores.curious - curious - 1) < 1e-6, persona.scores.curious)
 	NS:CompanionAdd("curiosity", -5)
-	S.ok("une baisse ne compte pas", math.abs(persona.scores.curious - curious - 2) < 1e-6)
+	S.ok("une baisse ne compte pas", math.abs(persona.scores.curious - curious - 1) < 1e-6)
 	NS:CompanionOnDead()
 	S.ok("mort : Taquin +6", persona.scores.teasing == 6)
 	Mock.world.resting = true
@@ -152,19 +156,25 @@ do
 		and NS.companionBubbleLine:find("LEVEL__glutton", 1, true), NS.companionBubbleText)
 	math.random = PE.random
 
+	-- 3.5.0 : un état obtenu vaut 45 minutes pour tous ; l'état préféré
+	-- (Gourmand : Repu) s'use moins vite (×0,7), il dure ~64 minutes
 	local needs = NS:CompanionData().needs
-	needs.hunger, needs.curiosity = 40, 40
-	NS:CompanionAdd("hunger", 10)
-	NS:CompanionAdd("curiosity", 10)
+	local rate = NS.COMPANION_STATE.rate
+	needs.hunger, needs.curiosity = 70, 70
+	NS:CompanionGrant("hunger")
+	NS:CompanionGrant("curiosity")
 	S.done()
 	S = Scenario("[PERS] Gourmand : envies, infobulle ; ampleur des effets")
-	S.ok("Gourmand : la faim monte 50 % plus vite, pas le reste", needs.hunger == 55 and needs.curiosity == 50,
+	S.ok("Gourmand : son état préféré, Repu", NS.PERSONALITY_TRAITS.glutton.need == "hunger")
+	S.ok("un déclencheur : 45 minutes pleines pour tous (rien de plus pour le préféré)", needs.hunger == 100 and needs.curiosity == 100,
 		needs.hunger .. "/" .. needs.curiosity)
-	needs.hunger, needs.curiosity = 80, 80
 	NS:CompanionTick(600)
-	local hungerDrop, curiosityDrop = 80 - needs.hunger, 80 - needs.curiosity
-	S.ok("… et baisse moins vite (×0,7)", math.abs(hungerDrop - 0.6 * 10 * 0.7) < 1e-6
-		and math.abs(curiosityDrop - 0.5 * 10) < 1e-6, hungerDrop .. "/" .. curiosityDrop)
+	local hungerDrop, curiosityDrop = 100 - needs.hunger, 100 - needs.curiosity
+	S.ok("… Repu s'use moins vite (×0,7)", math.abs(hungerDrop - rate * 10 * NS.PERSONALITY_DECAY) < 1e-6
+		and math.abs(curiosityDrop - rate * 10) < 1e-6 and NS.PERSONALITY_DECAY == 0.7, hungerDrop .. "/" .. curiosityDrop)
+	needs.hunger = 100
+	S.ok("… il dure ~64 minutes au lieu de 45", math.abs(NS:CompanionStateMinutes("hunger") - 45 / 0.7) < 1e-6
+		and math.abs(NS:CompanionStateMinutes("curiosity") - (needs.curiosity - 70) / rate) < 1e-6, NS:CompanionStateMinutes("hunger"))
 
 	local hover = NS:EnsureCompanionHover()
 	NS:CompanionRefreshHover()
@@ -319,11 +329,16 @@ do
 		NS:CompanionTick(5)
 		S.ok("" .. label .. " : pas encore", not Noticed(trait), NS.companionBubbleKey)
 		setup()
+		-- (3.5.0 : son envie, née entre-temps, se tait ici : PE.Quiet efface
+		-- la pause qui l'empêche de se redire à chaque relevé ; l'astuce
+		-- qu'elle a retardée aussi)
+		NS:CompanionData().wish, NS.companionWishNext = nil, math.huge
+		if NS.companionRT then NS.companionRT.tipAt, NS.companionRT.goalAt = math.huge, math.huge end
 		PE.Quiet()
 		NS:CompanionTick(5)
 		S.ok("" .. label, Noticed(trait), NS.companionBubbleKey)
 	end
-	TickNotice("glutton", function() NS:CompanionData().needs.hunger = 50 end, "Gourmand : un petit creux",
+	TickNotice("glutton", function() NS:CompanionData().needs.hunger = NS.COMPANION_STATE.on end, "Gourmand : pas Repu, un petit creux",
 		function() NS:CompanionData().needs.hunger = 90 end)
 	TickNotice("lazy", function() Mock:Advance(2401) end, "Paresseux : pas de repos depuis 40 min")
 	TickNotice("cuddly", function() Mock:Advance(1201) end, "Câlin : pas de caresse depuis 20 min")

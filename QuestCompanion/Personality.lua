@@ -113,20 +113,20 @@ ns.RegisterDefaults({
 	companionTraitPick   = 0,     -- 0 : formé par ton jeu ; sinon PERSONALITY_ORDER[n]
 })
 
--- need : l'envie préférée ; fx : ampleur des mouvements ; exclusive : apparence
+-- need : l'envie préférée (3.5.0 : son état dure 60 minutes ; le moral n'est plus, ceux qui l'aimaient ont pris un état) ; fx : ampleur des mouvements ; exclusive : apparence
 local TRAITS = {
 	curious     = { need = "curiosity", fx = 1.2 },
 	glutton     = { need = "hunger",    fx = 1.0 },
-	daring      = { need = "mood",      fx = 1.4 },
+	daring      = { need = "hunger",    fx = 1.4 },
 	lazy        = { need = "energy",    fx = 0.6 },
-	teasing     = { need = "mood",      fx = 1.2 },
-	cuddly      = { need = "mood",      fx = 1.0 },
+	teasing     = { need = "curiosity", fx = 1.2 },
+	cuddly      = { need = "energy",    fx = 1.0 },
 	wise        = { need = "curiosity", fx = 0.7, exclusive = "owl" },
-	parrot      = { need = "mood",      fx = 1.3, exclusive = "parrot" },
+	parrot      = { need = "curiosity", fx = 1.3, exclusive = "parrot" },
 	mystic      = { need = "curiosity", fx = 0.8, exclusive = "wisp" },
 	zen         = { need = "energy",    fx = 0.5, exclusive = "turtle" },
 	sly         = { need = "curiosity", fx = 0.9, exclusive = "snake" },
-	mischievous = { need = "mood",      fx = 1.5, exclusive = "sprite" },
+	mischievous = { need = "curiosity", fx = 1.5, exclusive = "sprite" },
 	fearful     = { need = "energy",    fx = 1.3, exclusive = "chicken" },
 	tinker      = { need = "curiosity", fx = 0.9, exclusive = "squirrel_mech" },
 }
@@ -142,7 +142,6 @@ ns.PERSONALITY_BY_APPEARANCE = BY_APPEARANCE
 
 ns.PERSONALITY_FORM_AFTER = 3 * 3600     -- s de jeu observées avant d'annoncer son caractère
 ns.PERSONALITY_VARIANT_CHANCE = 0.75     -- part de ses propres répliques quand il en a
-ns.PERSONALITY_GAIN = 1.5                -- envie préférée : gains
 ns.PERSONALITY_DECAY = 0.7               -- envie préférée : baisse
 ns.PERSONALITY_NOTICE_GAP = 900          -- s entre deux remarques de caractère
 -- ce que chaque façon de jouer pèse
@@ -242,15 +241,11 @@ Wrap("CompanionPick", function(original, self, pool, args, list)
 	return original(self, pool, args, list)
 end)
 
--- l'envie préférée monte plus vite ; et ce qui remplit ses envies forme son caractère
-Wrap("CompanionAdd", function(original, self, key, amount)
-	amount = tonumber(amount) or 0
-	if amount > 0 then
-		local trait = self:CompanionTrait()
-		if trait and TRAITS[trait].need == key then amount = amount * ns.PERSONALITY_GAIN end
-		if key == "curiosity" then self:PersonaScore("curious", amount * ns.PERSONALITY_SCORES.curiosity) end
-	end
-	return original(self, key, amount)
+-- 3.5.0 : un état obtenu forme aussi son caractère (Éveillé : curieux)
+Wrap("CompanionGrant", function(original, self, key, value)
+	local done = original(self, key, value)
+	if done and key == "curiosity" then self:PersonaScore("curious", 10 * ns.PERSONALITY_SCORES.curiosity) end
+	return done
 end)
 
 -- l'envie préférée baisse moins vite (CompanionTick)
@@ -387,7 +382,8 @@ function ns:PersonaTickNotice(now, state)
 	if not trait then return false end
 	local data = self:CompanionData()
 	if trait == "glutton" then
-		if (tonumber(data.needs.hunger) or 100) < 60 then return self:PersonaNotice("glutton") end
+		-- 3.5.0 : pas Repu
+		if self.CompanionStateOn and not self:CompanionStateOn("hunger") then return self:PersonaNotice("glutton") end
 	elseif trait == "lazy" then
 		if now - (state.lastRest or now) >= 2400 then return self:PersonaNotice("lazy") end
 	elseif trait == "cuddly" then

@@ -42,6 +42,8 @@ ns.BOND_DAILY = 10
 ns.BOND_SOURCES = {
 	route = { gain = 1, cap = 3 }, treat = { gain = 2, cap = 4 }, pet = { gain = 1, cap = 2 },
 	quest = { gain = 2, cap = 4 }, cap = { gain = 2, cap = 4 },
+	-- 3.5.0 : une envie comblée (CompanionStates.lua), hors du plafond du jour
+	wish = { gain = 1, cap = 3, outside = true },
 }
 ns.BOND_ROUTE_METERS = 1500
 ns.BOND_KEEPSAKE = { level = 3, chance = 0.30 }
@@ -176,9 +178,13 @@ function ns:SpecimenBondAdd(source, n)
 	if newDay then bond.day, bond.c = day, {} end
 	bond.c = type(bond.c) == "table" and bond.c or {}
 	local today = 0
-	for _, value in pairs(bond.c) do today = today + (tonumber(value) or 0) end
+	for key, value in pairs(bond.c) do
+		local other = ns.BOND_SOURCES[key]
+		if not (other and other.outside) then today = today + (tonumber(value) or 0) end
+	end
 	local want = (tonumber(n) or 1) * rule.gain
-	local room = math.min(rule.cap - (tonumber(bond.c[source]) or 0), ns.BOND_DAILY - today)
+	local room = rule.cap - (tonumber(bond.c[source]) or 0)
+	if not rule.outside then room = math.min(room, ns.BOND_DAILY - today) end
 	local gain = math.max(0, math.min(want, room))
 	if gain <= 0 then
 		if newDay then spec.bond = bond end

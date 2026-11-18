@@ -1,8 +1,8 @@
 -- QuestCompanion 3.1.0 : le carnet et la fiche au thème forgé. Les fonctions
 -- qui n'existaient que dans l'ancien habillage, re-logées en briques forgées
 -- (décidées à la création du cadre) : médaillon du logo, points de hauts
--- faits sur une plaque sous la marque, roue du socle, envies en trois
--- paliers, chiffres du garde-manger sur pastille ; page Hauts faits (total
+-- faits sur une plaque sous la marque, roue du socle, états en deux
+-- teintes, chiffres du garde-manger sur pastille ; page Hauts faits (total
 -- sur une plaque, losange sur les lignes) ; fiche de dresseur (médaillon,
 -- portrait dans un cadre d'orfèvre, vitrine en creux) ; panneau d'allure et
 -- confirmation (habillage qui suit le niveau, boutons à leur rang) ; décor du
@@ -112,18 +112,20 @@ do
 
 	s = Steps()
 	local data = NS:CompanionData()
-	data.needs = { hunger = 82, energy = 64, mood = 12, curiosity = 46 }
+	-- 3.5.0 : un état actif (au-dessus de 70) ou éteint, en deux teintes
+	data.needs = { hunger = 82, energy = 70, curiosity = 70 }
 	NS:SelectJournalKind("evolution")
 	local byKey = {}
 	for _, row in ipairs(f.evo.needs) do byKey[row.key] = row end
-	s.ok("comblée : barre et chiffre verts", Same(byKey.hunger.bar.fill.vertex, Theme.GREEN) and Same(byKey.hunger.value.textColor, Theme.GREEN))
-	s.ok("entre les deux : barre d'or, chiffre clair", Same(byKey.energy.bar.fill.vertex, Theme.GOLD) and Same(byKey.energy.value.textColor, Theme.LABEL))
-	s.ok("basse (sous 30 %) : barre et chiffre orange", Same(byKey.mood.bar.fill.vertex, Theme.ORANGE_DEEP)
-		and Same(byKey.mood.value.textColor, Theme.ORANGE_DEEP))
+	s.ok("actif : barre verte, durée claire", Same(byKey.hunger.bar.fill.vertex, Theme.GREEN)
+		and Same(byKey.hunger.value.textColor, Theme.PARCHMENT) and byKey.hunger.value.text:find("^%d+ min$") ~= nil,
+		byKey.hunger.value.text)
+	s.ok("éteint : barre grise, tiret estompé", Same(byKey.energy.bar.fill.vertex, Theme.MUTED)
+		and Same(byKey.energy.value.textColor, Theme.MUTED_LIGHT) and byKey.energy.value.text == NS.L.COMP_STATE_OFF)
 	local nav = {}
 	for _, row in ipairs(f.navSummary.pet.needs) do nav[row.key] = row end
-	s.ok("colonne : les mêmes paliers", Same(nav.hunger.bar.fill.vertex, Theme.GREEN) and Same(nav.energy.bar.fill.vertex, Theme.GOLD)
-		and Same(nav.mood.bar.fill.vertex, Theme.ORANGE_DEEP))
+	s.ok("colonne : les mêmes teintes", Same(nav.hunger.bar.fill.vertex, Theme.GREEN) and Same(nav.energy.bar.fill.vertex, Theme.MUTED_LIGHT)
+		and Same(nav.curiosity.bar.fill.vertex, Theme.MUTED_LIGHT))
 	local button = f.pantry and f.pantry.biscuit
 	s.ok("garde-manger : chiffre sur sa pastille sombre, ombré", button and button.countPad and Same(button.countPad.vertex, Theme.INK)
 		and button.count.shadowOffset ~= nil)
@@ -131,7 +133,7 @@ do
 	s.ok("garde-manger : survol à la sélection", Same(button.border.top.vertex or {}, Theme.SELECT_LIGHT)
 		or Same({ button.border.top:GetVertexColor() }, Theme.SELECT_LIGHT))
 	button:GetScript("OnLeave")(button)
-	s.check("[JFG] envies en trois paliers (verte comblée, or, orange sous 30 %), page et colonne ; garde-manger lisible")
+	s.check("[JFG] états en deux teintes (vert actif, gris éteint), page et colonne ; garde-manger lisible")
 
 	-- 2. Hauts faits : plaque du total, losanges
 	s = Steps()
@@ -168,11 +170,13 @@ do
 	s.ok("roue grise du journal de quêtes", f.settingsButton and f.settingsButton.cogTexture ~= nil)
 	local button = f.pantry and f.pantry.biscuit
 	s.ok("garde-manger sans pastille", button and button.countPad == nil)
-	NS:CompanionData().needs = { hunger = 82, energy = 64, mood = 12, curiosity = 46 }
+	NS:CompanionData().needs = { hunger = 82, energy = 70, curiosity = 70 }
 	NS:SelectJournalKind("evolution")
-	local low
-	for _, row in ipairs(f.evo.needs) do if row.key == "mood" then low = row end end
-	s.ok("envies : or ou gris (deux paliers)", low and Same(low.bar.fill.vertex, Theme.MUTED))
+	local on, off
+	for _, row in ipairs(f.evo.needs) do
+		if row.key == "hunger" then on = row elseif row.key == "curiosity" then off = row end
+	end
+	s.ok("états : vert ou gris (deux teintes)", on and off and Same(on.bar.fill.vertex, Theme.GREEN) and Same(off.bar.fill.vertex, Theme.MUTED))
 	NS:SelectJournalKind("feats")
 	s.ok("Hauts faits : pas de plaque du total", f.feats.pointsPlate == nil)
 	s.check("[JFG] Sobre : ni médaillon, ni plaque, ni pastille, ni troisième palier ; roue et points comme avant")
@@ -341,9 +345,11 @@ do
 	local pad = Theme.Over(Theme.WHITE, Theme.INK, K.padAlpha)   -- la pastille sur l'icône la plus claire
 	local c3 = Theme.Contrast(Theme.PARCHMENT, pad)
 	s.ok("chiffre du garde-manger sur sa pastille, icône blanche dessous ≥ 4,5", c3 >= 4.5, string.format("%.2f", c3))
-	for _, ink in ipairs({ { "verte", Theme.GREEN }, { "orange", Theme.ORANGE_DEEP }, { "claire", Theme.LABEL } }) do
+	-- 3.5.0 : les encres des plaques d'état (durée claire, tiret estompé, nom), sur la tuile
+	for _, ink in ipairs({ { "durée d'un état actif", Theme.PARCHMENT }, { "état éteint", Theme.MUTED_LIGHT },
+		{ "nom d'un état", Theme.LABEL } }) do
 		local c = math.min(Theme.Contrast(ink[2], Theme.ROW), Theme.Contrast(ink[2], Theme.ROW_ALT))
-		s.ok("envie " .. ink[1] .. " sur sa rangée ≥ 4,5", c >= 4.5, string.format("%.2f", c))
+		s.ok(ink[1] .. " sur sa tuile ≥ 4,5", c >= 4.5, string.format("%.2f", c))
 	end
 	for _, item in ipairs({ { "titre de plaque des Missions (identité claire) sur la tuile", Theme.IDENTITY_LIGHT, Theme.ROW },
 		{ "titre de liste et intertitres (identité) sur la fenêtre", Theme.IDENTITY, Theme.WINDOW },

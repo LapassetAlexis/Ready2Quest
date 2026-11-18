@@ -1,5 +1,17 @@
 # QuestCompanion
 
+## 3.5.0 — Des états, pas des jauges
+
+- **Ses envies deviennent des bonus, jamais une perte** : les effets du compagnon valent toujours en entier. Faim, énergie, moral et curiosité laissent place à **trois états de 45 minutes** : **Repu** (un repas, « Bien nourri », partir avec de quoi manger), **Reposé** (deux minutes en ville, à l'auberge ou au camp, le tampon d'auberge du jour), **Éveillé** (une zone, un lieu ou un tampon nouveau, un donjon, un élite ou un rare, un coffre ; en mode chasse : 15 créatures en 10 minutes, une brillante, une espèce nouvelle).
+- **Son humeur** se lit au nombre d'états : Tranquille, Content, Joyeux, **Rayonnant**. Rayonnant (les trois) : chance de capture +10 %, brillantes +20 %.
+- **Une envie à la fois** : il dit ce qui lui ferait plaisir (manger, se reposer, découvrir) ; la combler donne +1 lien à l'exemplaire que tu portes (3 par jour, en plus du reste). L'envie se voit sur la page Compagnon, la fiche au survol et le tableau de bord du carnet, même s'il parle peu.
+- **Évoluer** : le niveau ouvre le stade, une envie comblée le franchit (plus besoin des quatre envies à 70 %).
+- **Friandises** : chacune donne son état pour 60 minutes (Biscuit : Repu, Infusion : Reposé, Carte : Éveillé, Festin : les trois ; Bonbon : chaque état actif repart à plein). Garde-manger plein : la friandise en trop devient 1 paillette.
+- **Page Compagnon** : trois plaques d'état avec le temps qui reste, la ligne d'humeur (« Encore 1 pour rayonner »), son envie et son « +1 lien ».
+- Les effets qui parlaient du moral visent maintenant les états (le revers de Câlin : Reposé ; l'atout de Taquin : Éveillé) ; le bonhomme de neige fond sur ses trois états au chaud.
+
+*English:* needs become bonuses, never a loss: your companion's effects always count in full. Hunger, energy, mood and curiosity give way to three 45-minute states: Fed (a meal, "Well Fed", setting out with food), Rested (two minutes in town, at an inn or a camp, the day's inn stamp), Alert (a new zone, place or stamp, a dungeon, an elite or rare, a chest; in hunt mode: 15 creatures in 10 minutes, a shiny, a new species). Its mood is the number of states: Calm, Happy, Joyful, Radiant; Radiant (all three) gives capture chance +10% and shinies +20%. One wish at a time: granting it gives +1 bond to the specimen you wear (3 a day, on top of the rest), shown on the Companion page, the hover card and the journal dashboard. Evolving: your level opens the stage, one granted wish completes it. Treats give their state for 60 minutes (Feast: all three; Candy: every active state back to full); a full pantry turns the extra treat into 1 glitter.
+
 ## 3.4.0 — Compagnon de route
 
 - **La Réserve se trie finement** : recherche (nom, surnom ou zone), panneau « Filtres » (étoiles, version, taille, caractère, type, rang, zone, date de capture, lien, état), chaque puce avec son compte ; tri par étoiles, date, nom, taille, lien, doublons ou valeur, dans les deux sens ; vues toutes prêtes (Doublons, Relâchables, Meilleurs que le Codex, Récents, Protégés) et « Ma vue », la tienne. Le même panneau sert à choisir quoi proposer dans un échange.

@@ -3,7 +3,7 @@
 -- complétion de zone), tri, survol, masquage et réaffichage, repli, combat,
 -- ancrage et position, module coupé, réglages, chaînes ; dans la fenêtre :
 -- « Suivre à l'écran » d'une zone, tri / filtre des zones, Créatures inconnues,
--- page Compagnon (envies au survol). La page Complétion elle-même : journal.lua.
+-- page Compagnon (états au survol). La page Complétion elle-même : journal.lua.
 local Check, Say, ResetWorld, NS, Mock = T.Check, T.Say, T.ResetWorld, T.QNS, T.Mock
 
 local function Expect(bad, label, ok) if not ok then bad[#bad + 1] = label end end
@@ -612,42 +612,48 @@ do
 	-- Compagnon (ex-Évolution)
 	f.sections.evolution:Click()
 	local evo = f.evo
-	Check("[WIN] Compagnon : section seule, étape, prochain objectif, 4 envies avec barres, son allure, pas de coffre",
+	-- 3.5.0 : trois plaques d'état (Repu, Reposé, Éveillé), leur durée ou un tiret, une barre
+	Check("[WIN] Compagnon : section seule, étape, prochain objectif, 3 états avec barres, son allure, pas de coffre",
 		evo:IsShown() and not prog:IsShown() and f.kind == "evolution" and evo.look.text:find("étape", 1, true)
-		and evo.next.text:find("niveau", 1, true) and #evo.needs == 4 and evo.needs[1].label.text == "Faim"
-		and evo.needs[1].value.text:find("%", 1, true) and evo.looksTitle.raw and evo.looksTitle.raw:find("Son allure", 1, true)
+		and evo.next.text:find("niveau", 1, true) and #evo.needs == 3 and evo.needs[1].label.text == "Repu"
+		and (evo.needs[1].value.text == "—" or evo.needs[1].value.text:find("^%d+ min$")) and evo.needs[1].bar
+		and evo.looksTitle.raw and evo.looksTitle.raw:find("Son allure", 1, true)
 		and evo.looksTitle.raw:find("apparence", 1, true) and not evo.openChest:IsShown(), evo.look.text)
-	-- survol d'une envie : quoi faire pour la remplir
+	-- survol d'un état : le temps qui reste, ce qui l'allume
 	local data = NS:CompanionData()
-	data.needs.hunger, data.needs.mood = 40, 85
+	data.needs.hunger, data.needs.energy, data.needs.curiosity = 82, 70, 70
+	NS:RefreshJournal()
 	local bad = {}
-	for index, key in ipairs({ "hunger", "energy", "mood", "curiosity" }) do
-		local row = evo.needs[index]
-		local text = K.Tip(row.hover)
-		row.hover.scripts.OnLeave(row.hover)
-		Expect(bad, key, row.key == key and text:find(NS.L["COMP_NEED_" .. key], 1, true) and text:find(NS.L.JRN_NEED_TIP_HOW, 1, true)
-			and text:find(NS.L["JRN_NEED_" .. key .. "_1"], 1, true) and #_G.GameTooltip.lines >= 5)
+	for index, key in ipairs({ "hunger", "energy", "curiosity" }) do
+		local tile = evo.needs[index]
+		local text = K.Tip(tile)
+		tile:GetScript("OnLeave")(tile)
+		Expect(bad, key, tile.key == key and text:find(NS.L["COMP_STATE_" .. key], 1, true) and text:find(NS.L.JRN_STATE_TIP_HOW, 1, true)
+			and text:find(NS.L["JRN_STATE_" .. key .. "_1"], 1, true) and #_G.GameTooltip.lines >= 5)
 	end
-	Check("[WIN] chaque envie au survol : nom, valeur, quoi faire", #bad == 0, table.concat(bad, ", "))
-	local hunger, mood = K.Tip(evo.needs[1].hover), K.Tip(evo.needs[3].hover)
-	Check("[WIN] envie basse : ce qu'il manque pour qu'elle compte ; comblée : dite comblée", hunger:find("Faim : 40 %", 1, true)
-		and hunger:find("Encore 30 %", 1, true) and hunger:find("mange ou bois", 1, true) and mood:find("Moral : 85 %", 1, true)
-		and mood:find("Comblée", 1, true) and mood:find("caresse-le", 1, true), hunger .. " // " .. mood)
+	Check("[WIN] chaque état au survol : nom, temps qui reste, ce qui l'allume", #bad == 0, table.concat(bad, ", "))
+	local fed, rested = K.Tip(evo.needs[1]), K.Tip(evo.needs[2])
+	Check("[WIN] état actif : les minutes qui restent ; éteint : dit éteint, et comment l'allumer", fed:find("Repu : encore %d+ min")
+		and evo.needs[1].value.text:find("^%d+ min$") and rested:find("Reposé : éteint", 1, true)
+		and rested:find("deux minutes en ville", 1, true) and evo.needs[2].value.text == "—", fed .. " // " .. rested)
 	local missing = {}
 	for key, count in pairs(NS.NEED_TIP_LINES) do
 		for index = 1, count do
-			local name = "JRN_NEED_" .. key .. "_" .. index
+			local name = "JRN_STATE_" .. key .. "_" .. index
 			if NS.L[name] == name or NS.JOURNAL_WINDOW_STRINGS.en[name] == nil then missing[#missing + 1] = name end
 		end
 	end
-	Check("[WIN] conseils des envies en français et en anglais", #missing == 0, table.concat(missing, ", "))
+	Check("[WIN] ce qui allume chaque état, en français et en anglais", #missing == 0 and NS.NEED_TIP_LINES.mood == nil,
+		table.concat(missing, ", "))
 	-- « comment ça marche » : l'infobulle des étapes
 	_G.GameTooltip.lines = {}
 	evo.stepsHover.scripts.OnEnter(evo.stepsHover)
 	local how = _G.GameTooltip.lines or {}
 	evo.stepsHover.scripts.OnLeave(evo.stepsHover)
+	-- 3.5.0 : le niveau ouvre l'étape, une envie comblée la franchit (plus « quatre envies à 70 % »)
 	Check("[WIN] Compagnon : comment ça marche (au survol des étapes)", how[1] == "Comment ça marche"
-		and tostring(how[3]):find("70", 1, true) and tostring(how[4]):find("100 %", 1, true)
+		and tostring(how[3]):find("envie", 1, true) and tostring(how[3]):find("combl", 1, true)
+		and not tostring(how[3]):find("quatre", 1, true) and tostring(how[4]):find("100 %", 1, true)
 		and not tostring(how[4]):find("%%", 1, true), table.concat(how, " | "))
 	f:Hide()
 	NS:JournalData().bestiary = nil

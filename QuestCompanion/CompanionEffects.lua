@@ -31,7 +31,6 @@ local function InCombat()
 end
 
 ns.EFFECT_DELAY = 120             -- s (temps réel) avant que les effets d'un nouveau compagnon s'activent
-ns.EFFECT_NEED_OK = 50            -- une envie à ce niveau ou plus : comblée pour les effets
 ns.EFFECT_TICK = 1                -- s entre deux relevés (activation, compte à rebours)
 ns.EFFECT_RANK_STRENGTH = { trivial = 1, minus = 1, normal = 1, elite = 1.5, rare = 2, rareelite = 2, worldboss = 2.5 }
 ns.EFFECT_SHINY_STRENGTH = 0.5
@@ -77,7 +76,7 @@ local EFFECTS = {
 	treat_zone       = { kind = "treatZone",                      base = 0.15, cap = 0.60 },
 	decay_energy     = { kind = "decay",     need = "energy",     base = 0.10, cap = 0.40 },
 	decay_curiosity  = { kind = "decay",     need = "curiosity",  base = 0.10, cap = 0.40 },
-	decay_mood       = { kind = "decay",     need = "mood",       base = 0.10, cap = 0.40 },
+	decay_mood       = { kind = "decay",                          base = 0.034, cap = 0.134 },   -- 3.5.0 : le moral n'est plus : un tiers, sur les trois états
 	pet_mood         = { kind = "pet",                            base = 0.25, cap = 1.00 },
 	decay_all        = { kind = "decay",     base = 0.05, cap = 0.25 },
 	rest_energy      = { kind = "rest",                           base = 0.15, cap = 0.60 },
@@ -96,7 +95,7 @@ local EFFECTS = {
 	trait_glutton     = { kind = "treatZone",                      base = 0.10, cap = 0.20, trait = true },
 	trait_daring      = { kind = "capture",   named = true,        base = 0.05, cap = 0.10, trait = true },
 	trait_lazy        = { kind = "rest",                           base = 0.10, cap = 0.20, trait = true },
-	trait_teasing     = { kind = "decay",     need = "mood",       base = 0.08, cap = 0.16, trait = true },
+	trait_teasing     = { kind = "decay",     need = "curiosity",  base = 0.08, cap = 0.16, trait = true },   -- 3.5.0 : Éveillé (le moral n'est plus)
 	trait_cuddly      = { kind = "pet",                            base = 0.25, cap = 0.50, trait = true },
 	trait_wise        = { kind = "aidKeep",                        base = 0.05, cap = 0.05, trait = true },
 	trait_parrot      = { kind = "chain",                          base = 0.10, cap = 0.10, trait = true },
@@ -115,7 +114,7 @@ local EFFECTS = {
 	minus_daring      = { kind = "wary",                           base = -0.05, cap = -0.05, fixed = true, minus = true },
 	minus_lazy        = { kind = "decay",     need = "curiosity",  base = -0.10, cap = -0.10, fixed = true, minus = true },
 	minus_teasing     = { kind = "decay",     need = "energy",     base = -0.10, cap = -0.10, fixed = true, minus = true },
-	minus_cuddly      = { kind = "decay",     need = "mood",       base = -0.10, cap = -0.10, fixed = true, minus = true },
+	minus_cuddly      = { kind = "decay",     need = "energy",     base = -0.10, cap = -0.10, fixed = true, minus = true },   -- 3.5.0 : Reposé
 	-- 3.4.0 : taille (dès le lien 2) : plancher de méfiance, élites et rares, faim
 	size_tiny_wary    = { kind = "wary",                           base = 0.15,  cap = 0.15,  fixed = true, size = true },
 	size_tiny_named   = { kind = "capture",   named = true,        base = -0.05, cap = -0.05, fixed = true, size = true, minus = true },
@@ -185,42 +184,42 @@ local FR = {
 	EFF_aid_zone           = "%d %% de chance d'une aide de capture en plus à chaque palier de zone",
 	EFF_aid_refund         = "capture ratée : %d %% de chance que l'aide revienne",
 	EFF_capture_all        = "capture +%d %% sur toutes les créatures",
-	EFF_decay_hunger       = "la faim baisse %d %% moins vite",
+	EFF_decay_hunger       = "Repu s'use %d %% moins vite",
 	EFF_treat_zone         = "%d %% de chance d'une friandise en plus à chaque palier de zone",
-	EFF_decay_energy       = "l'énergie baisse %d %% moins vite",
-	EFF_decay_curiosity    = "la curiosité baisse %d %% moins vite",
-	EFF_decay_mood         = "le moral baisse %d %% moins vite",
-	EFF_pet_mood           = "une caresse remonte le moral de %d %% en plus",
-	EFF_decay_all          = "les envies baissent %d %% moins vite",
-	EFF_rest_energy        = "au repos, l'énergie remonte %d %% plus vite",
-	EFF_mascot_decay       = "les envies baissent %d %% moins vite",
+	EFF_decay_energy       = "Reposé s'use %d %% moins vite",
+	EFF_decay_curiosity    = "Éveillé s'use %d %% moins vite",
+	EFF_decay_mood         = "ses états s'usent %d %% moins vite",
+	EFF_pet_mood           = "une caresse prolonge son état le plus court de %d %%",
+	EFF_decay_all          = "ses états s'usent %d %% moins vite",
+	EFF_rest_energy        = "au repos, Reposé vient %d %% plus vite",
+	EFF_mascot_decay       = "ses états s'usent %d %% moins vite",
 	EFF_winter_treat       = "%d %% de chance d'une friandise en plus à chaque palier de zone",
 	EFF_winter_sack        = "« La hotte » : un cadeau par jour (friandise ou aide de capture)",
-	EFF_winter_energy      = "l'énergie baisse %d %% moins vite",
+	EFF_winter_energy      = "Reposé s'use %d %% moins vite",
 	EFF_winter_nose        = "« Le nez qui brille » : capture +%d %% la nuit (20 h - 6 h)",
-	EFF_winter_pet         = "une caresse remonte le moral de %d %% en plus",
-	EFF_winter_cold        = "« Il aime le froid » : envies %d %% plus lentes au froid, il fond au chaud",
+	EFF_winter_pet         = "une caresse prolonge son état le plus court de %d %%",
+	EFF_winter_cold        = "« Il aime le froid » : ses états s'usent %d %% moins vite au froid, il fond au chaud",
 	EFF_TRAIT              = "Caractère : %s, %s",
-	EFF_trait_curious      = "la curiosité baisse %d %% moins vite",
+	EFF_trait_curious      = "Éveillé s'use %d %% moins vite",
 	EFF_trait_glutton      = "%d %% de chance d'une friandise en plus à chaque palier de zone",
 	EFF_trait_daring       = "capture des élites et rares +%d %%",
-	EFF_trait_lazy         = "au repos, l'énergie remonte %d %% plus vite",
-	EFF_trait_teasing      = "le moral baisse %d %% moins vite",
-	EFF_trait_cuddly       = "une caresse remonte le moral de %d %% en plus",
+	EFF_trait_lazy         = "au repos, Reposé vient %d %% plus vite",
+	EFF_trait_teasing      = "Éveillé s'use %d %% moins vite",
+	EFF_trait_cuddly       = "une caresse prolonge son état le plus court de %d %%",
 	EFF_trait_wise         = "%d %% de chance qu'une aide utilisée ne soit pas consommée",
 	EFF_trait_parrot       = "chasse au brillant : abattus comptés +%d %%",
 	EFF_trait_mystic       = "chance de brillant +%d %% sur toutes les créatures",
-	EFF_trait_zen          = "les envies baissent %d %% moins vite",
+	EFF_trait_zen          = "ses états s'usent %d %% moins vite",
 	EFF_trait_sly          = "%d %% de chance d'une aide de capture en plus à chaque palier de zone",
 	EFF_trait_mischievous  = "capture +%d %% sur toutes les créatures",
-	EFF_trait_fearful      = "l'énergie baisse %d %% moins vite",
+	EFF_trait_fearful      = "Reposé s'use %d %% moins vite",
 	EFF_trait_tinker       = "capture ratée : %d %% de chance que l'aide revienne",
 	EFF_SEASON             = "Saison : %s",
 	EFF_QUIRK              = "Particularité : %s",
 	EFF_SECTION            = "Ses effets",
 	EFF_SECTION_MASCOT     = "Ses effets (mascotte, grandit avec l'étape)",
 	EFF_SECTION_WINTER     = "Ses effets (Voile d'hiver, grandit avec l'étape)",
-	EFF_STRENGTH           = "Force ×%s · envies %d/4 : %d %%",
+	EFF_STRENGTH           = "Force ×%s · effets entiers",
 	EFF_ACTIVE             = "Actifs",
 	EFF_PENDING            = "Actifs dans %s",
 	EFF_OFF                = "Compagnon coupé : aucun effet",
@@ -254,42 +253,42 @@ local EN = {
 	EFF_aid_zone           = "%d%% chance of an extra capture aid at each zone milestone",
 	EFF_aid_refund         = "failed capture: %d%% chance to get the aid back",
 	EFF_capture_all        = "capture +%d%% on every creature",
-	EFF_decay_hunger       = "hunger drops %d%% slower",
+	EFF_decay_hunger       = "Fed wears off %d%% slower",
 	EFF_treat_zone         = "%d%% chance of an extra treat at each zone milestone",
-	EFF_decay_energy       = "energy drops %d%% slower",
-	EFF_decay_curiosity    = "curiosity drops %d%% slower",
-	EFF_decay_mood         = "mood drops %d%% slower",
-	EFF_pet_mood           = "petting raises mood %d%% more",
-	EFF_decay_all          = "needs drop %d%% slower",
-	EFF_rest_energy        = "while resting, energy comes back %d%% faster",
-	EFF_mascot_decay       = "needs drop %d%% slower",
+	EFF_decay_energy       = "Rested wears off %d%% slower",
+	EFF_decay_curiosity    = "Alert wears off %d%% slower",
+	EFF_decay_mood         = "its states wear off %d%% slower",
+	EFF_pet_mood           = "petting extends its shortest state by %d%%",
+	EFF_decay_all          = "its states wear off %d%% slower",
+	EFF_rest_energy        = "while resting, Rested comes %d%% faster",
+	EFF_mascot_decay       = "its states wear off %d%% slower",
 	EFF_winter_treat       = "%d%% chance of an extra treat at each zone milestone",
 	EFF_winter_sack        = "\"The sack\": one gift a day (a treat or a capture aid)",
-	EFF_winter_energy      = "energy drops %d%% slower",
+	EFF_winter_energy      = "Rested wears off %d%% slower",
 	EFF_winter_nose        = "\"Glowing nose\": capture +%d%% at night (8 p.m. - 6 a.m.)",
-	EFF_winter_pet         = "petting raises mood %d%% more",
-	EFF_winter_cold        = "\"Loves the cold\": needs drop %d%% slower in the cold, melts in the heat",
+	EFF_winter_pet         = "petting extends its shortest state by %d%%",
+	EFF_winter_cold        = "\"Loves the cold\": its states wear off %d%% slower in the cold, melts in the heat",
 	EFF_TRAIT              = "Character: %s, %s",
-	EFF_trait_curious      = "curiosity drops %d%% slower",
+	EFF_trait_curious      = "Alert wears off %d%% slower",
 	EFF_trait_glutton      = "%d%% chance of an extra treat at each zone milestone",
 	EFF_trait_daring       = "elite and rare capture +%d%%",
-	EFF_trait_lazy         = "while resting, energy comes back %d%% faster",
-	EFF_trait_teasing      = "mood drops %d%% slower",
-	EFF_trait_cuddly       = "petting raises mood %d%% more",
+	EFF_trait_lazy         = "while resting, Rested comes %d%% faster",
+	EFF_trait_teasing      = "Alert wears off %d%% slower",
+	EFF_trait_cuddly       = "petting extends its shortest state by %d%%",
 	EFF_trait_wise         = "%d%% chance that a used aid is not spent",
 	EFF_trait_parrot       = "shiny hunt: kills count +%d%%",
 	EFF_trait_mystic       = "shiny chance +%d%% on every creature",
-	EFF_trait_zen          = "needs drop %d%% slower",
+	EFF_trait_zen          = "its states wear off %d%% slower",
 	EFF_trait_sly          = "%d%% chance of an extra capture aid at each zone milestone",
 	EFF_trait_mischievous  = "capture +%d%% on every creature",
-	EFF_trait_fearful      = "energy drops %d%% slower",
+	EFF_trait_fearful      = "Rested wears off %d%% slower",
 	EFF_trait_tinker       = "failed capture: %d%% chance to get the aid back",
 	EFF_SEASON             = "Season: %s",
 	EFF_QUIRK              = "Quirk: %s",
 	EFF_SECTION            = "Its effects",
 	EFF_SECTION_MASCOT     = "Its effects (mascot, grows with the stage)",
 	EFF_SECTION_WINTER     = "Its effects (Winter Veil, grows with the stage)",
-	EFF_STRENGTH           = "Strength ×%s · needs %d/4: %d%%",
+	EFF_STRENGTH           = "Strength ×%s · full effects",
 	EFF_ACTIVE             = "Active",
 	EFF_PENDING            = "Active in %s",
 	EFF_OFF                = "Companion off: no effect",
@@ -355,16 +354,11 @@ local function CaptureEntry(self, npc)
 	return type(creatures) == "table" and (creatures[npc] or creatures[tostring(npc)]) or nil
 end
 
--- Envies comblées (>= EFFECT_NEED_OK) et facteur de force : 1 si les quatre,
--- un huitième de moins par envie en dessous (0,5 au pire)
-local NEED_KEYS = { "hunger", "energy", "mood", "curiosity" }
+-- 3.5.0 : les effets valent toujours 100 % (les envies sont des bonus,
+-- jamais une perte) ; le second nombre compte les états actifs (clé de cache)
 function ns:CompanionEffectNeeds()
-	local needs = self.CompanionData and self:CompanionData().needs or {}
-	local ok = 0
-	for _, key in ipairs(NEED_KEYS) do
-		if (tonumber(needs[key]) or 0) >= ns.EFFECT_NEED_OK then ok = ok + 1 end
-	end
-	return 0.5 + 0.5 * ok / 4, ok
+	local ok = self.CompanionStatesOn and self:CompanionStatesOn() or 0
+	return 1, ok
 end
 
 -- Ce que donnerait une créature ou une mascotte.
@@ -798,22 +792,11 @@ do
 	end
 end
 
--- Mécanique : l'énergie remonte plus vite au repos
-do
-	local tick = ns.CompanionTick
-	if tick then
-		function ns:CompanionTick(seconds, ...)
-			local result = tick(self, seconds, ...)
-			local found = ModuleOn() and (tonumber(seconds) or 0) > 0 and ActiveOf(self, "rest")
-			if found and self:CompanionResting() and not self:CompanionData().sleepy then
-				local rules = ns.COMPANION_RULES or {}
-				local needs = self:CompanionData().needs
-				local gain = (tonumber(rules.restGain) or 4) * (seconds / 60) * Sum(found)
-				needs.energy = math.min(tonumber(rules.max) or 100, (tonumber(needs.energy) or 0) + gain)
-			end
-			return result
-		end
-	end
+-- Mécanique : au repos, Reposé vient plus vite (3.5.0 : les 2 minutes de repos
+-- se divisent par 1 + la somme des effets « rest »)
+function ns:CompanionRestSpeed()
+	local found = ModuleOn() and ActiveOf(self, "rest")
+	return 1 + (found and Sum(found) or 0)
 end
 
 -- Démon : une caresse compte plus. Seulement une vraie caresse : l'appel
@@ -826,8 +809,9 @@ do
 			local before = self.companionLastPet
 			local done = pet(self, ...)
 			if done and self.companionLastPet ~= nil and self.companionLastPet ~= before then
+				-- 3.5.0 : l'état qui finit le premier s'allonge (une part de ses 45 minutes)
 				local found = ActiveOf(self, "pet")
-				if found then self:CompanionAdd("mood", 8 * Sum(found)) end
+				if found and self.CompanionStateExtend then self:CompanionStateExtend(Sum(found)) end
 			end
 			return done
 		end
@@ -1027,7 +1011,13 @@ function ns:CompanionEffectsRefreshPane(pane)
 	else
 		state = self:F("EFF_PENDING", Clockface(effects.remaining))
 	end
-	pane.effState:SetText(self:F("EFF_STRENGTH", Num(effects.strength), effects.needsOk, Pct(effects.needs)) .. " · " .. state)
+	-- 3.5.0 : les effets toujours entiers ; Rayonnant le dit
+	local head = self:F("EFF_STRENGTH", Num(effects.strength))
+	if self.CompanionRadiant and self:CompanionRadiant() and ns.COMPANION_RADIANT then
+		head = self:F("COMP_RADIANT_ON", math.floor((ns.COMPANION_RADIANT.capture - 1) * 100 + 0.5),
+			math.floor((ns.COMPANION_RADIANT.shiny - 1) * 100 + 0.5))
+	end
+	pane.effState:SetText(head .. " · " .. state)
 	local c = effects.active and Theme.GOLD or Theme.MUTED_LIGHT
 	pane.effState:SetTextColor(c[1], c[2], c[3])
 	local tc = effects.active and Theme.TEXT or Theme.MUTED
@@ -1236,22 +1226,22 @@ end
 local FR34 = {
 	EFF_plus_curious      = "+%d paillette à chaque palier de zone",
 	EFF_plus_teasing      = "en chasse, méfiance moins forte (plancher +%d %%)",
-	EFF_minus_curious     = "l'énergie baisse %d %% plus vite",
-	EFF_minus_glutton     = "la faim baisse %d %% plus vite",
+	EFF_minus_curious     = "Reposé s'use %d %% plus vite",
+	EFF_minus_glutton     = "Repu s'use %d %% plus vite",
 	EFF_minus_daring      = "en chasse, méfiance plus forte (plancher −%d %%)",
-	EFF_minus_lazy        = "la curiosité baisse %d %% plus vite",
-	EFF_minus_teasing     = "l'énergie baisse %d %% plus vite",
-	EFF_minus_cuddly      = "le moral baisse %d %% plus vite",
+	EFF_minus_lazy        = "Éveillé s'use %d %% plus vite",
+	EFF_minus_teasing     = "Reposé s'use %d %% plus vite",
+	EFF_minus_cuddly      = "Reposé s'use %d %% plus vite",
 	EFF_size_tiny_wary    = "en chasse, méfiance moins forte (plancher +%d %%)",
 	EFF_size_tiny_named   = "capture des élites et rares −%d %%",
 	EFF_size_small_wary   = "en chasse, méfiance moins forte (plancher +%d %%)",
 	EFF_size_small_named  = "capture des élites et rares −%d %%",
 	EFF_size_large_named  = "capture des élites et rares +%d %%",
 	EFF_size_large_wary   = "en chasse, méfiance plus forte (plancher −%d %%)",
-	EFF_size_large_hunger = "la faim baisse %d %% plus vite",
+	EFF_size_large_hunger = "Repu s'use %d %% plus vite",
 	EFF_size_giant_named  = "capture des élites et rares +%d %%",
 	EFF_size_giant_wary   = "en chasse, méfiance plus forte (plancher −%d %%)",
-	EFF_size_giant_hunger = "la faim baisse %d %% plus vite",
+	EFF_size_giant_hunger = "Repu s'use %d %% plus vite",
 	EFF_PLUS              = "Atout : %s",
 	EFF_MINUS             = "Revers : %s",
 	EFF_MINUS_LATER       = "Revers (au lien 2) : %s",
@@ -1259,22 +1249,22 @@ local FR34 = {
 local EN34 = {
 	EFF_plus_curious      = "+%d glitter at each zone milestone",
 	EFF_plus_teasing      = "while hunting, milder wariness (floor +%d%%)",
-	EFF_minus_curious     = "energy drops %d%% faster",
-	EFF_minus_glutton     = "hunger drops %d%% faster",
+	EFF_minus_curious     = "Rested wears off %d%% faster",
+	EFF_minus_glutton     = "Fed wears off %d%% faster",
 	EFF_minus_daring      = "while hunting, stronger wariness (floor −%d%%)",
-	EFF_minus_lazy        = "curiosity drops %d%% faster",
-	EFF_minus_teasing     = "energy drops %d%% faster",
-	EFF_minus_cuddly      = "mood drops %d%% faster",
+	EFF_minus_lazy        = "Alert wears off %d%% faster",
+	EFF_minus_teasing     = "Rested wears off %d%% faster",
+	EFF_minus_cuddly      = "Rested wears off %d%% faster",
 	EFF_size_tiny_wary    = "while hunting, milder wariness (floor +%d%%)",
 	EFF_size_tiny_named   = "elite and rare capture −%d%%",
 	EFF_size_small_wary   = "while hunting, milder wariness (floor +%d%%)",
 	EFF_size_small_named  = "elite and rare capture −%d%%",
 	EFF_size_large_named  = "elite and rare capture +%d%%",
 	EFF_size_large_wary   = "while hunting, stronger wariness (floor −%d%%)",
-	EFF_size_large_hunger = "hunger drops %d%% faster",
+	EFF_size_large_hunger = "Fed wears off %d%% faster",
 	EFF_size_giant_named  = "elite and rare capture +%d%%",
 	EFF_size_giant_wary   = "while hunting, stronger wariness (floor −%d%%)",
-	EFF_size_giant_hunger = "hunger drops %d%% faster",
+	EFF_size_giant_hunger = "Fed wears off %d%% faster",
 	EFF_PLUS              = "Upside: %s",
 	EFF_MINUS             = "Downside: %s",
 	EFF_MINUS_LATER       = "Downside (at bond 2): %s",

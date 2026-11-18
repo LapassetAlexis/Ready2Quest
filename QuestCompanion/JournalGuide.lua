@@ -59,7 +59,7 @@ local FR = {
 	GUIDE_effects_1        = "Une créature capturée que tu emmènes donne deux effets liés à son type : un de chasse et un de confort. Les valeurs ci-dessous sont celles d'une créature normale à 1 étoile, à pleine force ; entre parenthèses, le plafond.",
 	GUIDE_effects_H        = "La force",
 	GUIDE_effects_2        = "Elle multiplie les effets : rang normal ×%s, élite ×%s, rare et rare élite ×%s, boss ×%s ; +%s si elle est brillante ; +%s par étoile au-dessus de la première ; +%s par palier de ta collection du type (voir Titres de dresseur).",
-	GUIDE_effects_3        = "Un compagnon heureux (ses quatre envies à %d %% ou plus) donne ses effets en entier ; chaque envie en dessous en retire un huitième, jamais moins de la moitié. Les mascottes (les compagnons que tu n'as pas capturés) sont le compagnon de cœur : un bonus général modeste, qui grandit avec leur étape d'évolution.",
+	GUIDE_effects_3        = "Les effets d'un compagnon valent toujours en entier : ses envies sont des bonus, jamais une perte. Trois états de 45 minutes (Repu, Reposé, Éveillé) font son humeur ; les trois ensemble, il est Rayonnant : chance de capture +%d %%, brillantes +%d %%. Les mascottes (les compagnons que tu n'as pas capturés) sont le compagnon de cœur : un bonus général modeste, qui grandit avec leur étape d'évolution.",
 	GUIDE_effects_4        = "Changer de compagnon demande une confirmation (anciens et nouveaux effets côte à côte), et les effets arrivent au bout de %d minutes : on choisit un compagnon pour une sortie, pas pour chaque cible. La page Compagnon montre ses effets et le compte à rebours ; l'infobulle des monstres, ta chance avec le bonus.",
 	GUIDE_SEC_seals        = "Explorer et sceller les zones",
 	GUIDE_seals_1          = "Depuis la 2.0, le pourcentage d'une zone (page Exploration) ne compte que l'exploration : lieux, récolte et quêtes. Les créatures vivent dans la page Créatures. Les paliers et coffres déjà gagnés restent acquis.",
@@ -131,7 +131,7 @@ local EN = {
 	GUIDE_effects_1        = "A captured creature you take along gives two effects tied to its type: a hunt effect and a comfort effect. The values below are those of a normal 1-star creature at full strength; in brackets, the cap.",
 	GUIDE_effects_H        = "Strength",
 	GUIDE_effects_2        = "It multiplies the effects: normal rank ×%s, elite ×%s, rare and rare elite ×%s, boss ×%s; +%s if it is shiny; +%s per star above the first; +%s per milestone of your type collection (see Trainer titles).",
-	GUIDE_effects_3        = "A happy companion (its four needs at %d%% or more) gives its effects in full; each need below takes an eighth away, never less than half. Mascots (the companions you did not capture) are the companion of the heart: a modest general bonus that grows with their evolution stage.",
+	GUIDE_effects_3        = "A companion's effects always count in full: its needs are bonuses, never a loss. Three 45-minute states (Fed, Rested, Alert) make its mood; with all three it is Radiant: capture chance +%d%%, shinies +%d%%. Mascots (the companions you did not capture) are the companion of the heart: a modest general bonus that grows with their evolution stage.",
 	GUIDE_effects_4        = "Switching companion asks for confirmation (old and new effects side by side), and the effects kick in after %d minutes: you pick a companion for an outing, not for each target. The Companion page shows its effects and the countdown; the monster tooltip, your odds with the bonus.",
 	GUIDE_SEC_seals        = "Explore and seal zones",
 	GUIDE_seals_1          = "Since 2.0, a zone's percentage (Exploration page) only counts exploring: places, gathering and quests. Creatures live on the Creatures page. Milestones and chests already earned stay yours.",
@@ -295,7 +295,8 @@ function BUILD.effects(self, cols)
 	blocks[#blocks + 1] = H(L.GUIDE_effects_H)
 	blocks[#blocks + 1] = P(self:F("GUIDE_effects_2", Num(rank.normal or 1), Num(rank.elite or 1), Num(rank.rare or 1),
 		Num(rank.worldboss or 1), Num(ns.EFFECT_SHINY_STRENGTH or 0), Num(ns.EFFECT_STAR_STRENGTH or 0), Num(ns.MENAGERIE_TYPE_STEP or 0)))
-	blocks[#blocks + 1] = P(self:F("GUIDE_effects_3", ns.EFFECT_NEED_OK or 0))
+	local R = ns.COMPANION_RADIANT or { capture = 1.1, shiny = 1.2 }
+	blocks[#blocks + 1] = P(self:F("GUIDE_effects_3", math.floor((R.capture - 1) * 100 + 0.5), math.floor((R.shiny - 1) * 100 + 0.5)))
 	blocks[#blocks + 1] = P(self:F("GUIDE_effects_4", math.floor((ns.EFFECT_DELAY or 0) / 60 + 0.5)))
 	return blocks
 end
