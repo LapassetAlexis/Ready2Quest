@@ -558,6 +558,17 @@ couleur n'a changé.
   du tableau de bord sur le parchemin (encre du filet à 10 %).
 - Bandeau du carnet effacé au premier coup reçu, et revenu après le combat.
 
+## Réserve, Créatures, Échoppe (QuestCompanion 3.4.0)
+
+- **Réserve** (contenu de 710 px, grille de 484 à gauche, fiche de 210 à droite) : rangée des vues (y −106 : Réserve | Échanges, cadeau de la 3.0, pastille du solde) ; rangée 1 (y −140) : recherche, « Filtres (n) », tri, sens (flèche du client), « Vues » ; rangée 2 (y −172) : deux pastilles au plus (128 px, clic : le groupe s'efface) puis « +n », « Effacer », le compte « 37 sur 62 » (rouge à 5 places de la limite : l'ancienne ligne d'alerte), « Sélection » / « Tout (n) » ; grille 7 × 4 à y −204.
+- **Panneau de filtres** : posé sur la grille et sa rangée du bas (fond `NAV`, la souris ne passe pas), puces à cocher (filet `SELECT_LIGHT`, fond `SELECT` à 0,22, texte `PARCHMENT`) avec leur compte (`MUTED`) ; libellé de rangée en `IDENTITY` ; zone en liste déroulante ; pied : compte, « Garder comme Ma vue », « Effacer », « Voir ».
+- **Vignette** : taille en haut à gauche, flèche verte (plus d'étoiles que le Codex) dessous, perle des brillants puis cadenas en haut à droite, quatre crans verts du lien au bas du portrait, coche de sélection.
+- **Barre de lot** (à la place de « Faire de la place » / « Échanger avec ma cible ») : « n choisi(s) », « Protéger » / « Déprotéger », « Échanger » (grisé et pourquoi au-delà de 3), « Annuler ». La fiche liste la sélection (10 lignes puis « et n autres »), le gain, les laissés de côté (orange), « Relâcher (n) ».
+- **Fiche du spécimen** : modèle de 126 de haut ; icônes Surnom et Localiser en haut à droite du modèle ; huit lignes, l'origine en dernier (la place manque avant les boutons) ; Mettre au Codex, Protéger, Relâcher (ou Livrer, pendant une commande). Surnom et « remplacer un exemplaire lié » se confirment dans la fiche, jamais dans une fenêtre.
+- **Échoppe** : ligne d'aide en haut, cinq rangées (3 aides avec stock du jour, places, surnom), « Arrivage de la semaine » (deux demi-rangées, prix sur 48 px), « Commandes de la semaine » (trois cartes de 232, « Livrer »), note.
+- **Créatures** : huit puces d'état (bourrage 14, écart 4 si elles débordent), losanges d'étude à gauche des icônes de la rangée.
+- Contrastes mesurés (sobre et forgé) : `journal_forge.lua` [R34UI].
+
 ## Partager (QuestCompanion 3.1.0, `Share.lua`)
 
 - Bouton 24 px (taille `sm`, `ns:ShareButton`) : l'icône de chat du client

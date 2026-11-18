@@ -957,14 +957,16 @@ local function ShopRow(sv, content, ui, width, x, y, frame)
 	row.icon = Theme.CreateIcon(row, LAY.shopIcon - 4, ns.PAILLETTES_ICON)
 	row.icon:SetPoint("LEFT", row, "LEFT", 7, 0)
 	local textX = 7 + LAY.shopIcon + 4
-	local textW = width - textX - (10 + LAY.shopButton + 10 + 84)
+	-- demi-rangée (arrivage) : le prix tient en 48
+	local priceW = width < ui.INNER and 48 or 84
+	local textW = width - textX - (10 + LAY.shopButton + 10 + priceW)
 	row.name = Text(row, Theme.F_LABEL, Theme.LABEL, textW)
 	row.name:SetPoint("TOPLEFT", row, "TOPLEFT", textX, -6)
 	if row.name.SetWordWrap then row.name:SetWordWrap(false) end
 	row.desc = Text(row, Theme.F_SMALL, Theme.MUTED_LIGHT, width - textX - (10 + LAY.shopButton + 10))
 	row.desc:SetPoint("TOPLEFT", row, "TOPLEFT", textX, -24)
 	if row.desc.SetWordWrap then row.desc:SetWordWrap(false) end
-	row.price = Text(row, Theme.F_LABEL, Theme.GOLD, 84)
+	row.price = Text(row, Theme.F_LABEL, Theme.GOLD, priceW)
 	row.price:SetPoint("TOPRIGHT", row, "TOPRIGHT", -(10 + LAY.shopButton + 10), -6)
 	row.price:SetJustifyH("RIGHT")
 	row.buy = Theme.CreateButton(row, LAY.shopButton, "sm", L.SHOP_BUY, function(b)
