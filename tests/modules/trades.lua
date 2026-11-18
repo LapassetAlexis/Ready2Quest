@@ -782,6 +782,17 @@ do
 		Check("[ECH] " .. style .. " : clic : proposé, dans ma colonne", #s.mine == 1 and tv.cols.mine.tiles[1]:IsShown()
 			and tv.cols.mine.tiles[1].tradeSpec.id == ids.raptor2 and not tv.cols.mine.slots[1].plus:IsShown()
 			and tv.cols.mine.slots[2].plus:IsShown() and pick.offered)
+		-- 3.4.0 : recherche et panneau de filtres dans le sélecteur (état « trd »)
+		NS:ReserveSearch("zzz", "trd")
+		NS:RefreshJournal()
+		local none = true
+		for _, tile in ipairs(tv.picks) do if tile:IsShown() then none = false end end
+		NS:ReserveClearFilter("trd")
+		tv.bar.filters:GetScript("OnClick")(tv.bar.filters)
+		local panelUp = tv.panel:IsShown() and not tv.picks[1]:IsShown()
+		NS:ReservePanelOpen(false, "trd")
+		Check("[ECH] " .. style .. " : 3.4 : recherche et panneau de filtres dans le sélecteur", none and panelUp
+			and tv.bar.search:IsShown() and not tv.panel:IsShown() and tv.picks[1]:IsShown())
 		X.PeerOffer(s.tid, 1, { X.PeerSpec({ i = 77, n = 950, s = 2, h = true, nm = "Ours givré", z = "giant" }) })
 		local theirTile = tv.cols.theirs.tiles[1]
 		Check("[ECH] " .. style .. " : son offre affichée : nom, étoiles, perle, taille", theirTile:IsShown()
