@@ -22,6 +22,9 @@
 --   * Réglage « Astuces du compagnon sur l'addon » (page Compagnon de route,
 --     actif) et /qc astuces on|off|reset.
 -- La voix reste neutre (une phrase par langue, pas une par caractère).
+-- 3.6.0 : la capture d'abord dans l'ordre du catalogue, puis six astuces
+-- nouvelles (mode chasse et Réserve, page Réserve, étude, lien, échoppe,
+-- commandes) ; chacune a sa condition « appris ».
 local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L
@@ -80,6 +83,129 @@ local function Express(self) return self.CaptureExpressOn ~= nil and self:Captur
 -- le texte ; learned/eligible/open reçoivent ns)
 -- ---------------------------------------------------------------------------
 ns.DISCOVERY_TIPS = {
+	-- la capture d'abord (3.6.0 : la boucle de l'addon, avant le reste)
+	{ id = "expressAll",
+		fr = "Plusieurs créatures au filet ? Maj + clic sur le filet : il les vise toutes.",
+		en = "Several creatures in the net? Shift + click the net: it goes for all of them.",
+		learned = function(self) return Used(self, "batch") end,
+		eligible = function(self) return Captures(self) >= 3 and Express(self) end },
+	{ id = "expressPrep",
+		fr = "Envie de choisir ton aide ? Ctrl + clic sur le filet : la carte de préparation.",
+		en = "Want to pick your aid? Ctrl + click the net: the preparation card.",
+		learned = function(self) return Used(self, "prep") end,
+		eligible = function(self) return Captures(self) >= 3 and Express(self) end },
+	-- 3.5.1 : les raccourcis du filet dépendent de la capture express (active
+	-- par défaut : clic = lancer, Maj + clic = tout, Ctrl + clic = la carte)
+	{ id = "direct",
+		fr = "Pressé ? Maj + clic sur le filet : il part tout de suite, sans la carte.",
+		en = "In a hurry? Shift + click the net: it goes at once, without the card.",
+		learned = function(self) return Used(self, "direct") or self:DB().companionCaptureDirect == true end,
+		eligible = function(self) return Captures(self) >= 3 and not Express(self) end },
+	{ id = "batch",
+		fr = "Plusieurs créatures au filet ? Ctrl + clic sur le filet, ou /qc filet tout : tout capturer.",
+		en = "Several creatures in the net? Ctrl + click the net, or /qc filet tout: capture them all.",
+		learned = function(self) return Used(self, "batch") end,
+		eligible = function(self) return Captures(self) >= 3 and not Express(self) end },
+	{ id = "aids",
+		fr = "Sur la carte de capture, choisis une aide : appât, lasso ou sifflet. Puis Lancer, ou Passer.",
+		en = "On the capture card, pick an aid: bait, lasso or whistle. Then Throw, or Skip.",
+		learned = function(self) return Used(self, "aid") end,
+		eligible = function(self) return Captures(self) >= 1 end },
+	{ id = "hunt",
+		fr = "Le mode chasse met chaque monstre abattu au filet : 5, 15, 30 min, 1 h ou jusqu'à l'arrêt. Maj + clic droit sur moi.",
+		en = "Hunt mode puts every monster you kill in the net: 5, 15, 30 min, 1 h or until you stop. Shift + right-click on me.",
+		learned = function(self) return Used(self, "hunt") end,
+		eligible = function(self) return Captures(self) >= 5 end },
+	{ id = "huntReserve",
+		fr = "Hors mode chasse, le filet ne garde que le nouveau et le meilleur. En chasse, tout y passe, doublons compris : ta Réserve se remplit.",
+		en = "Outside hunt mode, the net only keeps new and better catches. Hunting, everything goes in, duplicates too: your Reserve fills up.",
+		learned = function(self) return Used(self, "hunt") or Reserve(self) >= 1 end,
+		eligible = function(self) return Captures(self) >= 2 end,
+		open = function(self) if self.CompanionMenuShow then self:CompanionMenuShow() end end },
+	{ id = "wary",
+		fr = "En chasse, une espèce capturée trop souvent dans la journée devient méfiante. Varie les proies !",
+		en = "In hunt mode, a species captured too often in a day gets wary. Vary your prey!",
+		learned = function(self)
+			local wary = self.CaptureData and self:CaptureData().wary
+			if type(wary) ~= "table" or type(wary.n) ~= "table" then return false end
+			for _, count in pairs(wary.n) do if (tonumber(count) or 0) >= 3 then return true end end
+			return false
+		end,
+		eligible = function(self) return Used(self, "hunt") end },
+	{ id = "pins",
+		fr = "Page Créatures, « À compléter » : épingle une espèce, le filet la guettera pour toi.",
+		en = "Creatures page, \"To complete\": pin a species, the net will watch for it.",
+		learned = function(self)
+			local pins = self.CaptureData and self:CaptureData().pins
+			return Used(self, "pin") or (type(pins) == "table" and next(pins) ~= nil)
+		end,
+		eligible = function(self) return Captures(self) >= 5 end,
+		open = function(self) if self.OpenMenagerieTodo then self:OpenMenagerieTodo() end end },
+	{ id = "locate",
+		fr = "Il te manque une espèce ? « Localiser » pose un repère sur ta carte, là où elle vit.",
+		en = "Missing a species? \"Locate\" puts a pin on your map, where it lives.",
+		learned = function(self) return Used(self, "locate") end,
+		eligible = function(self) return Captures(self) >= 5 end,
+		open = function(self) if self.OpenMenagerieTodo then self:OpenMenagerieTodo() end end },
+	-- 3.6.0 : la Réserve, l'étude, le lien, l'échoppe, les commandes
+	{ id = "reserve",
+		fr = "Page Réserve : tes spécimens en plus du Codex. Mets-les au Codex, relâche-les, échange-les ou livre-les aux commandes.",
+		en = "Reserve page: your specimens beyond the Codex. Put them in the Codex, release, trade them or deliver them to orders.",
+		learned = function(self) return Used(self, "page_reserve") end,
+		eligible = function(self) return Reserve(self) >= 1 end,
+		open = function(self) if self.OpenReserve then self:OpenReserve("reserve") end end },
+	{ id = "study",
+		fr = "Chaque espèce a cinq choses à apprendre : étoiles, captures, tailles, caractères. Ses losanges, page Créatures ; chaque tâche : des paillettes.",
+		en = "Each species has five things to learn: stars, catches, sizes, personalities. Its diamonds are on the Creatures page; each task: glitter.",
+		learned = function(self) return Used(self, "study") or (self.TourDone ~= nil and self:TourDone("study")) end,
+		eligible = function(self) return Captures(self) >= 1 end,
+		open = function(self) Page(self, "menagerie") end },
+	{ id = "bond",
+		fr = "Emmène une de tes captures : page Créatures, un clic sur elle. Plus tu voyages avec elle, plus ton lien avec elle grandit.",
+		en = "Take one of your captures along: Creatures page, click it. The more you travel together, the stronger your bond.",
+		learned = function(self)
+			return Used(self, "bond") or (self.SpecimenWornHere ~= nil and self:SpecimenWornHere() ~= nil)
+		end,
+		eligible = function(self) return Captures(self) >= 1 end,
+		open = function(self) Page(self, "menagerie") end },
+	{ id = "release",
+		fr = "Un spécimen en trop dans la Réserve ? Relâche-le : il te rend des paillettes.",
+		en = "A spare specimen in the Reserve? Release it: it gives you glitter.",
+		learned = function(self) return Used(self, "release") end,
+		eligible = function(self) return Reserve(self) >= 1 end,
+		open = function(self) if self.OpenReserve then self:OpenReserve("reserve") end end },
+	{ id = "codex",
+		fr = "Dans la Réserve, « Mettre au Codex » fait d'un spécimen ta référence (et une allure possible).",
+		en = "In the Reserve, \"Put in the Codex\" makes a specimen your reference (and a possible look).",
+		learned = function(self) return Used(self, "codex") end,
+		eligible = function(self) return Reserve(self) >= 1 end,
+		open = function(self) if self.OpenReserve then self:OpenReserve("reserve") end end },
+	{ id = "shopEarn",
+		fr = "Tes paillettes viennent de l'étude, des missions, des sceaux et du relâcher. L'Échoppe du dresseur les change en aides et allures.",
+		en = "Your glitter comes from study, missions, seals and releasing. The Trainer's Stall turns it into aids and looks.",
+		learned = function(self) return Used(self, "page_shop") or Used(self, "shop") end,
+		eligible = function(self) return (self.Paillettes and tonumber(self:Paillettes()) or 0) >= 1 end,
+		open = function(self) if self.OpenShop then self:OpenShop() end end },
+	{ id = "shop",
+		fr = "Tes paillettes se dépensent à l'Échoppe du dresseur : aides, places de Réserve, allure.",
+		en = "Your glitter is spent at the Trainer's Stall: aids, Reserve slots, looks.",
+		learned = function(self) return Used(self, "shop") end,
+		eligible = function(self) return (self.Paillettes and tonumber(self:Paillettes()) or 0) >= 5 end,
+		open = function(self) if self.OpenShop then self:OpenShop() end end },
+	{ id = "orders",
+		fr = "Chaque semaine, trois commandes à l'Échoppe : livre un spécimen de ta Réserve qui convient, contre des paillettes.",
+		en = "Every week, three orders at the Stall: deliver a matching specimen from your Reserve, for glitter.",
+		learned = function(self) return Used(self, "order") end,
+		eligible = function(self) return Reserve(self) >= 1 end,
+		open = function(self) if self.OpenShop then self:OpenShop() end end },
+	{ id = "trade",
+		fr = "Un ami a l'addon ? Cible-le et tape /qc echange, ou clic droit sur son portrait : échangez des spécimens.",
+		en = "A friend has the addon? Target them and type /qc echange, or right-click their portrait: trade specimens.",
+		learned = function(self)
+			local log = self.TradeLog and self:TradeLog()
+			return Used(self, "trade") or (type(log) == "table" and #log > 0)
+		end,
+		eligible = function(self) return Reserve(self) >= 1 end },
 	-- le compagnon
 	{ id = "look",
 		fr = "Tu sais que je peux changer d'allure ? Carnet, page Compagnon, bouton « Choisir… ».",
@@ -131,99 +257,14 @@ ns.DISCOVERY_TIPS = {
 		learned = function(self) return Used(self, "page_evolution") end,
 		open = function(self) Page(self, "evolution") end },
 	{ id = "size",
-		fr = "Trop petit ? Trop grand ? Ma taille se règle dans les options, page Compagnon de route.",
-		en = "Too small? Too big? My size is in the settings, Road companion page.",
+		fr = "Trop petit ? Trop grand ? Mon échelle à l'écran se règle dans les options, page Compagnon de route.",
+		en = "Too small? Too big? My on-screen scale is in the settings, Road companion page.",
 		learned = function(self)
 			local size = self:DB().companionSize
 			return Used(self, "size") or (size ~= nil and tonumber(size) ~= tonumber(ns.COMPANION_SIZE_DEFAULT))
 		end,
 		eligible = function(self) return Level() >= 5 end,
 		open = function(self) if self.ToggleOptions then self:ToggleOptions() end end },
-	-- la capture
-	{ id = "aids",
-		fr = "Sur la carte de capture, choisis une aide : appât, lasso ou sifflet. Puis Lancer, ou Passer.",
-		en = "On the capture card, pick an aid: bait, lasso or whistle. Then Throw, or Skip.",
-		learned = function(self) return Used(self, "aid") end,
-		eligible = function(self) return Captures(self) >= 1 end },
-	-- 3.5.1 : les raccourcis du filet dépendent de la capture express (active
-	-- par défaut : clic = lancer, Maj + clic = tout, Ctrl + clic = la carte)
-	{ id = "direct",
-		fr = "Pressé ? Maj + clic sur le filet : il part tout de suite, sans la carte.",
-		en = "In a hurry? Shift + click the net: it goes at once, without the card.",
-		learned = function(self) return Used(self, "direct") or self:DB().companionCaptureDirect == true end,
-		eligible = function(self) return Captures(self) >= 3 and not Express(self) end },
-	{ id = "batch",
-		fr = "Plusieurs créatures au filet ? Ctrl + clic sur le filet, ou /qc filet tout : tout capturer.",
-		en = "Several creatures in the net? Ctrl + click the net, or /qc filet tout: capture them all.",
-		learned = function(self) return Used(self, "batch") end,
-		eligible = function(self) return Captures(self) >= 3 and not Express(self) end },
-	{ id = "expressAll",
-		fr = "Plusieurs créatures au filet ? Maj + clic sur le filet : il les vise toutes.",
-		en = "Several creatures in the net? Shift + click the net: it goes for all of them.",
-		learned = function(self) return Used(self, "batch") end,
-		eligible = function(self) return Captures(self) >= 3 and Express(self) end },
-	{ id = "expressPrep",
-		fr = "Envie de choisir ton aide ? Ctrl + clic sur le filet : la carte de préparation.",
-		en = "Want to pick your aid? Ctrl + click the net: the preparation card.",
-		learned = function(self) return Used(self, "prep") end,
-		eligible = function(self) return Captures(self) >= 3 and Express(self) end },
-	{ id = "pins",
-		fr = "Page Créatures, « À compléter » : épingle une espèce, le filet la guettera pour toi.",
-		en = "Creatures page, \"To complete\": pin a species, the net will watch for it.",
-		learned = function(self)
-			local pins = self.CaptureData and self:CaptureData().pins
-			return Used(self, "pin") or (type(pins) == "table" and next(pins) ~= nil)
-		end,
-		eligible = function(self) return Captures(self) >= 5 end,
-		open = function(self) if self.OpenMenagerieTodo then self:OpenMenagerieTodo() end end },
-	{ id = "locate",
-		fr = "Il te manque une espèce ? « Localiser » pose un repère sur ta carte, là où elle vit.",
-		en = "Missing a species? \"Locate\" puts a pin on your map, where it lives.",
-		learned = function(self) return Used(self, "locate") end,
-		eligible = function(self) return Captures(self) >= 5 end,
-		open = function(self) if self.OpenMenagerieTodo then self:OpenMenagerieTodo() end end },
-	{ id = "hunt",
-		fr = "Le mode chasse met chaque monstre abattu au filet : 5, 15, 30 min, 1 h ou jusqu'à l'arrêt. Maj + clic droit sur moi.",
-		en = "Hunt mode puts every monster you kill in the net: 5, 15, 30 min, 1 h or until you stop. Shift + right-click on me.",
-		learned = function(self) return Used(self, "hunt") end,
-		eligible = function(self) return Captures(self) >= 5 end },
-	{ id = "wary",
-		fr = "En chasse, une espèce capturée trop souvent dans la journée devient méfiante. Varie les proies !",
-		en = "In hunt mode, a species captured too often in a day gets wary. Vary your prey!",
-		learned = function(self)
-			local wary = self.CaptureData and self:CaptureData().wary
-			if type(wary) ~= "table" or type(wary.n) ~= "table" then return false end
-			for _, count in pairs(wary.n) do if (tonumber(count) or 0) >= 3 then return true end end
-			return false
-		end,
-		eligible = function(self) return Used(self, "hunt") end },
-	-- la Réserve
-	{ id = "release",
-		fr = "Un spécimen en trop dans la Réserve ? Relâche-le : il te rend des paillettes.",
-		en = "A spare specimen in the Reserve? Release it: it gives you glitter.",
-		learned = function(self) return Used(self, "release") end,
-		eligible = function(self) return Reserve(self) >= 1 end,
-		open = function(self) if self.OpenReserve then self:OpenReserve("reserve") end end },
-	{ id = "codex",
-		fr = "Dans la Réserve, « Mettre au Codex » fait d'un spécimen ta référence (et une allure possible).",
-		en = "In the Reserve, \"Put in the Codex\" makes a specimen your reference (and a possible look).",
-		learned = function(self) return Used(self, "codex") end,
-		eligible = function(self) return Reserve(self) >= 1 end,
-		open = function(self) if self.OpenReserve then self:OpenReserve("reserve") end end },
-	{ id = "shop",
-		fr = "Tes paillettes se dépensent à l'Échoppe du dresseur : aides, places de Réserve, allure.",
-		en = "Your glitter is spent at the Trainer's Stall: aids, Reserve slots, looks.",
-		learned = function(self) return Used(self, "shop") end,
-		eligible = function(self) return (self.Paillettes and tonumber(self:Paillettes()) or 0) >= 5 end,
-		open = function(self) if self.OpenShop then self:OpenShop() end end },
-	{ id = "trade",
-		fr = "Un ami a l'addon ? Cible-le et tape /qc echange, ou clic droit sur son portrait : échangez des spécimens.",
-		en = "A friend has the addon? Target them and type /qc echange, or right-click their portrait: trade specimens.",
-		learned = function(self)
-			local log = self.TradeLog and self:TradeLog()
-			return Used(self, "trade") or (type(log) == "table" and #log > 0)
-		end,
-		eligible = function(self) return Reserve(self) >= 1 end },
 	-- le carnet
 	{ id = "keys",
 		fr = "Le carnet s'ouvre aussi avec la touche Y (si elle était libre) ou le bouton de la minicarte.",
@@ -502,6 +543,13 @@ Mark("HuntStart", "hunt")
 Mark("SpecimenRelease", "release", Truthy)
 Mark("SpecimenSetReference", "codex", Truthy)
 Mark("ShopBuy", "shop", Truthy)
+-- 3.6.0 : la fiche d'une espèce (sa ligne d'étude) ; une capture portée (le
+-- lien) ; la commande livrée est notée par TrackerGoals.lua (ShopWeek.lua se
+-- charge après ce fichier)
+Mark("JournalPreviewMenagerie", "study")
+Mark("CompanionSetAppearance", function(_, result, id)
+	return type(id) == "string" and id:find("^cap:") and "bond" or nil
+end, Truthy)
 Mark("TradeInvite", "trade")
 Mark("TradeWithTarget", "trade")
 Mark("ChestPick", "chest")

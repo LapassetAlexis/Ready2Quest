@@ -2021,6 +2021,48 @@ Snap.scenes["qc-tracker"] = function(T)
 	return tracker, "QuestCompanion : bloc « Carnet » à l'écran (objectifs suivis)"
 end
 
+-- 3.6.0 : le suivi avec ses nouvelles sources (envie, commande, étude, zone)
+Snap.scenes["qc-tracker-36"] = function(T)
+	local ns = QCWorld(T)
+	ns:DB().journalTracker = true
+	ns.studyDormant = false
+	local capture = ns:CaptureData()
+	for _ = 1, 4 do
+		capture.creatures[3236] = { name = "Kodo des Tarides", normal = true, stars = 1, class = "normal", type = "Bête" }
+		ns:SpecimenAdd({ npc = 3236, stars = 1, name = "Kodo des Tarides", origin = "capture", zone = 1413, size = "large" })
+	end
+	ns:CompanionData().wish = { key = "hunger" }
+	ns:ShopOrders().list = { { kind = "zone", zone = 1413, reward = 12 } }
+	ns:RefreshJournalTracker()
+	local tracker = ns.journalTracker
+	tracker:ClearAllPoints()
+	tracker:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	return tracker, "QuestCompanion : bloc « Carnet », envie, commande, étude et Créatures de la zone (3.6)"
+end
+
+-- 3.6.0 : Réserve vide (le pourquoi, le mode chasse d'un clic)
+Snap.scenes["qc-journal-reserve-empty"] = function(T) return OwnDraws(T, function(T)
+	local frame = QCJournal(T, "reserve", function() end)
+	return frame, "QuestCompanion : carnet, Réserve vide (3.6)"
+end) end
+
+-- 3.6.0 : la bulle « Partir avec lui » après la toute première capture
+Snap.scenes["qc-tour-mate"] = function(T)
+	local ns = QCBannerWorld(T)
+	local anchor = CreateFrame("Frame", nil, UIParent)
+	anchor:SetSize(104, 118)
+	anchor:SetPoint("CENTER", UIParent, "CENTER", 0, -120)
+	anchor:Show()
+	ns.tourMate = { npc = 3236, name = "Kodo des Tarides" }
+	local def = ns.TOUR_DEFS.mate
+	local saved = def.steps[1].anchor
+	def.steps[1].anchor = anchor
+	ns:TourStart("mate")
+	def.steps[1].anchor = saved
+	local ui = ns.tourUI and (ns.tourUI.forge or ns.tourUI.sobre)
+	return Snap.Group(ui.callout, anchor), "QuestCompanion : « Partir avec lui » après la première capture (3.6)"
+end
+
 Snap.scenes["qc-tooltip"] = function(T)
 	local ns = QCWorld(T)
 	GameTooltip:ClearLines()

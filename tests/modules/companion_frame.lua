@@ -82,7 +82,8 @@ do
 	NS:SelectOptionsPage("companionMain")
 	local row
 	for _, r in ipairs(NS.optionsFrame.rows) do if r.def and r.def.key == "companionSize" then row = r end end
-	S.ok("réglette « Taille » dans la page Compagnon", row and row.def.kind == "number" and row.label.text == "Taille"
+	-- 3.6.0 : « Échelle » (la taille est celle d'un spécimen)
+	S.ok("réglette « Échelle » dans la page Compagnon", row and row.def.kind == "number" and row.label.text == "Échelle"
 		and row.value.text:find("Moyen", 1, true), row and row.value.text)
 	local point = NS:DB().companionPoint
 	local x, y = point.x, point.y

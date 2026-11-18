@@ -502,7 +502,9 @@ local FR2 = {
 	JRN_MEN_KILLED         = "Abattue %d fois",
 	JRN_MEN_EQUIP          = "Clic : en faire ton compagnon",
 	JRN_MEN_EQUIPPED       = "C'est ton compagnon",
-	JRN_MEN_EMPTY          = "Aucune créature croisée pour l'instant : cible ou survole des monstres.",
+	-- 3.6.0 : sans capture, la consigne de départ
+	JRN_MEN_EMPTY          = "Aucune créature capturée pour l'instant. Abats une créature : le filet apparaît à côté de ton compagnon.",
+	JRN_MEN_HINT_NONE      = "Aucune capture encore : abats une créature, le filet apparaît près de ton compagnon.",
 	JRN_SUB_companion      = "Ton compagnon de route : son humeur, ses envies, son allure.",
 	JRN_EVO_STAT_captures  = "capturées",
 	JRN_EVO_STAT_shiny     = "brillantes",
@@ -598,7 +600,8 @@ local EN2 = {
 	JRN_MEN_KILLED         = "Defeated %d times",
 	JRN_MEN_EQUIP          = "Click: make it your companion",
 	JRN_MEN_EQUIPPED       = "It's your companion",
-	JRN_MEN_EMPTY          = "No creature met yet: target or hover some monsters.",
+	JRN_MEN_EMPTY          = "No creature captured yet. Defeat a creature: the net shows up beside your companion.",
+	JRN_MEN_HINT_NONE      = "No capture yet: defeat a creature, the net shows up beside your companion.",
 	JRN_SUB_companion      = "Your road companion: its mood, its needs, its look.",
 	JRN_EVO_STAT_captures  = "captured",
 	JRN_EVO_STAT_shiny     = "shinies",
@@ -2751,6 +2754,9 @@ local function RefreshMenagerie(self, frame)
 		pane.count:SetText(self:F("JRN_MEN_COUNT", stats.captured, stats.known, stats.total))
 	end
 	pane.empty:SetText(#list == 0 and (stats.total == 0 and L.JRN_MEN_EMPTY or L.JRN_MEN_NONE) or "")
+	-- 3.6.0 : aucune capture sur le compte : la consigne remplace l'aide du bas
+	local none = self.CaptureData and (tonumber(self:CaptureData().count) or 0) == 0
+	pane.hint:SetText(none and L.JRN_MEN_HINT_NONE or L.JRN_MEN_HINT)
 	local page = #pane.items
 	local maxOffset = math.max(0, #list - page)
 	frame.menOffset = math.max(0, math.min(frame.menOffset or 0, maxOffset))

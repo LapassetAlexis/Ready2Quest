@@ -154,11 +154,13 @@ do
 			and f.sections.guide.points[1].y < f.sections.progress.points[1].y
 		NS:SelectJournalKind("guide")
 		local pane = f.guide
-		Check("[GUIDE] entrée « Guide » en dernier ; la page : titre, sommaire de neuf sections, Le filet ouvert", entry
+		-- 3.6.0 : quatorze sections (Réserve et paillettes, Échoppe et commandes, Lien, Étude, Échanges en plus)
+		Check("[GUIDE] entrée « Guide » en dernier ; la page : titre, sommaire de quatorze sections, Le filet ouvert", entry
 			and f.kind == "guide" and pane:IsShown() and f.header.title.text == NS.L.JRN_SEC_guide
-			and f.header.subtitle.text == NS.L.JRN_SUB_guide and #pane.rows == 9 and #NS.GUIDE_SECTIONS == 9
-			and pane.rows[1].label.text == NS.L.GUIDE_SEC_net and pane.rows[4].label.text == NS.L.GUIDE_SEC_effects
-			and pane.rows[9].label.text == NS.L.GUIDE_SEC_settings and f.guideSection == "net" and pane.rows[1].selected
+			and f.header.subtitle.text == NS.L.JRN_SUB_guide and #pane.rows == 14 and #NS.GUIDE_SECTIONS == 14
+			and pane.rows[1].label.text == NS.L.GUIDE_SEC_net and pane.rows[4].label.text == NS.L.GUIDE_SEC_reserve
+			and pane.rows[9].label.text == NS.L.GUIDE_SEC_effects
+			and pane.rows[14].label.text == NS.L.GUIDE_SEC_settings and f.guideSection == "net" and pane.rows[1].selected
 			and pane.title.text == NS.L.GUIDE_SEC_net and pane.shown >= 3)
 		local bad = {}
 		local function Want(label, ok) if not ok then bad[#bad + 1] = label end end

@@ -329,7 +329,8 @@ do
 		Shown(NS.captureToast) and NS:CaptureExpressThrow() == false and #NS:CaptureQueueState() == 1)
 	NS:DB().companionCaptureExpress = true
 	NS.tourState = { id = "capture" }
-	Check("[EXP] visite guidée en cours : le déroulé d'avant", NS:CaptureExpressOn() == false)
+	-- 3.6.0 : la visite guidée des captures suit la capture express
+	Check("[EXP] visite guidée en cours : la capture express reste en service", NS:CaptureExpressOn() == true)
 	NS.tourState = nil
 end
 

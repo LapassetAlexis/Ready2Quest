@@ -21,6 +21,9 @@
 --   ns:SpecimenStudy(npc) -> { done = { [tâche] = bool }, count = n faites, mastered, n, sizes, traits, lo, hi, shiny }
 --   ns:SpecimenStudyMastered() -> espèces maîtrisées
 --   ns:SpecimenStudyNote(spec) (appelé à chaque capture)
+-- 3.6.0 : une tâche finie fait avancer la mission « finis une tâche d'étude »
+-- (MissionsMenagerie.lua) ; la toute première, une bulle l'explique une fois
+-- (GuidedTour.lua, visite « study »).
 local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L
@@ -207,6 +210,49 @@ function ns:SpecimenStudyMastered()
 	return n
 end
 
+-- 3.6.0 : la tâche d'étude la plus proche d'être finie (suivi à l'écran,
+-- TrackerGoals.lua) : { npc, task, have, need } ou nil. Les espèces
+-- maîtrisées sont sautées ; « trois étoiles » (0 ou 1) ne vient qu'à défaut
+-- d'une tâche à compter. Gardée tant que ni capture ni spécimen ne change.
+local function TaskCount(row, task)
+	if task == "five" then return math.min(row.n or 0, ns.STUDY_NEED.five), ns.STUDY_NEED.five end
+	if task == "sizes" then return math.min(Count(row.z), ns.STUDY_NEED.sizes), ns.STUDY_NEED.sizes end
+	if task == "traits" then return math.min(Count(row.t), ns.STUDY_NEED.traits), ns.STUDY_NEED.traits end
+	if task == "stars3" then return row.s3 and 1 or 0, 1 end
+	return (row.n or 0) >= 1 and 1 or 0, 1
+end
+function ns:SpecimenStudyClosest()
+	self:SpecimenStudyRetro()
+	local study, capture = StudyTable(self)
+	local key = tostring(capture.serial) .. ":" .. tostring(capture.specSerial)
+	local cache = self.studyClosestCache
+	if cache and cache.key == key and cache.study == study then return cache.best end
+	local best, bestRatio, bestLeft
+	for npc, row in pairs(study) do
+		if type(row) == "table" then
+			local open = 0
+			for _, task in ipairs(ns.STUDY_TASKS) do if not TaskDone(row, task) then open = open + 1 end end
+			if open > 0 then
+				for _, task in ipairs(ns.STUDY_TASKS) do
+					if not TaskDone(row, task) then
+						local have, need = TaskCount(row, task)
+						-- « trois étoiles » : en dernier recours (rien à compter)
+						local ratio = task == "stars3" and -1 or have / need
+						local left = need - have
+						local better = not best or ratio > bestRatio or (ratio == bestRatio and (left < bestLeft
+							or (left == bestLeft and (tonumber(npc) or 0) < (tonumber(best.npc) or 0))))
+						if better then
+							best, bestRatio, bestLeft = { npc = npc, task = task, have = have, need = need }, ratio, left
+						end
+					end
+				end
+			end
+		end
+	end
+	self.studyClosestCache = { key = key, study = study, best = best }
+	return best
+end
+
 -- les caractères et tailles déjà capturés (hauts faits)
 local function Distinct(self)
 	local study = StudyTable(self)
@@ -252,8 +298,10 @@ function ns:SpecimenStudyNote(spec)
 			gained = gained + ns.STUDY_REWARD.task
 			self:PaillettesAdd(ns.STUDY_REWARD.task, "study")
 			self:Print(self:F("STUDY_DONE", name, L["STUDY_" .. task], ns.STUDY_REWARD.task))
+			if self.MissionEvent then pcall(self.MissionEvent, self, "studyTask", 1) end
 		end
 	end
+	if gained > 0 and self.TourQueue then pcall(self.TourQueue, self, "study") end
 	local masteredBit = #ns.STUDY_TASKS + 1
 	if PaidTasks(row) >= #ns.STUDY_TASKS and not Has(row.paid, masteredBit) then
 		row.paid = With(row.paid, masteredBit)
