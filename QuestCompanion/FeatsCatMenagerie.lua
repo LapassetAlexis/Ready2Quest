@@ -188,6 +188,11 @@ ns.FeatCatalog(function()
 	SOURCES.shiny3 = ScanSource("shiny3", SHINY)
 	SOURCES.shinyZones = ScanSource("shinyZones", SHINY)
 
+	-- 3.6.0 : points de mécène (Échoppe du dresseur, ShopWeek.lua)
+	SOURCES.patron = { topics = ns.FeatTopics("flag"), get = function(self)
+		return self.ShopPatronPoints and self:ShopPatronPoints() or 0
+	end }
+
 	-- 3.4.0 : espèces dont l'étude est maîtrisée (SpecimenStudy.lua)
 	SOURCES.studyMastered = { topics = CAP, get = function(self)
 		return self.SpecimenStudyMastered and self:SpecimenStudyMastered() or 0
@@ -512,6 +517,10 @@ ns.FeatCatalog(function()
 		{ "men_bond_inseparable", 185, "men", 25, A, crit = { "flag", "bondInseparable" } },
 		{ "men_traits_all",      186, "men", 25, A, crit = { "flag", "traitsAll" } },
 		{ "men_sizes_all",       187, "men", 25, A, crit = { "flag", "sizesAll" } },
+		-- 3.6.0 : mécénat de l'Échoppe (ShopWeek.lua), codes 241 à 243 (titres 61 à 63)
+		{ "men_patron_10",       241, "men", 10, A, crit = { "count", "patron", 10 },  reward = { title = 61 } },
+		{ "men_patron_50",       242, "men", 25, A, crit = { "count", "patron", 50 },  reward = { title = 62 } },
+		{ "men_patron_100",      243, "men", 50, A, crit = { "count", "patron", 100 }, reward = { title = 63 } },
 		-- Brillantes
 		{ "shiny_seen_1",   30, "shiny", 5,  A, crit = { "count", "shinySeen", 1 } },
 		{ "shiny_found_5",  31, "shiny", 10, A, crit = { "count", "shinyFound", 5 },  reward = { cosmetic = { "frame", "sparkle" } } },
@@ -755,6 +764,7 @@ local FR = {
 	FEATD_typesMaster    = "Atteindre le palier 3 dans les %d types de créature",
 	FEATD_stars3         = "Avoir %d espèce(s) capturée(s) à 3 étoiles",
 	FEATD_studyMastered  = "Maîtriser l'étude de %d espèce(s)",
+	FEATD_patron         = "Atteindre %d points de mécène (Échoppe du dresseur)",
 	FEATD_flag_bondFamiliar    = "Atteindre le lien Familier avec un spécimen",
 	FEATD_flag_bondInseparable = "Atteindre le lien Inséparable avec un spécimen",
 	FEATD_flag_traitsAll = "Capturer les 8 caractères",
@@ -843,6 +853,9 @@ local FR = {
 	FEAT_men_bond_inseparable = "À la vie, à la mort",
 	FEAT_men_traits_all  = "Tous les caractères",
 	FEAT_men_sizes_all   = "De toutes les tailles",
+	FEAT_men_patron_10   = "Mécène",
+	FEAT_men_patron_50   = "Grand mécène",
+	FEAT_men_patron_100  = "Bienfaiteur des créatures",
 	FEAT_shiny_seen_1    = "Un éclat dans l'herbe",
 	FEAT_shiny_found_5   = "Œil de pie",
 	FEAT_shiny_found_15  = "Poussière d'étoiles",
@@ -919,6 +932,7 @@ local EN = {
 	FEATD_typesMaster    = "Reach tier 3 in all %d creature types",
 	FEATD_stars3         = "Have %d species captured at 3 stars",
 	FEATD_studyMastered  = "Master the study of %d species",
+	FEATD_patron         = "Reach %d patron points (Trainer's Stall)",
 	FEATD_flag_bondFamiliar    = "Reach a Familiar bond with a specimen",
 	FEATD_flag_bondInseparable = "Reach an Inseparable bond with a specimen",
 	FEATD_flag_traitsAll = "Capture all 8 personalities",
@@ -1007,6 +1021,9 @@ local EN = {
 	FEAT_men_bond_inseparable = "Till Death Do Us Part",
 	FEAT_men_traits_all  = "Every Personality",
 	FEAT_men_sizes_all   = "All Shapes and Sizes",
+	FEAT_men_patron_10   = "Patron",
+	FEAT_men_patron_50   = "Great Patron",
+	FEAT_men_patron_100  = "Benefactor of Creatures",
 	FEAT_shiny_seen_1    = "A Glint in the Grass",
 	FEAT_shiny_found_5   = "Magpie Eye",
 	FEAT_shiny_found_15  = "Stardust",

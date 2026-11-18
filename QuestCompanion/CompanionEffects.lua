@@ -1204,6 +1204,18 @@ function ns:CompanionWaryFloor()
 	return math.max(range[1], math.min(range[2], floor + Sum(found)))
 end
 
+-- 3.6.0 (choix de l'utilisateur, plan 3.6 lot 1B) : une espèce maîtrisée
+-- (les cinq tâches d'étude, SpecimenStudy.lua) se méfie moins en chasse :
+-- son plancher gagne STUDY_WARY_BONUS, au-dessus de celui du compagnon
+ns.STUDY_WARY_BONUS = 0.10
+function ns:CaptureWaryFloor(npc)
+	local floor = self:CompanionWaryFloor()
+	if npc ~= nil and self.SpecimenStudyIsMastered and self:SpecimenStudyIsMastered(npc) then
+		floor = floor + ns.STUDY_WARY_BONUS
+	end
+	return math.min(1, floor)
+end
+
 do
 	local wariness = ns.CaptureWariness
 	if wariness then
@@ -1211,7 +1223,7 @@ do
 			local factor, count = wariness(self, npc, ...)
 			if not count or count <= 0 or factor >= 1 then return factor, count end
 			local w = ns.CAPTURE_WARINESS
-			return math.max(self:CompanionWaryFloor(), 1 - w.step * count), count
+			return math.max(self:CaptureWaryFloor(npc), 1 - w.step * count), count
 		end
 	end
 end

@@ -558,6 +558,13 @@ couleur n'a changé.
   du tableau de bord sur le parchemin (encre du filet à 10 %).
 - Bandeau du carnet effacé au premier coup reçu, et revenu après le combat.
 
+## Échoppe d'un gros joueur (QuestCompanion 3.6.0)
+
+- **Échoppe** : rangées de 40 au pas de 43 (y −30 du contenu) ; « Arrivage de la semaine » à y −248 (demi-rangées à −268) ; deux demi-colonnes à y −314 : « Hors de leur semaine (prix ×1,5) », un cosmétique à la fois (rangée à −334 ; la pagination du socle à droite de la section, « 2 / 6 », et la molette font défiler ; « Revient la semaine prochaine » / « Revient dans n semaines » ; tout possédé : une phrase) et « Mécénat » (« Points de mécène : n », « Titres à 10, 50 et 100 points », bouton « Donner », confirmation dans la rangée) ; explication au survol des deux rangées. « Commandes de la semaine » à y −380, détail « (relance gratuite utilisée) », bouton « Relancer · 10 » (grisé et pourquoi s'il manque des paillettes) ; cartes de 68 à −400 ; note à −474. Tout ne tenait pas en pleine largeur : la liste « hors de leur semaine » est une ligne qui défile.
+- **Fiche du spécimen** : au-delà de 100 paillettes de relâcher dans la journée, une ligne orange sous le lien, « Relâcher : demi-tarif aujourd'hui (plus de 100 paillettes de relâcher) », et la confirmation ajoute « (Demi-tarif aujourd'hui.) ».
+- **Créatures** : la ligne d'étude d'une espèce maîtrisée dit « Espèce maîtrisée · en chasse, elle se méfie moins (plancher +10 %) ».
+- Contrastes mesurés (sobre et forgé) : `lot36_a.lua`.
+
 ## Envies du compagnon (QuestCompanion 3.5.0)
 
 - **Page Compagnon, colonne gauche** : section « Ses envies (des bonus, jamais une perte) » à y −366 ; 3 plaques de 109 × 62 au pas de 117 à y −393 (nom, temps en `F_TITLE`, objet court, barre de 3 px verte sur 60 minutes ; liseré vert quand l'état est actif ; infobulle : ce qui l'allume, sa friandise) ; ligne d'humeur 343 × 26 à y −461 (« Humeur », humeur teintée, 3 losanges or, « Encore n pour rayonner » / « Bonus actif ») ; ligne de l'envie à y −493 (« Son envie », l'objet, « +1 lien » en vert) ; « Ses effets » à y −535.

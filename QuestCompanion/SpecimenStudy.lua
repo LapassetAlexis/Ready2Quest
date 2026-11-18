@@ -47,6 +47,7 @@ local FR = {
 	STUDY_LINE    = "Étude %d / %d",
 	STUDY_LEFT    = "reste : %s",
 	STUDY_MASTERED_LINE = "Espèce maîtrisée",
+	STUDY_MASTERED_WARY = "Espèce maîtrisée · en chasse, elle se méfie moins (plancher +%d %%)",
 }
 local EN = {
 	STUDY_caught  = "Caught",
@@ -65,6 +66,7 @@ local EN = {
 	STUDY_LINE    = "Study %d / %d",
 	STUDY_LEFT    = "left: %s",
 	STUDY_MASTERED_LINE = "Species mastered",
+	STUDY_MASTERED_WARY = "Species mastered · less wary when hunted (floor +%d%%)",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.STUDY_STRINGS = { fr = FR, en = EN } end
@@ -182,6 +184,17 @@ function ns:SpecimenStudy(npc)
 		sizes = Count(row.z), traits = Count(row.t), lo = row.lo, hi = row.hi, shiny = done.shiny }
 end
 
+-- 3.6.0 : cette espèce est-elle maîtrisée ? (méfiance en chasse,
+-- CompanionEffects.lua : lu à chaque tirage, sans table neuve)
+function ns:SpecimenStudyIsMastered(npc)
+	if npc == nil then return false end
+	self:SpecimenStudyRetro()
+	local row = StudyTable(self)[tonumber(npc) or npc]
+	if not row then return false end
+	for _, task in ipairs(ns.STUDY_TASKS) do if not TaskDone(row, task) then return false end end
+	return true
+end
+
 function ns:SpecimenStudyMastered()
 	self:SpecimenStudyRetro()
 	local study = StudyTable(self)
@@ -292,7 +305,8 @@ function ns:SpecimenStudyLine(npc)
 	local st = self:SpecimenStudy(npc)
 	local parts = {}
 	if st.mastered then
-		parts[1] = L.STUDY_MASTERED_LINE
+		-- 3.6.0 : et ce que la maîtrise change en chasse
+		parts[1] = self:F("STUDY_MASTERED_WARY", math.floor((ns.STUDY_WARY_BONUS or 0.1) * 100 + 0.5))
 	else
 		local left = {}
 		for _, task in ipairs(ns.STUDY_TASKS) do if not st.done[task] then left[#left + 1] = L["STUDY_" .. task] end end

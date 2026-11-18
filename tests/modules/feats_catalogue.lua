@@ -168,8 +168,9 @@ do
 	text, count = I.Catalogue(false)
 	hash = I.Hash(text)
 	-- 3.0.0 (bêta 6) : « Au galop » sur IsMounted hors taxi (ea095038 avant)
-	Check("[HF] catalogue actuel : 187 lignes (173 + « La poisse » + « Joyeux Voile d'hiver » + tailles 3.1 + échanges 3.0 + étude et lien 3.4), empreinte",
-		hash == "afe95ed8" and count == 187, "empreinte " .. hash .. " (" .. count .. " lignes)")
+	-- 3.6.0 : + mécénat (men_patron_10/50/100, codes 241 à 243 ; afe95ed8 / 187 avant)
+	Check("[HF] catalogue actuel : 190 lignes (173 + « La poisse » + « Joyeux Voile d'hiver » + tailles 3.1 + échanges 3.0 + étude et lien 3.4 + mécénat 3.6), empreinte",
+		hash == "e9c50708" and count == 190, "empreinte " .. hash .. " (" .. count .. " lignes)")
 	local def = NS:FeatDef("men_species_10")
 	local added = NS.FeatAdd({ id = "test_compact", n = 990, cat = "fun", pts = 5, scope = "account",
 		crit = { "flag", "x" }, extra = "gardé" })
@@ -249,8 +250,8 @@ do
 	local fewer = 0
 	for _, id in ipairs(NS.FEAT_MENAGERIE_IDS) do if NS:FeatDef(id) then fewer = fewer + 1 end end
 	-- 2.14.0 : + fun_winter_veil ; 3.1.0 : + tailles rares ; 3.0.0 : + échanges de spécimens
-	-- 3.4.0 : + étude et lien (7)
-	if not (#NS.FEAT_MENAGERIE_IDS == 96 and fewer == 96) then off[#off + 1] = "lot B : " .. #NS.FEAT_MENAGERIE_IDS end
+	-- 3.4.0 : + étude et lien (7) ; 3.6.0 : + mécénat (3)
+	if not (#NS.FEAT_MENAGERIE_IDS == 99 and fewer == 99) then off[#off + 1] = "lot B : " .. #NS.FEAT_MENAGERIE_IDS end
 	local all, points = {}, {}
 	for _, def in ipairs(NS:FeatDefs()) do
 		all[def.cat] = (all[def.cat] or 0) + 1
@@ -353,7 +354,8 @@ do
 			end
 		end
 	end
-	Check("[TIT] 40 titres, formes FR m/f et EN conformes au document (§4.1)", rows == 40 and #bad == 0,
+	-- 3.6.0 : + T61 à T63 (mécénat)
+	Check("[TIT] 43 titres, formes FR m/f et EN conformes au document (§4.1)", rows == 43 and #bad == 0,
 		rows .. " lignes ; " .. table.concat(bad, ", "))
 	local count, shape = 0, {}
 	for code, t in pairs(T_) do
@@ -372,8 +374,8 @@ do
 		-- anglais genré seulement pour Seigneur / Dame et Héros / Héroïne
 		if t.enf and code ~= 35 and code ~= 37 then shape[#shape + 1] = code .. " enf" end
 	end
-	Check("[TIT] codes 1 à 40 uniques, un seul %s par forme, place cohérente, source citée, anglais genré pour 35 et 37 seulement",
-		count == 40 and #shape == 0 and T_[35].enf and T_[37].enf, table.concat(shape, ", "))
+	Check("[TIT] codes 1 à 40 et 61 à 63 uniques, un seul %s par forme, place cohérente, source citée, anglais genré pour 35 et 37 seulement",
+		count == 43 and #shape == 0 and T_[35].enf and T_[37].enf, table.concat(shape, ", "))
 	-- chaque titre d'une ligne existe une fois au registre, et chaque titre a sa ligne (sa source)
 	local used, missing = {}, {}
 	for _, d in ipairs(NS:FeatDefs()) do

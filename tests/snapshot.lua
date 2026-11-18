@@ -1566,6 +1566,50 @@ Snap.scenes["qc-journal-shop"] = function(T) return OwnDraws(T, function(T)
 	return frame, "QuestCompanion : carnet, Échoppe du dresseur (3.4)"
 end) end
 
+-- 3.6.0 : l'Échoppe d'un gros joueur (hors de leur semaine, mécénat, relance payante)
+Snap.scenes["qc-journal-shop-36"] = function(T) return OwnDraws(T, function(T)
+	local frame = QCJournal(T, "shop", function(ns)
+		ns:PaillettesAdd(640, "snap")
+		ns:CaptureData().patron = 7
+		for index = 1, 6 do
+			ns:SpecimenAdd({ npc = 3236, stars = index % 3 + 1, name = "Kodo des Tarides", origin = "capture", by = "Testeur",
+				zone = 1413, at = 1793000000 + index })
+		end
+		ns:ShopOrdersReroll()
+	end)
+	return frame, "QuestCompanion : carnet, Échoppe du dresseur (3.6 : hors de leur semaine, mécénat, relance à 10)"
+end) end
+
+-- 3.6.0 : la fiche d'un spécimen au demi-tarif du jour
+Snap.scenes["qc-journal-reserve-half"] = function(T) return OwnDraws(T, function(T)
+	local frame = QCJournal(T, "reserve", function(ns)
+		ns:SpecimenAdd({ npc = 3236, stars = 1, name = "Kodo des Tarides", origin = "capture", by = "Testeur", zone = 1413, at = 1793500000 })
+		ns:SpecimenAdd({ npc = 3236, stars = 3, name = "Kodo des Tarides", origin = "capture", by = "Testeur", zone = 1413, at = 1793650000 })
+		ns:SpecimenAdd({ npc = 3236, stars = 2, name = "Kodo des Tarides", origin = "capture", by = "Testeur", zone = 1413, at = 1793600000 })
+		ns:CaptureData().releaseDay = { day = ns.CaptureDayKey(), n = 120 }
+	end)
+	local list = T.QNS:SpecimenList({ where = "reserve", sort = "id" })
+	if list[1] then T.QNS:ReservePick(list[1].id) end
+	return frame, "QuestCompanion : carnet, Réserve, fiche au demi-tarif du jour (3.6)"
+end) end
+
+-- 3.6.0 : une espèce maîtrisée sur la page Créatures (sa ligne d'étude)
+Snap.scenes["qc-journal-menagerie-mastered"] = function(T)
+	local frame, ns = Snap.scenes["qc-journal-menagerie"](T)
+	ns = T.QNS
+	local study = ns:CaptureData().study or {}
+	ns:CaptureData().study, ns:CaptureData().studyV = study, ns.STUDY_SCHEMA
+	for npc in pairs(ns:CaptureData().creatures) do
+		study[npc] = { n = 6, z = 7, t = 7, s3 = true, paid = 63, lo = 88, hi = 121 }
+	end
+	ns:RefreshJournal()
+	-- la fiche d'une espèce capturée (la ligne d'étude)
+	for _, row in ipairs(frame.men and frame.men.items or {}) do
+		if row.entry and row.entry.captured then ns:JournalPreviewMenagerie(row.entry, true); break end
+	end
+	return frame, "QuestCompanion : carnet, Créatures, espèce maîtrisée (3.6)"
+end
+
 -- 3.1.0 : page Juke-box
 Snap.scenes["qc-journal-juke"] = function(T) return OwnDraws(T, function(T)
 	local frame = QCJournal(T, "juke")

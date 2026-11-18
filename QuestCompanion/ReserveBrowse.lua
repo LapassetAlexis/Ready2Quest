@@ -317,12 +317,12 @@ function ns:ReserveSelectReleasable()
 		if spec then
 			if not spec.shiny and self:SpecimenCanRelease(spec.id) then
 				list[#list + 1] = spec
-				gain = gain + self:SpecimenReleaseValue(spec)
 			else
 				aside = aside + 1
 			end
 		end
 	end
+	gain = self:SpecimenReleaseTotal(list)   -- 3.6.0 : demi-tarif du jour compris
 	return list, gain, aside
 end
 
