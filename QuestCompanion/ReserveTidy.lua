@@ -120,7 +120,10 @@ function ns:ReserveTidyActive()
 	return frame ~= nil and frame.resTidy ~= nil
 end
 
--- Ouvre la sélection : rend le nombre de spécimens proposés
+-- Ouvre la sélection : rend le nombre de spécimens proposés.
+-- 3.4.0 : la page passe sur la vue Relâchables triée par valeur croissante
+-- (filtre et tri d'avant gardés pour Annuler ou après le relâcher) et coche
+-- les RESERVE_TIDY_COUNT premiers, ni brillants ni protégés
 function ns:ReserveTidyStart()
 	local frame = Frame(self)
 	local list = self:ReserveTidyCandidates()
@@ -131,6 +134,19 @@ function ns:ReserveTidyStart()
 		return 0
 	end
 	if frame then
+		if self.ReserveView2 and self.ReserveQuery then
+			if not frame.resTidyPrev then
+				frame.resTidyPrev = { f = frame.resFilter, sort = frame.resSort, desc = frame.resDesc, view = frame.resViewId }
+			end
+			frame.resFilter, frame.resViewId = self:ReserveView2("releasable"), "releasable"
+			frame.resSort, frame.resDesc, frame.resOffset = "value", false, 0
+			local picked = {}
+			for _, spec in ipairs(self:ReserveQuery(frame.resFilter, "value", false, "reserve")) do
+				if #picked >= ns.RESERVE_TIDY_COUNT then break end
+				if not spec.shiny and not (self.SpecimenProtected and self:SpecimenProtected(spec.id)) then picked[#picked + 1] = spec end
+			end
+			if #picked > 0 then list = picked end
+		end
 		frame.resTidy, frame.resTidyOrder = {}, {}
 		for _, spec in ipairs(list) do
 			frame.resTidy[spec.id] = true
@@ -140,6 +156,14 @@ function ns:ReserveTidyStart()
 	end
 	if self.RefreshJournal then self:RefreshJournal() end
 	return #list
+end
+
+-- 3.4.0 : le filtre et le tri d'avant « Faire de la place »
+local function Restore(frame)
+	local prev = frame and frame.resTidyPrev
+	if not prev then return end
+	frame.resFilter, frame.resSort, frame.resDesc, frame.resViewId = prev.f, prev.sort, prev.desc, prev.view
+	frame.resTidyPrev, frame.resOffset = nil, 0
 end
 
 -- Clic sur une vignette pendant la sélection : ajoute ou retire
@@ -152,8 +176,9 @@ function ns:ReserveTidyToggle(id)
 			if other == id then table.remove(frame.resTidyOrder, index); break end
 		end
 	else
-		local spec = self:SpecimenGet(id)
-		if not spec or spec.shiny or not self:SpecimenCanRelease(id) then return false end
+		-- 3.4.0 : tout se coche (protéger, échanger) ; « Relâcher (n) » laisse
+		-- de côté brillants, protégés et ce qui ne se relâche pas
+		if not self:SpecimenGet(id) then return false end
 		frame.resTidy[id] = true
 		frame.resTidyOrder[#frame.resTidyOrder + 1] = id
 	end
@@ -163,7 +188,7 @@ end
 
 function ns:ReserveTidyCancel()
 	local frame = Frame(self)
-	if frame then frame.resTidy, frame.resTidyOrder = nil, nil end
+	if frame then frame.resTidy, frame.resTidyOrder = nil, nil; Restore(frame) end
 	if self.RefreshJournal then self:RefreshJournal() end
 end
 
@@ -183,14 +208,14 @@ end
 
 -- « Relâcher (n) » : rend le nombre relâché, les paillettes gagnées
 function ns:ReserveTidyConfirm()
-	local list = self:ReserveTidySelection()
+	local list = self.ReserveSelectReleasable and self:ReserveSelectReleasable() or self:ReserveTidySelection()
 	local count, gain = 0, 0
 	for _, spec in ipairs(list) do
 		local got = self:SpecimenRelease(spec.id, true)
 		if got then count, gain = count + 1, gain + got end
 	end
 	local frame = Frame(self)
-	if frame then frame.resTidy, frame.resTidyOrder, frame.resPick = nil, nil, nil end
+	if frame then frame.resTidy, frame.resTidyOrder, frame.resPick = nil, nil, nil; Restore(frame) end
 	if count > 0 then self:Print(self:F("RES_TIDY_DONE", count, gain, self:Paillettes())) end
 	if self.RefreshJournal then self:RefreshJournal() end
 	return count, gain

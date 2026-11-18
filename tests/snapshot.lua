@@ -1530,8 +1530,10 @@ Snap.scenes["qc-journal-reserve-filter"] = function(T) return OwnDraws(T, functi
 				zone = 1413, at = 1793000000 + index })
 		end
 	end)
-	T.QNS.journalFrame.res.reserve.filter:Open(true)
-	return frame, "QuestCompanion : carnet, Réserve, liste Filtre ouverte"
+	-- 3.4.0 : le panneau de filtres, une taille cochée
+	T.QNS:ReserveToggleFilter("stars", 2)
+	T.QNS:ReservePanelOpen(true)
+	return frame, "QuestCompanion : carnet, Réserve, panneau de filtres ouvert"
 end) end
 
 -- 3.1.0 : page Juke-box

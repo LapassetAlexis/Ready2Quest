@@ -374,7 +374,9 @@ local STATE_VALID = {
 	progPart = { "explore", "craft", "quests" }, progFilter = { "mine", "seen", "all" },
 	-- 2.15.0 : Réserve (JournalReserve.lua) : vue et tri
 	-- 3.0.0 : « shop » n'est plus une vue (onglet à part) ; « trade » en est une
-	resView = { "reserve", "trade" }, resSort = { "stars", "date", "name" },
+	resView = { "reserve", "trade" }, resSort = { "stars", "date", "name", "size", "bond", "dups", "value" },
+	-- 3.4.0 : le sens du tri
+	resDesc = { true, false },
 }
 local function Valid(list, value)
 	for _, v in ipairs(list or {}) do if v == value then return true end end
@@ -796,30 +798,34 @@ end
 -- Aperçu (fiche survolée, objet de la collection) : carte sombre, modèle 3D ou
 -- nuancier en haut, nom, puis des lignes empilées de haut en bas
 local PREVIEW_MODEL_H = 168
-local function BuildPreview(parent, content, x, y, height)
+-- 3.4.0 : opts.modelH (scène plus basse : fiche du spécimen), opts.lines (lignes de texte)
+local function BuildPreview(parent, content, x, y, height, opts)
+	opts = opts or {}
+	local MODEL_H = tonumber(opts.modelH) or PREVIEW_MODEL_H
 	local p = Panel(parent, PREVIEW_W, height)
+	p.modelH = MODEL_H
 	At(p, content, x, y)
 	p.stage = Theme.Solid(p, "BORDER", Theme.WINDOW, 1)
 	p.stage:SetPoint("TOPLEFT", p, "TOPLEFT", 1, -1)
-	p.stage:SetSize(PREVIEW_W - 2, PREVIEW_MODEL_H)
+	p.stage:SetSize(PREVIEW_W - 2, MODEL_H)
 	local ok, model = pcall(CreateFrame, "PlayerModel", nil, p)
 	if ok and model then
-		model:SetSize(PREVIEW_W - 16, PREVIEW_MODEL_H - 12)
+		model:SetSize(PREVIEW_W - 16, MODEL_H - 12)
 		model:SetPoint("TOP", p, "TOP", 0, -7)
 		p.model = model
 	end
 	p.swatch = p:CreateTexture(nil, "ARTWORK")
-	p.swatch:SetSize(PREVIEW_W - 16, PREVIEW_MODEL_H - 12)
+	p.swatch:SetSize(PREVIEW_W - 16, MODEL_H - 12)
 	p.swatch:SetPoint("TOP", p, "TOP", 0, -7)
 	p.swatch:Hide()
 	p.rule = Theme.Solid(p, "ARTWORK", Theme.EDGE_SOFT, 1)
-	p.rule:SetPoint("TOPLEFT", p, "TOPLEFT", 1, -1 - PREVIEW_MODEL_H)
+	p.rule:SetPoint("TOPLEFT", p, "TOPLEFT", 1, -1 - MODEL_H)
 	p.rule:SetSize(PREVIEW_W - 2, 1)
 	p.title = Text(p, Theme.F_TITLE, Theme.PARCHMENT, PREVIEW_W - 28)
-	p.title:SetPoint("TOPLEFT", p, "TOPLEFT", 14, -PREVIEW_MODEL_H - 14)
+	p.title:SetPoint("TOPLEFT", p, "TOPLEFT", 14, -MODEL_H - 14)
 	if p.title.SetWordWrap then p.title:SetWordWrap(false) end
 	p.lines = {}
-	for index = 1, 8 do
+	for index = 1, (tonumber(opts.lines) or 8) do
 		local line = Text(p, index == 1 and Theme.F_BODY or Theme.F_SMALL, index == 1 and Theme.LABEL or Theme.MUTED_LIGHT,
 			PREVIEW_W - 28)
 		if line.SetWordWrap then line:SetWordWrap(true) end
@@ -831,7 +837,7 @@ end
 
 -- lignes de l'aperçu, de haut en bas (une ligne longue pousse la suivante)
 local function PreviewLayout(p)
-	local y = -PREVIEW_MODEL_H - 14 - 22
+	local y = -(p.modelH or PREVIEW_MODEL_H) - 14 - 22
 	for index, line in ipairs(p.lines) do
 		line:ClearAllPoints()
 		line:SetPoint("TOPLEFT", p, "TOPLEFT", 14, y)

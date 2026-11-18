@@ -54,6 +54,9 @@ local FR = {
 	RES_FG_age      = "Capturé",
 	RES_FG_bond     = "Lien",
 	RES_FG_state    = "État",
+	RES_FV_stars_1  = "1 étoile",
+	RES_FV_stars_2  = "2 étoiles",
+	RES_FV_stars_3  = "3 étoiles",
 	RES_FV_normal   = "Normale",
 	RES_FV_shiny    = "Brillante",
 	RES_FV_rank_normal = "Normal",
@@ -77,10 +80,10 @@ local FR = {
 	RES_VIEW2_recent     = "Récents",
 	RES_VIEW2_protected  = "Protégés",
 	RES_VIEW2_mine       = "Ma vue",
-	RES_SORT_size   = "Taille",
-	RES_SORT_bond   = "Lien",
-	RES_SORT_dups   = "Doublons",
-	RES_SORT_value  = "Valeur",
+	RES_SORT_size   = "Tri : taille",
+	RES_SORT_bond   = "Tri : lien",
+	RES_SORT_dups   = "Tri : doublons",
+	RES_SORT_value  = "Tri : valeur",
 	SPEC_PROTECTED  = "Protégé : jamais relâché, échangé ni pris dans un lot.",
 	SPEC_PROTECT_ON  = "%s est protégé.",
 	SPEC_PROTECT_OFF = "%s n'est plus protégé.",
@@ -99,6 +102,9 @@ local EN = {
 	RES_FG_age      = "Caught",
 	RES_FG_bond     = "Bond",
 	RES_FG_state    = "State",
+	RES_FV_stars_1  = "1 star",
+	RES_FV_stars_2  = "2 stars",
+	RES_FV_stars_3  = "3 stars",
 	RES_FV_normal   = "Normal",
 	RES_FV_shiny    = "Shiny",
 	RES_FV_rank_normal = "Normal",
@@ -122,10 +128,10 @@ local EN = {
 	RES_VIEW2_recent     = "Recent",
 	RES_VIEW2_protected  = "Protected",
 	RES_VIEW2_mine       = "My view",
-	RES_SORT_size   = "Size",
-	RES_SORT_bond   = "Bond",
-	RES_SORT_dups   = "Duplicates",
-	RES_SORT_value  = "Value",
+	RES_SORT_size   = "Sort: size",
+	RES_SORT_bond   = "Sort: bond",
+	RES_SORT_dups   = "Sort: duplicates",
+	RES_SORT_value  = "Sort: value",
 	SPEC_PROTECTED  = "Protected: never released, traded or picked in a batch.",
 	SPEC_PROTECT_ON  = "%s is protected.",
 	SPEC_PROTECT_OFF = "%s is no longer protected.",
@@ -278,6 +284,16 @@ local function TypeOf(self, capture, spec)
 	return self.CreatureTypeKey and self:CreatureTypeKey(entry.type) or nil
 end
 
+-- la sorte et le rang d'un spécimen (fiche de la Réserve)
+function ns:SpecimenTypeKey(spec)
+	spec = Spec(self, spec)
+	return spec and TypeOf(self, Store(self), spec) or nil
+end
+function ns:SpecimenRankKey(spec)
+	spec = Spec(self, spec)
+	return spec and RankOf(Store(self), spec) or "normal"
+end
+
 local function BondOf(self, spec)
 	return self.SpecimenBondLevel and self:SpecimenBondLevel(spec) or 1
 end
@@ -348,7 +364,7 @@ function ns:ReserveZoneName(zone)
 end
 
 function ns:ReserveFilterLabel(group, value)
-	if group == "stars" then return tostring(tonumber(value) or 1) end
+	if group == "stars" then return L["RES_FV_stars_" .. math.max(1, math.min(3, math.floor(tonumber(value) or 1)))] end
 	if group == "version" then return L["RES_FV_" .. tostring(value)] end
 	if group == "size" then return self:SpecimenSizeLabel(value) end
 	if group == "trait" then return self.PersonaLabel and self:PersonaLabel(value) or tostring(value) end

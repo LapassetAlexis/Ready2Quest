@@ -472,8 +472,42 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 			and Apart(hint, grid) and rv.hint:GetText() == NS.L.RES_HINT)
 		Want(style .. " : au-dessus du pied du carnet", f.footer == nil or button.top + button.height <= R(f.footer).top)
 	end
-	Want(style .. " : 2e rangée : les trois listes (tri, espèce, filtre) à la même hauteur", rv.sort:GetHeight() == H
-		and rv.species:GetHeight() == H and rv.filter:GetHeight() == H)
+	-- 3.4.0 : rangée 1 : recherche, Filtres, tri, sens, Vues, à la même hauteur,
+	-- côte à côte dans la largeur de la grille ; rangée 2 sous elle
+	do
+		local function R(region) return Snap.Rect(region, { memo = {} }) end
+		local bar = rv.bar
+		local row = { R(bar.search), R(bar.filters), R(bar.sort), R(bar.dir), R(bar.views) }
+		local grid = R(rv.grid)
+		local okRow = true
+		for index, r in ipairs(row) do
+			if index > 1 and r.left < row[index - 1].left + row[index - 1].width then okRow = false end
+			if r.top ~= row[1].top or r.left + r.width > grid.left + grid.width then okRow = false end
+		end
+		Want(style .. " : rangée 1 (recherche, Filtres, tri, sens, Vues) alignée, sans chevauchement, dans la largeur de la grille",
+			okRow and bar.search:GetHeight() == H and bar.sort:GetHeight() == H and bar.views:GetHeight() == H)
+		local sel, count = R(bar.select), R(bar.count)
+		Want(style .. " : rangée 2 (compte, Sélection) entre la rangée 1 et la grille", sel.top >= row[1].top + row[1].height
+			and sel.top + sel.height <= grid.top and sel.left + sel.width <= grid.left + grid.width
+			and count.left + count.width <= sel.left)
+		NS:ReservePanelOpen(true)
+		local panel = R(rv.panel)
+		local inside = true
+		for group, chips in pairs(rv.panel.chips) do
+			for _, chip in ipairs(chips) do
+				if chip:IsShown() then
+					local c = R(chip)
+					if c.left < panel.left or c.left + c.width > panel.left + panel.width or c.top + c.height > panel.top + panel.height then
+						inside = group .. " " .. c.left .. "," .. c.top .. "," .. c.width .. "," .. c.height .. " / " .. panel.left .. "," .. panel.top .. "," .. panel.width .. "," .. panel.height
+					end
+				end
+			end
+		end
+		Want(style .. " : panneau de filtres sur la grille, à côté de la fiche, puces dedans, vignettes cachées", rv.panel:IsShown()
+			and panel.left == grid.left and panel.left + panel.width <= R(rv.preview).left and inside == true
+			and not rv.tiles[1]:IsShown(), tostring(inside) .. " " .. panel.left .. "/" .. grid.left .. " " .. tostring(rv.tiles[1]:IsShown()))
+		NS:ReservePanelOpen(false)
+	end
 	Want(style .. " : pastille de la Réserve : solde", not pane.balance.mockHidden and pane.balance.value:GetText() == "40"
 		and pane.balance.flash ~= nil, tostring(pane.balance:IsShown()) .. " " .. tostring(pane.balance.value:GetText()))
 	local before = #Mock.frames

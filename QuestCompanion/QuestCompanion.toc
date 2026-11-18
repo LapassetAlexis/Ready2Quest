@@ -115,5 +115,6 @@ OptionsCompanionSplit.lua
 SpecimenBond.lua
 SpecimenStudy.lua
 ShopWeek.lua
+ReserveBrowse.lua
 NamesES.lua
 Locales_es.lua

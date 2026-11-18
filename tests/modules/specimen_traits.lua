@@ -546,14 +546,16 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 		and not tilePlain.sizeTag:IsShown() and c[1] and Ratio(c, NS.Theme.NAV) >= 4.5 and tileGiant.sizeTag.azKeep == true)
 	NS:ReservePick(giant)
 	local p = rv.preview
-	local sizeText = p.lines[rv.sizeLine] and p.lines[rv.sizeLine]:GetText()
-	local traitText = p.lines[rv.traitLine] and p.lines[rv.traitLine]:GetText()
-	Check("[T31] " .. style .. " : fiche : « Taille : Géant », « Caractère : Zen (les envies baissent 5 % moins vite) »",
-		sizeText == "Taille : Géant" and traitText == "Caractère : Zen (les envies baissent 5 % moins vite)", tostring(sizeText) .. " / " .. tostring(traitText))
+	-- 3.4.0 : « Géant (12x) · Zen », puis l'atout à son lien (1 : la valeur d'avant)
+	local sizeText = p.lines[2] and p.lines[2]:GetText()
+	local traitText = p.lines[3] and p.lines[3]:GetText()
+	Check("[T31] " .. style .. " : fiche : « Géant (indice) · Zen », « Atout : les envies baissent 5 % moins vite »",
+		Has(sizeText, "Géant (") and Has(sizeText, "· Zen") and traitText == "Atout : les envies baissent 5 % moins vite",
+		tostring(sizeText) .. " / " .. tostring(traitText))
 	if style == "sobre" then
-		local tc = p.lines[rv.traitLine].textColor or {}
-		Check("[T31] sobre : caractère à sa couleur (rare : ambre clair), taille aussi", tc[1] == NS.Theme.GOLD_LIGHT[1]
-			and (p.lines[rv.sizeLine].textColor or {})[1] == NS.Theme.GOLD_LIGHT[1])
+		local tc = p.lines[3].textColor or {}
+		Check("[T31] sobre : taille à sa couleur (géant : ambre clair), atout en vert", tc[1] == NS.Theme.GREEN[1]
+			and (p.lines[2].textColor or {})[1] == NS.Theme.GOLD_LIGHT[1])
 	end
 	tips = {}
 	NS:ReserveTileTip(tileGiant)

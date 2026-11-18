@@ -542,6 +542,8 @@ end
 function ns.ReserveNewTile(frame, parent)
 	local tile = ns.AllureNewTile(frame, parent, { w = LAY.tileW, h = LAY.tileH, portrait = LAY.portrait })
 	BuildTileStars(tile)
+	-- 3.4.0 : cadenas, flèche « meilleur », crans du lien, coche (ReserveBrowse.lua)
+	if ns.ReserveTileExtras then ns.ReserveTileExtras(tile) end
 	tile.sizeBack = Theme.Solid(tile, "ARTWORK", Theme.NAV, ns.RESERVE_SIZE_TAG.alpha)
 	if tile.sizeBack.SetDrawLayer then tile.sizeBack:SetDrawLayer("ARTWORK", 5) end
 	tile.sizeBack:SetPoint("TOPLEFT", tile, "TOPLEFT", 2, -2)
@@ -564,7 +566,9 @@ function ns:ReserveTilePaint(tile, spec)
 	if self.AllureTileLook then
 		self:AllureTileLook(tile, { id = "spec:" .. spec.npc .. (spec.shiny and ":s" or ""), npc = spec.npc, shiny = spec.shiny })
 	end
-	tile.label:SetText(self.CreatureName and self:CreatureName(spec.npc, { name = spec.name }) or tostring(spec.name or spec.npc))
+	-- 3.4.0 : le surnom d'abord
+	local nick = type(spec.nick) == "string" and spec.nick ~= "" and spec.nick or nil
+	tile.label:SetText(nick or (self.CreatureName and self:CreatureName(spec.npc, { name = spec.name }) or tostring(spec.name or spec.npc)))
 	local c = spec.shiny and Theme.GOLD_LIGHT or Theme.LABEL
 	tile.label:SetTextColor(c[1], c[2], c[3], 1)
 	tile.label.azKeep = nil
@@ -646,7 +650,7 @@ local function Build(self, frame, content, ui)
 	pane:SetAllPoints()
 	frame.res = pane
 	frame.resView = frame.resView or "reserve"
-	frame.resSort, frame.resShow, frame.resOffset = frame.resSort or "stars", frame.resShow or "all", frame.resOffset or 0
+	frame.resSort, frame.resOffset = frame.resSort or "stars", frame.resOffset or 0
 
 	-- 1re rangée : la vue (Réserve, Échanges), le solde à droite ; puces et
 	-- pastille à la même hauteur (Theme.CONTROL_HEIGHT)
@@ -666,37 +670,14 @@ local function Build(self, frame, content, ui)
 	rv:SetAllPoints()
 	pane.reserve = rv
 	local rowY = TOP - Theme.CONTROL_HEIGHT - 10
-	rv.sort = Theme.CreateDropdown(rv, 132, function(value)
-		frame.resSort, frame.resOffset = value, 0
-		if ns.JournalRemember then ns:JournalRemember("resSort", value) end
-		ns:RefreshJournal()
-	end)
-	At(rv.sort, content, 0, rowY)
-	local sorts = {}
-	for _, key in ipairs(ns.RESERVE_SORTS) do sorts[#sorts + 1] = { value = key, label = L["RES_SORT_" .. key] } end
-	rv.sort:SetOptions(sorts)
-	rv.species = Theme.CreateDropdown(rv, 180, function(value)
-		frame.resNpc, frame.resOffset = (value ~= "all") and value or nil, 0
-		ns:RefreshJournal()
-	end, { listWidth = 230, maxRows = 12 })
-	At(rv.species, content, 142, rowY)
-	-- 3.3.1 : « Filtre » : tous, brillants, une taille ou un caractère (à la
-	-- place des puces Tous / Brillants : la rangée n'a pas la place de plus)
-	rv.filter = Theme.CreateDropdown(rv, GRID_W - 332, function(value)
-		frame.resShow, frame.resOffset = value, 0
-		ns:RefreshJournal()
-	end, { listWidth = 230, maxRows = 12 })
-	rv.filter:SetOptions(ns:ReserveFilterChoices())
-	At(rv.filter, content, 332, rowY)
-	-- avertissement (Réserve pleine), au-dessus de la grille, sur une rangée de
-	-- la hauteur des boutons « Faire de la place » et du cadeau (3.2.1 : le
-	-- bouton mordait sur la grille et touchait les filtres, retour en jeu)
+	-- 3.4.0 : rangée 1 (recherche, Filtres, tri, sens, Vues) et rangée 2
+	-- (pastilles, Effacer, compte, Sélection), ReserveBrowse.lua ; la liste
+	-- des espèces et la ligne d'alerte s'en vont (le compte devient rouge)
+	rv.bar = ns.ReserveBuildBar(frame, rv, content, ui, "res", 0, rowY)
+	rv.bar.content = content
 	local warnY = rowY - Theme.CONTROL_HEIGHT - 8
 	local warnH = Theme.BUTTON_SIZES and Theme.BUTTON_SIZES.sm or 24
-	rv.warn = Text(rv, Theme.F_SMALL, Theme.RED, GRID_W)
 	rv.gridWidth = GRID_W
-	At(rv.warn, content, 0, warnY - math.floor((warnH - 14) / 2))
-	if rv.warn.SetWordWrap then rv.warn:SetWordWrap(false) end
 	-- la grille : vignettes de l'allure, construites une fois
 	local gridTop = warnY - warnH - 8
 	rv.warnY, rv.gridTop = warnY, gridTop
@@ -712,10 +693,10 @@ local function Build(self, frame, content, ui)
 		local slot = index - 1
 		tile:ClearAllPoints()
 		tile:SetPoint("TOPLEFT", rv.grid, "TOPLEFT", (slot % cols) * (LAY.tileW + LAY.gap), -math.floor(slot / cols) * (LAY.tileH + LAY.gap))
-		-- 3.2.0 : pendant « Faire de la place », le clic ajoute ou retire
+		-- 3.4.0 : sélection (mode, Ctrl+clic, Maj+clic) ou fiche ; la recherche lâche le clavier
 		tile:SetScript("OnClick", function(t)
-			if frame.resTidy and ns.ReserveTidyToggle then return ns:ReserveTidyToggle(t.spec and t.spec.id) end
-			ns:ReservePick(t.spec and t.spec.id)
+			if rv.bar.search.ClearFocus then rv.bar.search:ClearFocus() end
+			if t.spec then ns:ReserveTileClick(t.spec.id) end
 		end)
 		tile.onEnter = function(t) ns:ReserveTileTip(t) end
 		tile.onLeave = HideTip
@@ -727,26 +708,33 @@ local function Build(self, frame, content, ui)
 	if rv.empty.SetWordWrap then rv.empty:SetWordWrap(true) end
 	ui.Pager(rv, content)
 	rv.hint:SetText(L.RES_HINT)
+	-- le panneau de filtres, posé sur la grille (et sa rangée du bas)
+	rv.panel = ns.ReserveBuildPanel(frame, rv, content, ui, "res", 0, gridTop, GRID_W, gridTop - PAGER_Y + 2)
 
-	-- la fiche du spécimen choisi, et ses trois boutons en bas
+	-- la fiche du spécimen choisi (3.4.0 : modèle plus bas, 8 lignes), trois
+	-- boutons en bas ; Localiser et Surnom en icônes sur le modèle
 	local previewTop = rowY
 	local previewH = previewTop - PAGER_Y - 12
-	local p = ui.BuildPreview(rv, content, INNER - PREVIEW_W, previewTop, previewH)
+	local p = ui.BuildPreview(rv, content, INNER - PREVIEW_W, previewTop, previewH, { modelH = 126, lines = 8 })
 	rv.preview = p
 	local actionsH = 3 * (LAY.actionH + LAY.actionGap) + 8
 	p.maxBottom = previewH - 10 - actionsH
 	local bw = PREVIEW_W - 24
 	rv.toCodex = Theme.CreateButton(p, bw, "sm", L.RES_TO_CODEX, function()
-		if frame.resPick then ns:ReserveToCodex(frame.resPick) end
+		if frame.resPick then ns:ReserveToCodexAsk(frame.resPick) end
 	end, "primary")
-	rv.release = Theme.CreateButton(p, bw, "sm", "", function(b)
-		if frame.resPick and b.qcEnabled ~= false then ns:ReserveRelease(frame.resPick) end
+	rv.protect = Theme.CreateButton(p, bw, "sm", L.RES_PROTECT, function()
+		if frame.resPick then
+			ns:SpecimenProtect(frame.resPick, not ns:SpecimenProtected(frame.resPick))
+			ns:RefreshJournal()
+		end
 	end, "outline")
-	rv.locate = Theme.CreateButton(p, bw, "sm", L.RES_LOCATE, function(b)
-		if frame.resPick and b.qcEnabled ~= false then ns:ReserveLocate(frame.resPick) end
-	end, "accent")
+	rv.release = Theme.CreateButton(p, bw, "sm", "", function(b)
+		if not (frame.resPick and b.qcEnabled ~= false) then return end
+		if b.order then ns:ReserveDeliver(frame.resPick) else ns:ReserveRelease(frame.resPick) end
+	end, "outline")
 	local y = 8
-	for _, button in ipairs({ rv.locate, rv.release, rv.toCodex }) do
+	for _, button in ipairs({ rv.release, rv.protect, rv.toCodex }) do
 		button:SetPoint("BOTTOM", p, "BOTTOM", 0, y)
 		y = y + LAY.actionH + LAY.actionGap
 	end
@@ -754,22 +742,67 @@ local function Build(self, frame, content, ui)
 		rv.toCodex:HookScript("OnEnter", function(b) Tip(b, L.RES_TO_CODEX, { L.RES_TO_CODEX_TIP }) end)
 		rv.toCodex:HookScript("OnLeave", HideTip)
 	end
+	local icons = ns.RESERVE_ICONS
+	rv.locate = Theme.CreateIconButton(p, 22, icons.locate, function(b)
+		if frame.resPick and b.qcEnabled ~= false then ns:ReserveLocate(frame.resPick) end
+	end)
+	rv.locate:SetPoint("TOPRIGHT", p, "TOPRIGHT", -6, -6)
+	rv.nick = Theme.CreateIconButton(p, 22, icons.nick, function(b)
+		if frame.resPick and b.qcEnabled ~= false then
+			frame.resNick, frame.resConfirm, frame.resCodexAsk = frame.resPick, nil, nil
+			ns:RefreshJournal()
+			if rv.nickBox.SetFocus then rv.nickBox:SetFocus() end
+		end
+	end)
+	rv.nick:SetPoint("TOPRIGHT", rv.locate, "TOPLEFT", -4, 0)
+	for _, button in ipairs({ rv.locate, rv.nick }) do
+		if button.HookScript then
+			button:HookScript("OnEnter", function(b)
+				Tip(b, b.tipTitle or "", { b.disabledTip or b.tipText })
+			end)
+			button:HookScript("OnLeave", HideTip)
+		end
+	end
 	-- confirmation dans la fiche (jamais de fenêtre) : texte et deux boutons
 	rv.confirm = Text(p, Theme.F_SMALL, Theme.LABEL, PREVIEW_W - 28)
 	rv.confirm:SetPoint("BOTTOMLEFT", p, "BOTTOMLEFT", 14, 8 + LAY.actionH + 8)
 	if rv.confirm.SetWordWrap then rv.confirm:SetWordWrap(true) end
 	local half = math.floor((bw - 6) / 2)
 	rv.confirmYes = Theme.CreateButton(p, half, "sm", L.RES_CONFIRM_YES, function()
-		if frame.resConfirm then ns:ReserveRelease(frame.resConfirm, true) end
+		if frame.resCodexAsk then ns:ReserveToCodexAsk(frame.resCodexAsk, true)
+		elseif frame.resConfirm then ns:ReserveRelease(frame.resConfirm, true) end
 	end, "primary")
 	rv.confirmYes:SetPoint("BOTTOMLEFT", p, "BOTTOMLEFT", 12, 8)
-	rv.confirmNo = Theme.CreateButton(p, half, "sm", L.RES_CONFIRM_NO, function() ns:ReserveCancelConfirm() end, "outline")
+	rv.confirmNo = Theme.CreateButton(p, half, "sm", L.RES_CONFIRM_NO, function()
+		frame.resCodexAsk, frame.resNick = nil, nil
+		ns:ReserveCancelConfirm()
+	end, "outline")
 	rv.confirmNo:SetPoint("BOTTOMRIGHT", p, "BOTTOMRIGHT", -12, 8)
+	-- le surnom : un champ et « Donner (15) » dans la fiche
+	rv.nickBox = Theme.CreateSearchBox(p, bw, L.RES_NICK_PLACE, nil)
+	if rv.nickBox.SetMaxLetters then rv.nickBox:SetMaxLetters(ns.SPECIMEN_NICK_MAX or 24) end
+	rv.nickBox:SetPoint("BOTTOM", p, "BOTTOM", 0, 8 + LAY.actionH + LAY.actionGap)
+	rv.nickBox:SetScript("OnEnterPressed", function() rv.nickYes:Click() end)
+	rv.nickYes = Theme.CreateButton(p, half, "sm", "", function(b)
+		if not (frame.resNick and b.qcEnabled ~= false) then return end
+		local ok = ns:ShopNickBuy(frame.resNick, rv.nickBox:GetText() or "")
+		if ok then frame.resNick = nil; rv.nickBox:SetText("") end
+		if rv.nickBox.ClearFocus then rv.nickBox:ClearFocus() end
+		ns:RefreshJournal()
+	end, "primary")
+	rv.nickYes:SetPoint("BOTTOMLEFT", p, "BOTTOMLEFT", 12, 8)
+	rv.nickNo = Theme.CreateButton(p, half, "sm", L.RES_CONFIRM_NO, function()
+		frame.resNick = nil
+		if rv.nickBox.ClearFocus then rv.nickBox:ClearFocus() end
+		ns:RefreshJournal()
+	end, "outline")
+	rv.nickNo:SetPoint("BOTTOMRIGHT", p, "BOTTOMRIGHT", -12, 8)
 
-	-- 3.0.0 : le cadeau de la 3.0, tant qu'il n'a pas servi (à droite, au-dessus de la grille)
+	-- 3.0.0 : le cadeau de la 3.0, tant qu'il n'a pas servi ; 3.4.0 : sur la
+	-- rangée des vues, à gauche du solde
 	rv.giftButton = Theme.CreateButton(rv, "auto", "sm", ns:F("GIFT30_OPEN", ns.GIFT30 and ns.GIFT30.max or 3),
 		function() ns:Gift30Open() end, "accent")
-	rv.giftButton:SetPoint("TOPRIGHT", content, "TOPLEFT", ui.PAD + GRID_W, warnY)
+	rv.giftButton:SetPoint("RIGHT", pane.balance, "LEFT", -10, 0)
 	rv.giftButton:Hide()
 	-- 3.2.0 : « Faire de la place » (ReserveTidy.lua) ; 3.3.1 : en bas, à
 	-- gauche de « Échanger avec ma cible » (placé à chaque rafraîchissement)
@@ -777,9 +810,9 @@ local function Build(self, frame, content, ui)
 		if ns.ReserveTidyStart then ns:ReserveTidyStart() end
 	end, "primary")
 	rv.tidyButton:Hide()
-	-- la sélection, dans la fiche : son aide, « Relâcher (n) » et « Annuler »
-	rv.tidyYes = Theme.CreateButton(p, half, "sm", "", function()
-		if ns.ReserveTidyConfirm then ns:ReserveTidyConfirm() end
+	-- la sélection, dans la fiche : « Relâcher (n) » et « Annuler »
+	rv.tidyYes = Theme.CreateButton(p, half, "sm", "", function(b)
+		if b.qcEnabled ~= false and ns.ReserveTidyConfirm then ns:ReserveTidyConfirm() end
 	end, "primary")
 	rv.tidyYes:SetPoint("BOTTOMLEFT", p, "BOTTOMLEFT", 12, 8)
 	rv.tidyNo = Theme.CreateButton(p, half, "sm", L.RES_TIDY_NO or "", function()
@@ -803,6 +836,20 @@ local function Build(self, frame, content, ui)
 	rv.hint:SetWidth(GRID_W - hintX)
 	if rv.hint.SetWordWrap then rv.hint:SetWordWrap(true) end
 	if rv.hint.SetMaxLines then rv.hint:SetMaxLines(2) end
+	-- 3.4.0 : la barre de lot, à la place de la rangée du bas pendant une sélection
+	rv.batch = {}
+	rv.batch.count = Text(rv, Theme.F_LABEL, Theme.LABEL, 120)
+	if rv.batch.count.SetWordWrap then rv.batch.count:SetWordWrap(false) end
+	rv.batch.protect = Theme.CreateButton(rv, "auto", "sm", L.RES_BATCH_PROTECT, function(b)
+		if b.qcEnabled ~= false then ns:ReserveSelectProtect() end
+	end, "outline")
+	rv.batch.trade = Theme.CreateButton(rv, "auto", "sm", L.RES_BATCH_TRADE, function(b)
+		if b.qcEnabled ~= false then ns:ReserveSelectTrade() end
+	end, "outline")
+	rv.batch.cancel = Theme.CreateButton(rv, "auto", "sm", L.RES_BATCH_CANCEL, function()
+		if ns.ReserveTidyCancel then ns:ReserveTidyCancel() end
+	end, "outline")
+	for _, region in pairs(rv.batch) do region:Hide() end
 
 	-- ===== vue Cadeau de la 3.0 (choix de 3 créatures du Codex) =====
 	local gv = CreateFrame("Frame", nil, pane)
@@ -859,6 +906,9 @@ local function Build(self, frame, content, ui)
 		frame:HookScript("OnHide", function(f)
 			f.resConfirm, f.shopConfirm = nil, nil
 			f.resTidy, f.resTidyOrder = nil, nil   -- 3.2.0 : la sélection « Faire de la place » aussi
+			-- 3.4.0 : le panneau, le surnom, la question du Codex ; la recherche lâche le clavier
+			f.resPanel, f.resNick, f.resCodexAsk, f.resTidyPrev = nil, nil, nil, nil
+			if rv.bar.search.ClearFocus then rv.bar.search:ClearFocus() end
 			-- l'apprentissage des displayID s'arrête avec le carnet (comme l'allure)
 			if ns.ModelLearnStop then ns:ModelLearnStop() end
 		end)
@@ -945,131 +995,253 @@ function ns:ReserveTileTip(tile)
 	local spec = tile and tile.spec
 	if not spec then return end
 	local lines = { Stars(self, spec.stars, 12), self:SpecimenOriginText(spec) }
-	-- 3.1.0 : taille et caractère
+	-- 3.1.0 : taille et caractère ; 3.4.0 : le lien, protégé
 	if self.SpecimenTagsShort then lines[#lines + 1] = self:SpecimenTagsShort(spec) end
+	if self.SpecimenBondLevel and self:SpecimenBondLevel(spec) >= 2 then
+		lines[#lines + 1] = self:F("BOND_LINE_MAX", self:SpecimenBondName(self:SpecimenBondLevel(spec)))
+	end
+	if self.SpecimenProtected and self:SpecimenProtected(spec.id) then lines[#lines + 1] = L.SPEC_PROTECTED end
 	if self:SpecimenBetterThanCodex(spec.id) then
 		local ref = self:SpecimenReference(spec.npc, spec.shiny)
 		lines[#lines + 1] = self:F("RES_BETTER", Stars(self, ref and ref.stars or 1, 10))
 	end
 	local tip = UI().Tip
-	if tip then tip(tile, self:SpecimenLabel(spec), lines) end
-end
-
--- Les options du filtre d'espèce : les espèces présentes en Réserve
-local function SpeciesOptions(self, all)
-	local seen, options = {}, {}
-	for _, spec in ipairs(all) do
-		local item = seen[spec.npc]
-		if not item then
-			item = { value = spec.npc, label = self.CreatureName and self:CreatureName(spec.npc, { name = spec.name }) or tostring(spec.name or spec.npc), n = 0 }
-			seen[spec.npc] = item
-			options[#options + 1] = item
-		end
-		item.n = item.n + 1
-	end
-	table.sort(options, function(a, b)
-		if a.label ~= b.label then return tostring(a.label) < tostring(b.label) end
-		return tostring(a.value) < tostring(b.value)
-	end)
-	for _, option in ipairs(options) do option.hint = tostring(option.n) end
-	table.insert(options, 1, { value = "all", label = L.RES_SPECIES_ALL })
-	return options, seen
+	if tip then tip(tile, self.SpecimenDisplayName and self:SpecimenDisplayName(spec) or self:SpecimenLabel(spec), lines) end
 end
 
 local WHY = { better = "RES_WHY_better", worn = "RES_WHY_worn", reference = "RES_WHY_reference", missing = "RES_WHY_missing",
-	locked = "RES_WHY_locked" }
+	locked = "RES_WHY_locked", protected = "SPEC_WHY_protected" }
 
--- 3.2.0 : la sélection de « Faire de la place » : la liste, le total, l'aide
+-- les boutons de la fiche, tous cachés (chaque état montre les siens)
+local function HideCard(rv)
+	for _, key in ipairs({ "toCodex", "protect", "release", "confirm", "confirmYes", "confirmNo", "tidyYes", "tidyNo",
+		"nickBox", "nickYes", "nickNo" }) do
+		if rv[key] then rv[key]:Hide() end
+	end
+end
+
+-- 3.2.0 : la sélection (« Faire de la place » ; 3.4.0 : toute sélection) :
+-- la liste (12 lignes, puis « et n autres »), le gain, ce qui est laissé de
+-- côté, « Relâcher (n) » et « Annuler »
 local function RefreshTidy(self, frame, rv)
 	local p = rv.preview
-	local list, gain = self:ReserveTidySelection()
-	local lines = {}
-	for index, spec in ipairs(list) do
-		if index > ns.RESERVE_TIDY_COUNT then
-			lines[#lines + 1] = self:F("RES_TIDY_MORE", #list - ns.RESERVE_TIDY_COUNT)
+	local all = self:ReserveTidySelection()
+	local list, gain, aside = self:ReserveSelectReleasable()
+	local max = ns.RESERVE_BROWSE.selectLines
+	local names = {}
+	for index, spec in ipairs(all) do
+		if index > max then
+			names[#names + 1] = self:F("RES_TIDY_MORE", #all - max)
 			break
 		end
-		lines[#lines + 1] = self:F("RES_TIDY_LINE", self:SpecimenLabel(spec), Stars(self, spec.stars, 10), self:SpecimenReleaseValue(spec))
+		names[#names + 1] = self:F("RES_TIDY_LINE", self:SpecimenDisplayName(spec), Stars(self, spec.stars, 10), self:SpecimenReleaseValue(spec))
 	end
-	if #list == 0 then lines[#lines + 1] = L.RES_TIDY_NONE end
-	lines[#lines + 1] = self:F("RES_TIDY_TOTAL", gain)
-	lines[#lines + 1] = L.RES_TIDY_HINT
-	UI().PreviewSet(p, L.RES_TIDY_TITLE, lines, {})
+	local lines = {}
+	lines[1] = #all > 0 and table.concat(names, "\n") or L.RES_SEL_EMPTY
+	lines[2] = self:F("RES_TIDY_TOTAL", gain)
+	lines[3] = aside > 0 and self:F("RES_SEL_ASIDE", aside) or ""
+	lines[4] = #all > 0 and L.RES_TIDY_HINT or ""
+	UI().PreviewSet(p, self:F("RES_SEL_TITLE", #all), lines, {})
 	for index, line in ipairs(p.lines) do
-		local c = (index == #lines - 1 and Theme.GOLD) or (index == #lines and Theme.MUTED_LIGHT) or Theme.LABEL
+		local c = (index == 2 and Theme.GOLD) or (index == 3 and Theme.ORANGE) or (index == 4 and Theme.MUTED_LIGHT) or Theme.LABEL
 		line:SetTextColor(c[1], c[2], c[3], 1)
-		line.azKeep = nil
 	end
-	for _, region in ipairs({ rv.toCodex, rv.release, rv.locate, rv.confirm, rv.confirmYes, rv.confirmNo }) do region:Hide() end
+	HideCard(rv)
+	rv.locate:Hide(); rv.nick:Hide()
 	rv.tidyYes:SetText(self:F("RES_TIDY_YES", #list))
 	Enable(rv.tidyYes, #list > 0)
 	rv.tidyYes:Show(); rv.tidyNo:Show()
+end
+
+-- « Grand (112) · Curieux »
+local function ProfileLine(self, spec)
+	local size = self:F("RES_CARD_SIZE", self:SpecimenSizeLabel(spec.size), self:SpecimenSizeIndex(spec))
+	local trait = spec.trait and self.PersonaLabel and self:PersonaLabel(spec.trait)
+	if trait and trait ~= "" then return size .. L.SPEC_TAGS_SEP .. trait end
+	return size
+end
+
+-- atouts et revers du spécimen à son lien (revers et taille : dès le lien 2,
+-- montrés estompés avant)
+local function EffectLines(self, spec, bond)
+	local plus, minus, later = {}, {}, {}
+	local main = spec.trait and self:CompanionTraitEffect(spec.trait, bond)
+	if main then plus[#plus + 1] = main.label end
+	for _, item in ipairs(self:CompanionProfileExtras(spec, bond, true)) do
+		if not item.active then later[#later + 1] = item.label
+		elseif item.minus then minus[#minus + 1] = item.label
+		else plus[#plus + 1] = item.label end
+	end
+	local plusText = #plus > 0 and self:F("EFF_PLUS", table.concat(plus, " ; ")) or ""
+	local minusText, minusLater = "", false
+	if #minus > 0 then minusText = self:F("EFF_MINUS", table.concat(minus, " ; "))
+	elseif #later > 0 then minusText, minusLater = self:F("EFF_MINUS_LATER", table.concat(later, " ; ")), true end
+	return plusText, minusText, minusLater
+end
+
+local function BondText(self, spec)
+	local level = self:SpecimenBondLevel(spec)
+	local nextAt = self:SpecimenBondNext(spec)
+	if nextAt then return self:F("BOND_LINE", self:SpecimenBondName(level), self:SpecimenBondPoints(spec), nextAt) end
+	return self:F("BOND_LINE_MAX", self:SpecimenBondName(level))
 end
 
 local function RefreshDetails(self, frame, rv, spec)
 	local p = rv.preview
 	local ui = UI()
 	if frame.resTidy and self.ReserveTidySelection then return RefreshTidy(self, frame, rv) end
-	if rv.tidyYes then rv.tidyYes:Hide(); rv.tidyNo:Hide() end
-	local confirm = spec and frame.resConfirm == spec.id
+	HideCard(rv)
 	if not spec then
 		ui.PreviewSet(p, "", { L.RES_PICK }, {})
-		for _, region in ipairs({ rv.toCodex, rv.release, rv.locate, rv.confirm, rv.confirmYes, rv.confirmNo }) do region:Hide() end
+		rv.locate:Hide(); rv.nick:Hide()
 		return
 	end
-	local lines = { Stars(self, spec.stars, 14), self:SpecimenOriginText(spec) }
-	-- 3.1.0 : la taille, puis le caractère et son effet, chacun à sa couleur
-	rv.sizeLine, rv.traitLine = nil, nil
-	if self.SpecimenSizeLine then
-		lines[#lines + 1] = self:SpecimenSizeLine(spec)
-		rv.sizeLine = #lines
-		local trait = self:SpecimenTraitLine(spec, true)
-		if trait ~= "" then lines[#lines + 1] = trait; rv.traitLine = #lines end
-	end
+	local bond = self:SpecimenBondLevel(spec)
+	local typeKey = self.SpecimenTypeKey and self:SpecimenTypeKey(spec)
+	local kind = { Stars(self, spec.stars, 14) }
+	if typeKey then kind[#kind + 1] = self:CreatureTypeLabel(typeKey) end
+	kind[#kind + 1] = L["RES_FV_rank_" .. (self:SpecimenRankKey(spec) or "normal")]
+	local plusText, minusText, minusLater = EffectLines(self, spec, bond)
+	-- la place est comptée : l'essentiel d'abord, l'origine en dernier (la
+	-- valeur au relâcher est sur son bouton ; seule la raison d'un refus s'écrit)
+	local lines = { table.concat(kind, "  "), ProfileLine(self, spec), plusText, minusText, BondText(self, spec) }
 	local ref = self:SpecimenReference(spec.npc, spec.shiny)
 	local better = self:SpecimenBetterThanCodex(spec.id)
 	rv.betterLine = nil
 	if better then
 		lines[#lines + 1] = self:F("RES_BETTER", Stars(self, ref and ref.stars or 1, 10))
 		rv.betterLine = #lines
-	elseif ref then
+	elseif ref and ref.id ~= spec.id then
 		lines[#lines + 1] = self:F("RES_CODEX_REF", Stars(self, ref.stars, 10))
 	end
+	-- 3.4.0 : une commande de la semaine en cours : « Livrer »
+	local order = frame.resOrder and self.ShopOrders and self:ShopOrders().list[frame.resOrder]
+	if order and order.done then order, frame.resOrder = nil, nil end
 	local canRelease, why = self:SpecimenCanRelease(spec.id)
 	local value = self:SpecimenReleaseValue(spec)
 	rv.reasonLine = nil
-	if canRelease then
-		lines[#lines + 1] = self:F("RES_VALUE", value)
-	else
+	if not canRelease then
 		lines[#lines + 1] = L[WHY[why] or "RES_WHY_missing"]
 		rv.reasonLine = #lines
 	end
-	ui.PreviewSet(p, self:SpecimenLabel(spec), lines, { creature = spec.npc, shiny = spec.shiny })
-	-- couleurs : « meilleur » en vert, la raison du refus en rouge
+	lines[#lines + 1] = self:SpecimenOriginText(spec)
+	ui.PreviewSet(p, self:SpecimenDisplayName(spec), lines, { creature = spec.npc, shiny = spec.shiny })
+	-- couleurs : atout en vert, revers en orange (estompé avant le lien 2),
+	-- « meilleur » en vert, la raison du refus en rouge
 	for index, line in ipairs(p.lines) do
 		local c = (index == rv.betterLine and Theme.GREEN) or (index == rv.reasonLine and Theme.RED)
-			or (index == rv.sizeLine and self:SpecimenSizeColor(spec.size))
-			or (index == rv.traitLine and self:SpecimenTraitColor(spec.trait))
+			or (index == 3 and Theme.GREEN) or (index == 4 and (minusLater and Theme.MUTED or Theme.ORANGE))
+			or (index == 2 and self:SpecimenSizeColor(spec.size))
+			or (index == 5 and Theme.IDENTITY)
 			or (index == 1 and Theme.LABEL or Theme.MUTED_LIGHT)
 		line:SetTextColor(c[1], c[2], c[3], 1)
-		line.azKeep = nil
 	end
-	if confirm then
-		for _, region in ipairs({ rv.toCodex, rv.release, rv.locate }) do region:Hide() end
-		rv.confirm:SetText(self:F("RES_CONFIRM", self:SpecimenLabel(spec), value))
+	-- Localiser et Surnom, sur le modèle
+	local point = self.SpeciesPoint and self:SpeciesPoint(spec.npc, self:SpecimenZones(spec))
+	local pinned = point and self:MapPinActive("creature:" .. tostring(spec.npc))
+	rv.locate.tipTitle = pinned and L.RES_LOCATE_OFF or L.RES_LOCATE
+	rv.locate.pinned = pinned and true or false
+	Enable(rv.locate, point, L.RES_LOCATE_NONE)
+	rv.locate:Show()
+	local nickPrice = self.ShopNickPrice and self:ShopNickPrice(spec) or 15
+	rv.nick.tipTitle = L.RES_NICK
+	rv.nick.tipText = nickPrice > 0 and self:F("RES_NICK_TIP", nickPrice) or L.RES_NICK_TIP_FREE
+	Enable(rv.nick, true)
+	rv.nick:Show()
+	-- états : surnom, remplacer un exemplaire lié, relâcher (confirmation)
+	if frame.resNick == spec.id then
+		rv.nickBox:Show()
+		rv.nickYes:SetText(nickPrice > 0 and self:F("RES_NICK_GIVE", nickPrice) or L.RES_NICK_OK)
+		local short = nickPrice > self:Paillettes()
+		Enable(rv.nickYes, not short, short and self:F("SHOP_DIS_short", nickPrice - self:Paillettes()) or nil)
+		rv.nickYes:Show(); rv.nickNo:Show()
+		return
+	end
+	if frame.resCodexAsk == spec.id then
+		rv.confirm:SetText(self:F("RES_CODEX_ASK", ref and self:SpecimenBondName(self:SpecimenBondLevel(ref)) or "", self:SpecimenDisplayName(spec)))
+		rv.confirmYes:SetText(L.RES_CODEX_YES)
 		rv.confirm:Show(); rv.confirmYes:Show(); rv.confirmNo:Show()
 		return
 	end
-	rv.confirm:Hide(); rv.confirmYes:Hide(); rv.confirmNo:Hide()
+	if frame.resConfirm == spec.id then
+		rv.confirm:SetText(self:F("RES_CONFIRM", self:SpecimenDisplayName(spec), value))
+		rv.confirmYes:SetText(L.RES_CONFIRM_YES)
+		rv.confirm:Show(); rv.confirmYes:Show(); rv.confirmNo:Show()
+		return
+	end
 	rv.toCodex:Show()
-	Enable(rv.toCodex, true)
-	rv.release:SetText(self:F("RES_RELEASE", value, ns.PaillettesGlyph(12)))
-	Enable(rv.release, canRelease, L[WHY[why] or "RES_WHY_missing"])
+	Enable(rv.toCodex, not self:SpecimenIsReference(spec.id))
+	local protected = self:SpecimenProtected(spec.id)
+	rv.protect:SetText(protected and L.RES_UNPROTECT or L.RES_PROTECT)
+	Enable(rv.protect, true)
+	rv.protect:Show()
+	rv.release.order = nil
+	if order then
+		local fits = self:ShopOrderMatches(order, spec)
+		rv.release.order = true
+		rv.release:SetText(self:F("RES_ORDER_DELIVER", order.reward, ns.PaillettesGlyph(12)))
+		Enable(rv.release, fits and canRelease, (not canRelease) and L[WHY[why] or "RES_WHY_missing"] or self:ShopOrderLabel(order))
+	else
+		rv.release:SetText(self:F("RES_RELEASE", value, ns.PaillettesGlyph(12)))
+		Enable(rv.release, canRelease, L[WHY[why] or "RES_WHY_missing"])
+	end
 	rv.release:Show()
-	local point = self.SpeciesPoint and self:SpeciesPoint(spec.npc, self:SpecimenZones(spec))
-	rv.locate:SetText((point and self:MapPinActive("creature:" .. tostring(spec.npc))) and L.RES_LOCATE_OFF or L.RES_LOCATE)
-	Enable(rv.locate, point, L.RES_LOCATE_NONE)
-	rv.locate:Show()
+end
+
+-- la rangée du bas : « Faire de la place », « Échanger avec ma cible » et
+-- l'aide ; pendant une sélection, la barre de lot
+local function RefreshBottom(self, frame, rv)
+	local batch = rv.batch
+	-- le panneau de filtres ouvert : la rangée du bas lui laisse la place
+	if frame.resPanel then
+		for _, region in pairs(batch) do region:Hide() end
+		rv.tidyButton:Hide(); rv.tradeButton:Hide(); rv.hint:Hide()
+		return
+	end
+	if frame.resTidy then
+		rv.tidyButton:Hide(); rv.tradeButton:Hide(); rv.hint:Hide()
+		local n = #(frame.resTidyOrder or {})
+		batch.count:SetText(self:F("RES_BATCH_COUNT", n))
+		rv.bottomAt(batch.count, 0)
+		batch.count:ClearAllPoints()
+		UI().At(batch.count, rv.bar.content, 0, rv.bottomY - 5)
+		local all = n > 0
+		for _, id in ipairs(frame.resTidyOrder or {}) do if not self:SpecimenProtected(id) then all = false end end
+		batch.protect:SetText(all and L.RES_BATCH_UNPROTECT or L.RES_BATCH_PROTECT)
+		Enable(batch.protect, n > 0)
+		local tradeOk, tradeWhy = self:ReserveSelectTradeState()
+		Enable(batch.trade, tradeOk, tradeWhy)
+		local x = 120
+		for _, key in ipairs({ "protect", "trade", "cancel" }) do
+			batch[key]:ClearAllPoints()
+			rv.bottomAt(batch[key], x)
+			batch[key]:Show()
+			x = x + math.ceil(batch[key]:GetWidth()) + 6
+		end
+		batch.count:Show()
+		return
+	end
+	for _, region in pairs(batch) do region:Hide() end
+	rv.tradeButton:Show()
+	-- 3.2.0 : « Faire de la place », Réserve pleine ou presque
+	local offer = self.ReserveNearFull and self:ReserveNearFull() and #self:ReserveTidyCandidates(1) > 0
+	-- 3.3.1 (retour en jeu) : en bas à gauche, « Échanger avec ma cible »
+	-- juste après, puis l'aide sur la place qui reste
+	local tidyW = 0
+	rv.tidyButton:ClearAllPoints()
+	rv.tradeButton:ClearAllPoints()
+	if offer then
+		rv.bottomAt(rv.tidyButton, 0)
+		rv.tidyButton:Show()
+		tidyW = math.ceil(rv.tidyButton:GetWidth()) + 8
+	else
+		rv.tidyButton:Hide()
+	end
+	rv.bottomAt(rv.tradeButton, tidyW)
+	-- l'aide (« Clic sur un spécimen… ») n'a plus la place à côté des deux
+	-- boutons : elle s'efface tant que « Faire de la place » est proposé
+	rv.hint:SetWidth(math.max(80, (rv.gridWidth or 0) - math.ceil(rv.tradeButton:GetWidth()) - LAY.hintGap))
+	if offer then rv.hint:Hide() else rv.hint:Show() end
 end
 
 -- les displayID à apprendre (vignettes visibles), table réutilisée
@@ -1079,49 +1251,25 @@ local function RefreshReserve(self, frame, pane)
 	local count, capacity = self:SpecimenReserveCount(), self:ReserveCapacity()
 	frame.header:SetTitle(self:F("RES_TITLE", count, capacity))
 	frame.header:SetSubtitle(L.JRN_SUB_reserve)
-	local list, all
+	local list
 	if frame.scrollOnly and rv.lastList then
-		list, all = rv.lastList, rv.lastAll
+		list = rv.lastList
 	else
-		all = self:ReserveView("stars")
-		local options, seen = SpeciesOptions(self, all)
-		if frame.resNpc and not seen[frame.resNpc] then frame.resNpc = nil end
-		rv.species:SetOptions(options)
-		rv.species:SetValue(frame.resNpc or "all")
-		rv.sort:SetValue(frame.resSort or "stars")
-		rv.filter:SetValue(frame.resShow or "all")
-		list = self:ReserveView(frame.resSort, frame.resNpc, frame.resShow)
-		rv.lastList, rv.lastAll = list, all
+		list = self:ReserveBrowseList("res")
+		rv.lastList = list
 	end
 	frame.resList = list
-	rv.warn:SetText(self:ReserveFull() and self:F("RES_FULL", count, capacity) or "")
+	self:ReserveBarRefresh(rv.bar, frame)
 	-- 3.0.0 : le cadeau de la 3.0, tant qu'il n'a pas servi
 	if self.Gift30Available and self:Gift30Available() then rv.giftButton:Show() else rv.giftButton:Hide() end
-	-- 3.2.0 : « Faire de la place », Réserve pleine ou presque, hors sélection
-	if rv.tidyButton then
-		local offer = not frame.resTidy and self.ReserveNearFull and self:ReserveNearFull()
-			and #self:ReserveTidyCandidates(1) > 0
-		-- 3.3.1 (retour en jeu) : en bas à gauche, « Échanger avec ma cible »
-		-- juste après, puis l'aide sur la place qui reste
-		local tidyW = 0
-		rv.tidyButton:ClearAllPoints()
-		rv.tradeButton:ClearAllPoints()
-		if offer then
-			rv.bottomAt(rv.tidyButton, 0)
-			rv.tidyButton:Show()
-			tidyW = math.ceil(rv.tidyButton:GetWidth()) + 8
-		else
-			rv.tidyButton:Hide()
-		end
-		rv.bottomAt(rv.tradeButton, tidyW)
-		-- l'aide (« Clic sur un spécimen… ») n'a plus la place à côté des deux
-		-- boutons : elle s'efface tant que « Faire de la place » est proposé
-		rv.hint:SetWidth(math.max(80, (rv.gridWidth or 0) - math.ceil(rv.tradeButton:GetWidth()) - LAY.hintGap))
-		if offer then rv.hint:Hide() else rv.hint:Show() end
-		-- l'avertissement s'arrête avant le cadeau
-		local room = rv.gridWidth or 0
-		if rv.giftButton:IsShown() then room = room - math.ceil(rv.giftButton:GetWidth()) - 8 end
-		rv.warn:SetWidth(math.max(80, room))
+	RefreshBottom(self, frame, rv)
+	-- le panneau de filtres : posé sur la grille, les vignettes dessous se taisent
+	local panelOpen = frame.resPanel and true or false
+	if panelOpen then
+		rv.panel:Show()
+		self:ReservePanelRefresh(rv.panel)
+	else
+		rv.panel:Hide()
 	end
 	local cols, rows = rv.cols, rv.rows
 	local totalRows = math.ceil(#list / cols)
@@ -1132,21 +1280,25 @@ local function RefreshReserve(self, frame, pane)
 	for _, spec in ipairs(list) do if spec.id == frame.resPick then picked = spec end end
 	if not picked then picked = list[1]; frame.resPick = picked and picked.id or nil end
 	if frame.resConfirm and frame.resConfirm ~= frame.resPick then frame.resConfirm = nil end
+	if frame.resCodexAsk and frame.resCodexAsk ~= frame.resPick then frame.resCodexAsk = nil end
+	if frame.resNick and frame.resNick ~= frame.resPick then frame.resNick = nil end
 	local first = frame.resOffset * cols
 	local learn = learnList
 	for i = #learn, 1, -1 do learn[i] = nil end
 	for index, tile in ipairs(rv.tiles) do
 		local spec = list[first + index]
 		tile.spec = spec
-		if spec then
+		if spec and not panelOpen then
 			self:ReserveTilePaint(tile, spec)
-			local on = spec.id == frame.resPick
+			local ticked = frame.resTidy and frame.resTidy[spec.id] or false
+			local on = (frame.resTidy and ticked) or (not frame.resTidy and spec.id == frame.resPick)
 			tile:SetSelected(on)
 			if ns.AllureShowRing then ns.AllureShowRing(tile, on, frame) end
 			local better = self:SpecimenBetterThanCodex(spec.id)
 			tile:SetAccent((on and Theme.SELECT) or (better and Theme.GREEN) or (spec.shiny and Theme.GOLD_LIGHT) or nil)   -- choisi : la sélection (= or en Sobre)
-			-- 3.2.0 : pendant « Faire de la place », les autres s'estompent
-			tile:SetAlpha((frame.resTidy and not frame.resTidy[spec.id]) and ns.RESERVE_TIDY_DIM or 1)
+			if self.ReserveTilePaintExtras then self:ReserveTilePaintExtras(tile, spec, ticked) end
+			-- 3.2.0 : pendant une sélection, les autres s'estompent
+			tile:SetAlpha((frame.resTidy and not ticked) and ns.RESERVE_TIDY_DIM or 1)
 			tile:Show()
 			if not (self.ModelKnownDisplay and self:ModelKnownDisplay(spec.npc)) then learn[#learn + 1] = spec.npc end
 		else
@@ -1154,8 +1306,8 @@ local function RefreshReserve(self, frame, pane)
 		end
 	end
 	if #learn > 0 and self.ModelLearnCreatures then self:ModelLearnCreatures(learn) end
-	if #list == 0 then
-		rv.empty:SetText(#(all or rv.lastAll or {}) == 0 and L.RES_EMPTY or L.RES_EMPTY_FILTER)
+	if #list == 0 and not panelOpen then
+		rv.empty:SetText(count == 0 and L.RES_EMPTY or L.RES_EMPTY_FILTER)
 		rv.empty:Show()
 	else
 		rv.empty:SetText("")

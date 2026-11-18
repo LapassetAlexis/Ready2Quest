@@ -894,7 +894,11 @@ do
 		local first = f.resTidyOrder[1]
 		NS:ReserveTidyToggle(first)
 		ok("clic : retiré (4)", not f.resTidy[first] and #f.resTidyOrder == 4 and rv.tidyYes:GetText() == "Relâcher (4)")
-		ok("brillant : refusé", NS:ReserveTidyToggle(ids.shiny) == false and not f.resTidy[ids.shiny])
+		-- 3.4.0 : un brillant se coche (protéger, échanger) mais « Relâcher » le laisse de côté
+		ok("brillant : coché, laissé de côté", NS:ReserveTidyToggle(ids.shiny) == true and f.resTidy[ids.shiny]
+			and rv.tidyYes:GetText() == "Relâcher (4)" and PreviewText(rv.preview.lines):find("Laissés de côté : 1", 1, true) ~= nil,
+			PreviewText(rv.preview.lines))
+		NS:ReserveTidyToggle(ids.shiny)
 		local count, balance = NS:SpecimenReserveCount(), NS:Paillettes()
 		Mock:Reset()
 		rv.tidyYes:GetScript("OnClick")(rv.tidyYes)
@@ -952,15 +956,36 @@ do
 		NS:RefreshJournal(); NS:RefreshJournal()
 		Check("[J215] rafraîchi sans rien créer (vignettes réutilisées)", #Mock.frames == before, #Mock.frames .. "/" .. before)
 		local bad = {}
-		rv.sort:Choose("date")
+		-- 3.4.0 : la barre (tri, sens, recherche, vues) et le panneau de filtres
+		local bar = rv.bar
+		bar.sort:Choose("date")
 		if not (rv.tiles[1].spec.id == ids.shiny and f.resSort == "date") then bad[#bad + 1] = "date" end
-		rv.sort:Choose("name")
+		bar.dir:GetScript("OnClick")(bar.dir)
+		if not (f.resDesc == false and rv.tiles[1].spec.id ~= ids.shiny) then bad[#bad + 1] = "sens" end
+		bar.sort:Choose("name")
 		if rv.tiles[1].spec.name ~= "Grue" then bad[#bad + 1] = "nom" end
-		rv.species:Choose(900)
-		if not (ShownTiles(rv) == 2 and TileOf(rv, ids.low) and TileOf(rv, ids.mid)) then bad[#bad + 1] = "espèce" end
-		rv.species:Choose("all")
-		rv.filter:Choose("shiny")
-		if not (TileOf(rv, ids.shiny) and not TileOf(rv, ids.low)) then bad[#bad + 1] = "brillants" end
+		NS:ReserveSearch("raptor")
+		NS:RefreshJournal()
+		if not (ShownTiles(rv) == 2 and TileOf(rv, ids.low) and TileOf(rv, ids.mid)) then bad[#bad + 1] = "recherche" end
+		NS:ReserveSearch("")
+		NS:RefreshJournal()
+		-- le panneau : puces avec leur compteur, OU dans un groupe
+		bar.filters:GetScript("OnClick")(bar.filters)
+		local shinyChip
+		for _, chip in ipairs(rv.panel.chips.version) do if chip.value == "shiny" and chip:IsShown() then shinyChip = chip end end
+		local shinies = 0
+		for _, spec in ipairs(NS:SpecimenList({ where = "reserve" })) do if spec.shiny then shinies = shinies + 1 end end
+		if not (rv.panel:IsShown() and shinyChip and shinyChip.n == shinies and shinies > 0) then
+			bad[#bad + 1] = "panneau " .. tostring(rv.panel:IsShown()) .. " " .. tostring(shinyChip and shinyChip.n) .. " " .. tostring(#rv.panel.chips.version)
+				.. " " .. tostring(rv.panel.chips.version[2] and rv.panel.chips.version[2].rowY)
+		end
+		if shinyChip then shinyChip:GetScript("OnClick")(shinyChip) end
+		rv.panel.show:GetScript("OnClick")(rv.panel.show)
+		if not (not rv.panel:IsShown() and TileOf(rv, ids.shiny) and not TileOf(rv, ids.low)
+			and bar.filters:GetText() == "Filtres (1)" and rv.bar.pills[1]:IsShown()) then bad[#bad + 1] = "brillants" end
+		-- la pastille : clic, le groupe s'efface
+		rv.bar.pills[1]:GetScript("OnClick")(rv.bar.pills[1])
+		if f.resFilter.sets.version ~= nil then bad[#bad + 1] = "pastille" end
 		-- 3.3.1 : une taille, un caractère
 		-- (tailles et caractères tirés au hasard : fixés ici)
 		for _, spec in ipairs(NS:SpecimenList({ where = "reserve" })) do
@@ -969,16 +994,17 @@ do
 		end
 		NS:SpecimenGet(ids.low).size, NS:SpecimenGet(ids.mid).trait = "giant", "zen"
 		NS:SpecimenGet(ids.low).trait = "curious"
-		rv.filter:Choose("size:giant")
+		NS:ReserveToggleFilter("size", "giant")
 		if not (ShownTiles(rv) == 1 and TileOf(rv, ids.low)) then bad[#bad + 1] = "taille" end
-		rv.filter:Choose("trait:zen")
+		NS:ReserveClearFilter()
+		NS:ReserveToggleFilter("trait", "zen")
 		if not (TileOf(rv, ids.mid) and not TileOf(rv, ids.low)) then bad[#bad + 1] = "caractère" end
-		local labels = {}
-		for _, entry in ipairs(rv.filter.options or {}) do labels[#labels + 1] = entry.value end
-		if #labels ~= 2 + #NS.SPECIMEN_SIZES + #NS.SPECIMEN_TRAIT_WEIGHTS then bad[#bad + 1] = "choix " .. #labels end
-		rv.filter:Choose("all")
-		rv.sort:Choose("stars")
-		Check("[J215] tris (date, nom) et filtres (espèce, brillants, taille, caractère)", #bad == 0, table.concat(bad, ", "))
+		-- les vues
+		bar.views:Choose("better")
+		if not (ShownTiles(rv) == 1 and TileOf(rv, ids.better) and bar.views.text:GetText() == "Vues") then bad[#bad + 1] = "vue" end
+		NS:ReserveClearFilter()
+		bar.sort:Choose("stars")
+		Check("[J215] tris (date, sens, nom), recherche, panneau (brillants), pastille, taille, caractère, vues", #bad == 0, table.concat(bad, ", "))
 		-- fiche : origine, meilleur que le Codex, bouton grisé et pourquoi
 		TileOf(rv, ids.better):GetScript("OnClick")(TileOf(rv, ids.better))
 		local p = rv.preview
@@ -1012,16 +1038,16 @@ do
 		local pins = PinApi(OTHER)
 		TileOf(rv, ids.mid):GetScript("OnClick")(TileOf(rv, ids.mid))
 		rv.locate:GetScript("OnClick")(rv.locate)
-		local located = pins.set == 1 and pins.point.map == ZONE and pins.opened == ZONE and rv.locate:GetText() == "Effacer le repère"
+		local located = pins.set == 1 and pins.point.map == ZONE and pins.opened == ZONE and rv.locate.tipTitle == "Effacer le repère"
 		TileOf(rv, ids.shiny):GetScript("OnClick")(TileOf(rv, ids.shiny))
 		Check("[J215] Localiser l'espèce : repère et carte ; espèce sans point : grisé", located and rv.locate.qcEnabled == false
 			and rv.locate.disabledTip ~= nil)
 		-- Réserve pleine
-		local quiet = (rv.warn:GetText() or "") == ""
+		local quiet = not (rv.bar.count:GetText() or ""):find("pleine", 1, true)
 		for _ = 1, NS:ReserveCapacity() - NS:SpecimenReserveCount() do NS:SpecimenAdd({ npc = 904, stars = 1, name = "Sanglier" }) end
 		NS:RefreshJournal()
 		Check("[J215] Réserve pleine : le dire (rien avant)", quiet and NS:ReserveFull()
-			and (rv.warn:GetText() or ""):find("Réserve pleine", 1, true) ~= nil)
+			and (rv.bar.count:GetText() or "") == NS:F("RES_COUNT_FULL", NS:ReserveCapacity(), NS:ReserveCapacity()))
 		-- vide
 		NS:DB().capture.specimens, NS:DB().capture.codex = {}, {}
 		NS:DB().capture.specDirty = true    -- le Codex se refait d'après les fiches : Réserve vide
