@@ -722,8 +722,8 @@ local function Build(self, frame, content, ui)
 		function() ns:Gift30Open() end, "accent")
 	rv.giftButton:SetPoint("TOPRIGHT", content, "TOPLEFT", ui.PAD + GRID_W, warnY)
 	rv.giftButton:Hide()
-	-- 3.2.0 : « Faire de la place » (ReserveTidy.lua), sur la ligne de
-	-- l'avertissement, à droite (à gauche du cadeau s'il est là)
+	-- 3.2.0 : « Faire de la place » (ReserveTidy.lua) ; 3.3.1 : en bas, à
+	-- gauche de « Échanger avec ma cible » (placé à chaque rafraîchissement)
 	rv.tidyButton = Theme.CreateButton(rv, "auto", "sm", L.RES_TIDY_BUTTON or "", function()
 		if ns.ReserveTidyStart then ns:ReserveTidyStart() end
 	end, "primary")
@@ -745,7 +745,9 @@ local function Build(self, frame, content, ui)
 	rv.tradeButton = Theme.CreateButton(rv, "auto", "sm", L.RES_TRADE_TARGET, function()
 		if ns.TradeWithTarget then ns:TradeWithTarget() end
 	end, "outline")
-	At(rv.tradeButton, content, 0, PAGER_Y + math.floor((LAY.actionH - (Theme.PAGER_HEIGHT or 22)) / 2))
+	rv.bottomY = PAGER_Y + math.floor((LAY.actionH - (Theme.PAGER_HEIGHT or 22)) / 2)
+	rv.bottomAt = function(region, x) At(region, content, x, rv.bottomY) end
+	At(rv.tradeButton, content, 0, rv.bottomY)
 	local hintX = math.ceil(rv.tradeButton:GetWidth()) + LAY.hintGap
 	rv.hint:ClearAllPoints()
 	rv.hint:SetPoint("LEFT", rv.tradeButton, "RIGHT", LAY.hintGap, 0)
@@ -1050,18 +1052,26 @@ local function RefreshReserve(self, frame, pane)
 	if rv.tidyButton then
 		local offer = not frame.resTidy and self.ReserveNearFull and self:ReserveNearFull()
 			and #self:ReserveTidyCandidates(1) > 0
+		-- 3.3.1 (retour en jeu) : en bas à gauche, « Échanger avec ma cible »
+		-- juste après, puis l'aide sur la place qui reste
+		local tidyW = 0
 		rv.tidyButton:ClearAllPoints()
-		if rv.giftButton:IsShown() then
-			rv.tidyButton:SetPoint("RIGHT", rv.giftButton, "LEFT", -8, 0)
+		rv.tradeButton:ClearAllPoints()
+		if offer then
+			rv.bottomAt(rv.tidyButton, 0)
+			rv.tidyButton:Show()
+			tidyW = math.ceil(rv.tidyButton:GetWidth()) + 8
 		else
-			rv.tidyButton:SetPoint("TOPRIGHT", rv.giftButton, "TOPRIGHT", 0, 0)
+			rv.tidyButton:Hide()
 		end
-		if offer then rv.tidyButton:Show() else rv.tidyButton:Hide() end
-		-- l'avertissement s'arrête avant les boutons de droite
+		rv.bottomAt(rv.tradeButton, tidyW)
+		-- l'aide (« Clic sur un spécimen… ») n'a plus la place à côté des deux
+		-- boutons : elle s'efface tant que « Faire de la place » est proposé
+		rv.hint:SetWidth(math.max(80, (rv.gridWidth or 0) - math.ceil(rv.tradeButton:GetWidth()) - LAY.hintGap))
+		if offer then rv.hint:Hide() else rv.hint:Show() end
+		-- l'avertissement s'arrête avant le cadeau
 		local room = rv.gridWidth or 0
-		for _, button in ipairs({ rv.tidyButton, rv.giftButton }) do
-			if button:IsShown() then room = room - math.ceil(button:GetWidth()) - 8 end
-		end
+		if rv.giftButton:IsShown() then room = room - math.ceil(rv.giftButton:GetWidth()) - 8 end
 		rv.warn:SetWidth(math.max(80, room))
 	end
 	local cols, rows = rv.cols, rv.rows
