@@ -404,7 +404,8 @@ do
 			if type(gained) == "table" and #gained > 0 and not (type(opts) == "table" and opts.quiet) then
 				local top
 				for _, rank in ipairs(gained) do
-					if type(rank) == "table" and tonumber(rank.count) and (not top or rank.count > top) then top = rank.count end
+					-- (3.6.0 : « tout Azeroth » part en haut fait, sorte h : son seuil dépend de la faction)
+					if type(rank) == "table" and not rank.all and tonumber(rank.count) and (not top or rank.count > top) then top = rank.count end
 				end
 				if top then pcall(self.GuildFeatNote, self, { kind = "r", id = top, zone = 0, stars = 0 }) end
 			end

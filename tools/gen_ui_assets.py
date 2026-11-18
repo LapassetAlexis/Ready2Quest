@@ -27,6 +27,23 @@ tools/sync_socle.py) des TGA 32 bits non compressés, côtés en puissances de 2
                            (rayons 0,80 à 0,94), liserés noirs, quatre pointes,
                            ombre intérieure ; centre vide. En or : se teinte.
 
+QuestCompanion 3.6.0 : fonds et cadres de la fiche de dresseur (cosmétiques
+gagnés par les hauts faits). Motifs et dégradés à nous, sombres (le texte
+de la fiche reste lisible : point le plus clair de chaque fond mesuré, contraste
+≥ 4,5 avec le texte estompé du thème, tests/modules/lot36_b.lua) :
+
+  fiche_registre.tga  256x128 fond : registre, lignes réglées, marge, losanges
+  fiche_atlas.tga     256x128 fond : quadrillage, rose des vents, sceaux de cire
+  fiche_renom.tga     256x128 fond : pourpre, bannière à pointe, chevrons
+  fiche_pantheon.tga  256x128 fond : colonnade, rayons depuis le haut
+  fiche_blason_est.tga     64x64 cadre en 9 tranches (marge 24) : double filet
+                           argent bleuté, écusson losange aux coins
+  fiche_blason_kalimdor.tga 64x64 idem, ambre et brique
+  fiche_lauriers.tga       64x64 cadre en 9 tranches (marge 24) : filet d'or,
+                           deux rameaux de laurier dans chaque coin
+Les fonds sont étirés sur la fiche (environ 780 x 470 px) : les formes sont
+dessinées en coordonnées d'écran (sx, sy) pour ne pas être déformées.
+
 L'anneau du médaillon des logos (ring) est aussi dessiné ici : tools/gen_logos.py
 le reprend.
 
@@ -316,8 +333,177 @@ def anneau(size=128, outer=0.94, inner=0.80, shade=0.66):
     return size, size, pixels
 
 
+# ---------------------------------------------------------------------------
+# QuestCompanion 3.6.0 : fonds et cadres de la fiche de dresseur
+# ---------------------------------------------------------------------------
+CARD_W, CARD_H = 256, 128
+CARD_SCREEN = (780.0, 470.0)       # taille d'écran approchée de la fiche
+
+
+def card_pixels(shade):
+    """Fond opaque : shade(sx, sy, u, v) -> (r, g, b) en 0..255, sx/sy en px d'écran."""
+    pixels = []
+    kx, ky = CARD_SCREEN[0] / CARD_W, CARD_SCREEN[1] / CARD_H
+    for y in range(CARD_H):
+        for x in range(CARD_W):
+            sx, sy = (x + 0.5) * kx, (y + 0.5) * ky
+            r, g, b = shade(sx, sy, (x + 0.5) / CARD_W, (y + 0.5) / CARD_H)
+            pixels.append((clamp(r), clamp(g), clamp(b), 255))
+    return CARD_W, CARD_H, pixels
+
+
+def line(value, at, width):
+    """Couverture d'un filet de largeur `width` centré sur `at`."""
+    return max(0.0, min(1.0, width / 2 + 0.5 - abs(value - at)))
+
+
+def add(colour, amount, tint=(1.0, 1.0, 1.0)):
+    return tuple(colour[i] + amount * tint[i] for i in range(3))
+
+
+def fiche_registre():
+    def shade(sx, sy, u, v):
+        c = mix((30, 23, 15), (17, 13, 9), v)
+        rule = line((sy - 70) % 22, 0, 3.0) if sy > 64 else 0.0                    # lignes du registre
+        c = add(c, 10 * rule, (1.0, 0.85, 0.6))
+        c = add(c, 16 * line(sx, 58, 3.2), (1.0, 0.30, 0.22))                    # marge
+        c = add(c, 12 * max(line(sy, 58, 3.2), line(sy, 66, 2.2)), (1.0, 0.85, 0.6))  # double trait d'en-tête
+        dx, dy = (sx - 11) % 66 - 33, (sy - 11) % 66 - 33                          # losanges en filigrane
+        dd = abs(dx) + abs(dy)
+        c = add(c, 9 * max(0.0, min(1.0, 9.5 - dd)) * min(1.0, max(0.0, dd - 4.0)), (1.0, 0.85, 0.6))
+        return c
+    return card_pixels(shade)
+
+
+def fiche_atlas():
+    def shade(sx, sy, u, v):
+        c = mix((14, 26, 30), (8, 15, 19), v)
+        grid = max(line(sx % 60, 0, 3.0), line(sy % 60, 0, 3.0))                   # méridiens, parallèles
+        c = add(c, 9 * grid, (0.7, 1.0, 1.0))
+        cx, cy = 690.0, 360.0                                                       # rose des vents
+        dx, dy = sx - cx, sy - cy
+        d, angle = math.hypot(dx, dy), math.atan2(dy, dx)
+        c = add(c, 12 * line(d, 58, 3.0) + 9 * line(d, 48, 2.0), (0.8, 1.0, 1.0))
+        spoke = min(abs(math.sin(angle * 2)), 1.0)
+        if d < 56:
+            c = add(c, 14 * max(0.0, 1 - spoke * d / 9.0), (1.0, 0.95, 0.75))
+        for wx, wy in ((150, 400), (470, 300), (620, 110)):                        # sceaux de cire
+            w = math.hypot(sx - wx, sy - wy)
+            if w < 18:
+                c = mix(c, (52, 15, 14), 0.9 * min(1.0, 18 - w))
+                c = add(c, 10 * line(w, 12, 2.4), (1.0, 0.5, 0.4))
+        return c
+    return card_pixels(shade)
+
+
+def fiche_renom():
+    def shade(sx, sy, u, v):
+        c = mix((36, 12, 15), (16, 7, 9), v)
+        c = add(c, -6 * abs(u - 0.5), (1.0, 1.0, 1.0))                              # bords plus sombres
+        bx = 700.0                                                                   # bannière à pointe
+        half = 34.0
+        tip = 300.0 - abs(sx - bx) * 0.7
+        inside = abs(sx - bx) < half and sy < tip
+        if inside:
+            c = mix(c, (50, 15, 20), 0.85)
+            c = add(c, 14 * max(line(abs(sx - bx), half - 4, 3.0), line(sy, tip - 4, 3.0)), (1.0, 0.78, 0.35))
+            for k in range(3):                                                       # chevrons d'or
+                at = 90 + k * 46
+                c = add(c, 13 * line(sy - abs(sx - bx) * 0.7, at, 4.0), (1.0, 0.78, 0.35))
+        c = add(c, 6 * line((sx + sy * 0.5) % 90, 0, 2.4), (1.0, 0.7, 0.4))        # trame oblique
+        return c
+    return card_pixels(shade)
+
+
+def fiche_pantheon():
+    def shade(sx, sy, u, v):
+        c = mix((26, 20, 37), (11, 10, 19), v)
+        dx, dy = sx - 390.0, sy + 120.0                                              # rayons depuis le haut
+        angle = math.atan2(dx, dy)
+        ray = 0.5 + 0.5 * math.cos(angle * 26)
+        c = add(c, 12 * ray * max(0.0, 1 - math.hypot(dx, dy) / 620.0), (0.9, 0.85, 1.0))
+        if sy > 300:                                                                  # colonnade
+            for k in range(7):
+                cx = 90 + k * 100
+                w = abs(sx - cx)
+                if w < 18:
+                    c = add(c, 8 + 7 * line(w % 7, 0, 2.4), (0.85, 0.82, 1.0))
+            c = add(c, 12 * max(line(sy, 302, 4.0), line(sy, 452, 4.0)), (0.95, 0.85, 1.0))
+        return c
+    return card_pixels(shade)
+
+
+def card_luminance(pixels):
+    """Luminance relative (WCAG) du pixel le plus clair d'un fond opaque."""
+    def lin(c):
+        c /= 255.0
+        return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
+    return max(0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b) for r, g, b, _ in pixels)
+
+
+def card_frame(band, inner, crest, crest_edge, laurel=False, size=64):
+    """Cadre en 9 tranches (marge 24) : liseré noir, filet en relief, filet
+    intérieur ; un écusson losange (ou deux rameaux de laurier) dans chaque
+    coin. Bords uniformes le long de l'étirement."""
+    pixels = []
+    for y in range(size):
+        for x in range(size):
+            ex, ey = min(x + 0.5, size - x - 0.5), min(y + 0.5, size - y - 0.5)   # distance aux bords
+            depth = min(ex, ey)
+            colour, alpha = (0, 0, 0), 0.0
+            if depth < 1.0:
+                colour, alpha = (0, 0, 0), 0.9
+            elif depth < 4.0:
+                t = (depth - 1.0) / 3.0
+                colour, alpha = mix(mix(band, (255, 255, 255), 0.25), mix(band, (0, 0, 0), 0.45), t), 1.0
+            elif depth < 5.0:
+                colour, alpha = (0, 0, 0), 0.55
+            elif 6.0 <= depth < 7.2:
+                colour, alpha = inner, 0.9
+            cx, cy = min(x + 0.5, size - x - 0.5), min(y + 0.5, size - y - 0.5)     # repère du coin le plus proche
+            if laurel:
+                for k in range(5):                                                     # deux rameaux, cinq feuilles
+                    for along in (False, True):
+                        px, py = 7.0 + k * 3.4, 6.0 + 0.9 * k
+                        if along:
+                            px, py = py, px
+                        lx, ly = (cx - px, cy - py) if not along else (cy - py, cx - px)
+                        d = math.hypot((lx + ly * 0.6) / 2.8, ly / 1.5)
+                        m = max(0.0, min(1.0, (1.0 - d) * 3.0))
+                        if m > 0:
+                            colour = mix(colour, crest_edge if d > 0.62 else crest, m)
+                            alpha = max(alpha, m)
+                d = math.hypot(cx - 4.5, cy - 4.5)                                       # nœud d'or au coin
+                m = max(0.0, min(1.0, 3.2 - d))
+                if m > 0:
+                    colour, alpha = mix(colour, crest_edge, m), max(alpha, m)
+            else:
+                d = abs(cx - 11.5) + abs(cy - 11.5)
+                m = max(0.0, min(1.0, 10.5 - d))
+                if m > 0:
+                    colour = mix(colour, (0, 0, 0) if d > 9.4 else (crest_edge if d > 7.4 else (crest if d > 3.2 else crest_edge)), m)
+                    alpha = max(alpha, m)
+            pixels.append((clamp(colour[0]), clamp(colour[1]), clamp(colour[2]), clamp(alpha * 255)))
+    return size, size, pixels
+
+
+def fiche_blason_est():
+    return card_frame((176, 196, 222), (92, 124, 176), (58, 92, 160), (214, 226, 240))
+
+
+def fiche_blason_kalimdor():
+    return card_frame((228, 160, 86), (176, 78, 52), (164, 52, 38), (246, 206, 140))
+
+
+def fiche_lauriers():
+    return card_frame(GOLD, GOLD_LO, (96, 146, 70), GOLD_HI, laurel=True)
+
+
 ASSETS = [("cadre", cadre), ("ombre", ombre), ("coin", coin), ("plaque", plaque), ("creux", creux),
-          ("lueur_ligne", lueur_ligne), ("lueur_point", lueur_point), ("vignette", vignette), ("anneau", anneau)]
+          ("lueur_ligne", lueur_ligne), ("lueur_point", lueur_point), ("vignette", vignette), ("anneau", anneau),
+          ("fiche_registre", fiche_registre), ("fiche_atlas", fiche_atlas), ("fiche_renom", fiche_renom),
+          ("fiche_pantheon", fiche_pantheon), ("fiche_blason_est", fiche_blason_est),
+          ("fiche_blason_kalimdor", fiche_blason_kalimdor), ("fiche_lauriers", fiche_lauriers)]
 
 
 def main(argv=None):
@@ -335,7 +521,10 @@ def main(argv=None):
             os.makedirs(preview, exist_ok=True)
             with open(os.path.join(preview, name + ".png"), "wb") as handle:
                 handle.write(png(width, height, pixels))
-        print("%-18s %3d x %-3d  %6d octets" % (name + ".tga", width, height, len(data)))
+        note = ""
+        if name.startswith("fiche_") and width == CARD_W:
+            note = "  luminance max %.4f" % card_luminance(pixels)
+        print("%-18s %3d x %-3d  %6d octets%s" % (name + ".tga", width, height, len(data), note))
     print("total : %d octets dans %s" % (total, os.path.relpath(OUT, ROOT)))
 
 

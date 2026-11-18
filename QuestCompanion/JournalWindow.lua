@@ -2796,6 +2796,11 @@ local function RefreshMenagerie(self, frame)
 			if entry.captured and entry.normal ~= false then row.caught:Show() else row.caught:Hide() end
 			-- 3.4.0 : l'étude (espèce capturée)
 			local study = entry.captured and self.SpecimenStudy and self:SpecimenStudy(entry.npc)
+			-- 3.6.0 : espèce maîtrisée (les cinq tâches) : le liseré passe à l'or
+			local lc2 = (study and study.mastered) and Theme.GOLD or Theme.GREEN
+			row.caught:SetVertexColor(lc2[1], lc2[2], lc2[3], 1)
+			if study and study.mastered then row.caught:Show() end
+			row.mastered = study and study.mastered or nil
 			for index, d in ipairs(row.study or {}) do
 				if study then
 					local task = ns.STUDY_TASKS[index] or "shiny"

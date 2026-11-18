@@ -9,8 +9,10 @@
 -- Chargé juste après Feats.lua : les lignes du catalogue qui attendaient
 -- (reward.soon) passent en reward.cosmetic dès que le cosmétique existe ici
 -- (ns.FeatResolveSoon). Les cosmétiques de la fiche de dresseur (cardbg /
--- cardframe) sont reportés : la récompense s'affiche « fond de fiche (à
--- venir) », jamais un identifiant brut.
+-- cardframe) existent depuis la 3.6.0 (TrainerCardStyle.lua, nos textures) ;
+-- un id inconnu se lit « récompense à venir », jamais un identifiant brut.
+-- 3.6.0 : un cadre (les 8 caractères), un fond (les 5 tailles) et un
+-- ornement (100 espèces maîtrisées) de plus, toujours en images du client.
 --
 -- Images : UNIQUEMENT celles du client (aucune texture livrée), par chemin
 -- (icônes, carte du monde, minicarte) ou nom d'atlas, relevées dans le
@@ -49,6 +51,10 @@ local FRAMES = {
 	{ id = "feat_prism", label = "COMP_FRAME_FEAT_PRISM", tier = 0, unlock = { feat = "meta_shiny" },
 		edge = { 1, 1, 1, 0.9 }, inner = { 1, 1, 1, 0.45 }, deco = "prism",
 		backdrop = { file = TOOLTIP_BORDER, size = 14, color = { 1, 1, 1 } } },
+	-- 3.6.0 : les 8 caractères (filets mauve et or, bordure dorée du client)
+	{ id = "feat_traits", label = "COMP_FRAME_FEAT_TRAITS", tier = 0, unlock = { feat = "men_traits_all" },
+		edge = { 0.80, 0.62, 0.95, 1 }, inner = { 0.96, 0.78, 0.49, 0.55 },
+		backdrop = { file = GOLD_BORDER, size = 16, color = { 0.92, 0.80, 1 } } },
 }
 -- fonds : l'Atlas = une case de la carte du monde d'origine (Royaumes de
 -- l'Est) ; le Feu de camp = nuit étoilée en dégradé, halo orangé (atlas) et
@@ -59,6 +65,10 @@ local BACKGROUNDS = {
 	{ id = "feat_campfire", label = "COMP_BG_FEAT_CAMPFIRE", tier = 0, unlock = { feat = "char_camp_25" },
 		color = { 0.10, 0.06, 0.10, 0.92 }, stars = true, campfire = true,
 		gradient = { top = { 0.02, 0.03, 0.10, 0.92 }, bottom = { 0.30, 0.11, 0.04, 0.92 } } },
+	-- 3.6.0 : les 5 tailles (dégradé d'aube, étoiles)
+	{ id = "feat_sizes", label = "COMP_BG_FEAT_SIZES", tier = 0, unlock = { feat = "men_sizes_all" },
+		color = { 0.10, 0.12, 0.20, 0.92 }, stars = true,
+		gradient = { top = { 0.05, 0.07, 0.18, 0.92 }, bottom = { 0.26, 0.20, 0.10, 0.90 } } },
 }
 -- ornements : `icons` = icônes du client par ordre de préférence (la
 -- première présente gagne) dans l'anneau d'un bouton de minicarte ; `look` :
@@ -85,6 +95,10 @@ local ORNAMENTS = {
 	{ id = "feat_wildcrown", key = "companionOrnFeatWildcrown", label = "COMP_ORN_FEAT_WILDCROWN", tier = 0,
 		unlock = { feat = "dng_raid_hyjal" }, icons = { "INV_Crown_14", "INV_Crown_02" },
 		size = 24, at = { "BOTTOM", "TOP", 27, -10 } },
+	-- 3.6.0 : 100 espèces maîtrisées (un grimoire, en haut à droite)
+	{ id = "feat_scholar", key = "companionOrnFeatScholar", label = "COMP_ORN_FEAT_SCHOLAR", tier = 0,
+		unlock = { feat = "men_study_100" }, icons = { "INV_Misc_Book_09", "INV_Misc_Book_11" },
+		size = 24, at = { "TOPRIGHT", "TOPRIGHT", 9, 10 } },
 }
 ns.FEAT_COSMETICS = { frame = FRAMES, bg = BACKGROUNDS, orn = ORNAMENTS }
 -- 3.1.0 : leur place sur le médaillon forgé (les coins du carré tombent dans
@@ -100,6 +114,7 @@ ns.FEAT_ORN_FORGE = {
 	feat_eye = { angle = 200, r = -2 },
 	feat_anniversary = { angle = 340, r = -2 },
 	feat_wildcrown = { angle = 65, r = 4 },
+	feat_scholar = { angle = 22, r = 4 },
 }
 -- 2.15.0 : deux cosmétiques de l'Échoppe du dresseur (JournalReserve.lua,
 -- prix dans ns.PAILLETTES_SHOP), achetés en paillettes et gardés au compte
@@ -178,6 +193,9 @@ local FR = {
 	COMP_ORN_FEAT_ANNIVERSARY = "Ruban d'anniversaire",
 	COMP_ORN_FEAT_EYE         = "Œil clos",
 	COMP_ORN_FEAT_WILDCROWN   = "Couronne sauvage",
+	COMP_FRAME_FEAT_TRAITS    = "Cadre des huit caractères",
+	COMP_BG_FEAT_SIZES        = "Aube des cinq tailles",
+	COMP_ORN_FEAT_SCHOLAR     = "Grimoire du savant",
 	COMP_FRAME_SHOP_GLITTER   = "Cadre pailleté",
 	COMP_BG_SHOP_STARFALL     = "Nuit pailletée",
 	COMP_FRAME_SHOP_EMBER     = "Cadre de braise",
@@ -204,6 +222,9 @@ local EN = {
 	COMP_ORN_FEAT_ANNIVERSARY = "Anniversary Ribbon",
 	COMP_ORN_FEAT_EYE         = "Closed Eye",
 	COMP_ORN_FEAT_WILDCROWN   = "Wild Crown",
+	COMP_FRAME_FEAT_TRAITS    = "Frame of the Eight Personalities",
+	COMP_BG_FEAT_SIZES        = "Dawn of the Five Sizes",
+	COMP_ORN_FEAT_SCHOLAR     = "Scholar's Tome",
 	COMP_FRAME_SHOP_GLITTER   = "Glitter Frame",
 	COMP_BG_SHOP_STARFALL     = "Glittering Night",
 	COMP_FRAME_SHOP_EMBER     = "Ember Frame",
@@ -284,7 +305,8 @@ end
 -- ---------------------------------------------------------------------------
 if ns.FeatResolveSoon then ns.FeatResolveSoon() end
 
-local KNOWN = { frame = "COMPANION_FRAMES", bg = "COMPANION_BACKGROUNDS", orn = "COMPANION_ORNAMENTS", app = "COMPANION_APPEARANCES" }
+local KNOWN = { frame = "COMPANION_FRAMES", bg = "COMPANION_BACKGROUNDS", orn = "COMPANION_ORNAMENTS", app = "COMPANION_APPEARANCES",
+	cardbg = "TRAINER_CARD_BACKGROUNDS", cardframe = "TRAINER_CARD_FRAMES" }
 local function CosmeticKnown(pair)
 	if type(pair) ~= "table" then return false end
 	for _, def in ipairs(ns[KNOWN[pair[1]] or ""] or {}) do if def.id == pair[2] then return true end end

@@ -1585,6 +1585,25 @@ Snap.scenes["qc-trainer"] = function(T) return OwnDraws(T, function(T)
 	return Centered(frame), "QuestCompanion : fiche de dresseur"
 end) end
 
+-- 3.6.0 : la fiche de dresseur avec un fond et un cadre gagnés, des médailles de type
+Snap.scenes["qc-trainer-style"] = function(T) return OwnDraws(T, function(T)
+	local ns = QCWorld(T)
+	ns:FeatAward("men_first", { silent = true, at = 1700000000 })
+	local data = ns:CompanionData()
+	data.unlocked["cardbg:" .. (rawget(_G, "SNAP_CARD_BG") or "card_pantheon")] = true
+	data.unlocked["cardframe:" .. (rawget(_G, "SNAP_CARD_FRAME") or "card_laurels")] = true
+	data.cardStyle = { bg = rawget(_G, "SNAP_CARD_BG") or "card_pantheon", frame = rawget(_G, "SNAP_CARD_FRAME") or "card_laurels" }
+	local creatures = ns:CaptureData().creatures
+	for index = 1, 170 do creatures[90000 + index] = { name = "Bête " .. index, normal = true, stars = 2, class = "normal", type = "Bête" } end
+	for index = 1, 85 do creatures[91000 + index] = { name = "Humanoïde " .. index, normal = true, stars = 2, class = "normal", type = "Humanoïde" } end
+	for index = 1, 22 do creatures[92000 + index] = { name = "Démon " .. index, normal = true, stars = 2, class = "normal", type = "Démon" } end
+	if ns.journalFrame then ns.journalFrame:Hide() end
+	ns.trainerFrame = nil
+	local frame = ns:TrainerOpen()
+	if frame and frame.model then frame.model:Hide() end
+	return Centered(frame), "QuestCompanion : fiche de dresseur, fond et cadre (3.6)"
+end) end
+
 -- 3.1.0 : le panneau « Choisir son allure » au-dessus du carnet
 Snap.scenes["qc-allure"] = function(T) return OwnDraws(T, function(T)
 	local _, ns = QCJournal(T, "evolution")

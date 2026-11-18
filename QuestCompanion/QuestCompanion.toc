@@ -79,6 +79,7 @@ JournalGuide.lua
 JournalAddons.lua
 MenagerieView.lua
 TrainerCard.lua
+TrainerCardStyle.lua
 GuildFeats.lua
 AzerothStyle.lua
 ForgeCompanion.lua

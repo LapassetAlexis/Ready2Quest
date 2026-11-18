@@ -558,6 +558,13 @@ couleur n'a changé.
   du tableau de bord sur le parchemin (encre du filet à 10 %).
 - Bandeau du carnet effacé au premier coup reçu, et revenu après le combat.
 
+## Fiche de dresseur et Créatures (QuestCompanion 3.6.0)
+
+- **Fiche de dresseur** : 780 × 614 (une rangée de plus). Rangée du titre (y −68) : « Titre affiché » à gauche, « Fond : … » et « Cadre : … » (170 px chacune) à droite (ma fiche seulement ; un choix pas encore gagné est grisé avec sa condition). Ligne des espèces : « Espèces : n / total · maîtrisées : m ». Rangée « Médailles de type » à y −276 : huit icônes de famille (18 px, pas 26) avec un losange du socle au coin (au trait : paliers 1 et 2 ; bronze : 3 ; argent `PARCHMENT` : 4 ; or clair : 5 ; type sans médaille : icône délavée) ; infobulle : palier, espèces, prochain seuil. Hauts faits à y −298, vitrine à y −426.
+- **Fond** : texture opaque et sombre sous le contenu, de y −58 au pied ; **cadre** : 9 tranches de 24 px au bord du même rectangle, au-dessus des cartes. Contraste du texte mesuré au pixel le plus clair (≥ 4,5, titres ≥ 3).
+- **Créatures** : liseré gauche d'or (au lieu du vert) pour une espèce maîtrisée.
+- **Vignette de spécimen** : marque « Inséparable » (cœur du client, 14 px) en bas à gauche du portrait, au lien 5.
+
 ## Envies du compagnon (QuestCompanion 3.5.0)
 
 - **Page Compagnon, colonne gauche** : section « Ses envies (des bonus, jamais une perte) » à y −366 ; 3 plaques de 109 × 62 au pas de 117 à y −393 (nom, temps en `F_TITLE`, objet court, barre de 3 px verte sur 60 minutes ; liseré vert quand l'état est actif ; infobulle : ce qui l'allume, sa friandise) ; ligne d'humeur 343 × 26 à y −461 (« Humeur », humeur teintée, 3 losanges or, « Encore n pour rayonner » / « Bonus actif ») ; ligne de l'envie à y −493 (« Son envie », l'objet, « +1 lien » en vert) ; « Ses effets » à y −535.
