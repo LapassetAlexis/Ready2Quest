@@ -590,6 +590,8 @@ end
 -- Tout le filet d'un coup. Rend le nombre de prises et le nombre d'essais.
 function ns:CaptureExpressAll()
 	if not self:CaptureExpressOn() then return 0, 0 end
+	-- 3.5.1 : l'astuce « Maj + clic : tout le filet » est apprise (Discovery.lua)
+	if self.DiscoveryUse then self:DiscoveryUse("batch") end
 	local got, tried = 0, 0
 	-- (la file se vide à mesure ; un candidat bloqué reste : on s'arrête sur lui)
 	for _ = 1, (ns.CAPTURE_QUEUE_MAX or 12) do

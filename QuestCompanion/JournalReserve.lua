@@ -156,7 +156,7 @@ local FR = {
 	SHOP_SLOTS_DESC      = "Ta Réserve compte %d places.",
 	SHOP_COS_frame       = "Cadre du compagnon, pour tous tes personnages.",
 	SHOP_COS_bg          = "Fond du compagnon, pour tous tes personnages.",
-	SHOP_NOTE            = "Gagner des paillettes : relâcher des spécimens (2 / 4 / 10, brillant 25), les missions (3 par mission du jour, plus aux trois et à la semaine), les paliers de zone (2).",
+	SHOP_NOTE            = "Gagner des paillettes : relâcher (2 / 4 / 10, brillant 25), les missions (3 par mission du jour, plus aux trois et à la semaine), les paliers de zone (2), l'étude des espèces, les commandes, une friandise en trop (1).",
 	SHOP_BOUGHT          = "Échoppe du dresseur : %s (−%d paillettes, reste %d).",
 	SHOP_REQ             = "Échoppe du dresseur : %d paillettes",
 	PAILLETTES_MILESTONE_GAIN = "+%d paillettes : palier de zone (%d %%).",
@@ -241,7 +241,7 @@ local EN = {
 	SHOP_SLOTS_DESC      = "Your Reserve has %d slots.",
 	SHOP_COS_frame       = "Companion frame, for all your characters.",
 	SHOP_COS_bg          = "Companion background, for all your characters.",
-	SHOP_NOTE            = "Earning glitter: release specimens (2 / 4 / 10, shiny 25), missions (3 per daily mission, more for all three and weekly ones), zone milestones (2).",
+	SHOP_NOTE            = "Earning glitter: releasing (2 / 4 / 10, shiny 25), missions (3 per daily mission, more for all three and weekly ones), zone milestones (2), species study, orders, an extra treat (1).",
 	SHOP_BOUGHT          = "Trainer's Stall: %s (−%d glitter, %d left).",
 	SHOP_REQ             = "Trainer's Stall: %d glitter",
 	PAILLETTES_MILESTONE_GAIN = "+%d glitter: zone milestone (%d%%).",
@@ -1034,6 +1034,16 @@ local function BuildShop(self, frame, content, ui)
 	sv.ordersHead = Theme.CreateSection(sv, L.SHOP_ORDERS)
 	sv.ordersHead:SetWidth(INNER)
 	At(sv.ordersHead, content, 0, TOP - SL.ordersY)
+	-- 3.5.1 : une relance gratuite par semaine (ShopWeek.lua)
+	sv.reroll = Theme.CreateButton(sv, "auto", "sm", L.ORDER_REROLL, function()
+		if ns.ShopOrdersReroll then ns:ShopOrdersReroll(); ns:RefreshJournal() end
+	end, "outline")
+	sv.reroll:SetPoint("TOPRIGHT", content, "TOPLEFT", ui.PAD + INNER, TOP - SL.ordersY + 6)
+	if sv.reroll.HookScript and ui.Tip then
+		sv.reroll:HookScript("OnEnter", function(b) ui.Tip(b, L.ORDER_REROLL, { L.ORDER_REROLL_TIP }) end)
+		sv.reroll:HookScript("OnLeave", ui.HideTip)
+	end
+	sv.reroll:Hide()
 	sv.orders = {}
 	for index = 1, 3 do
 		local card = Theme.CreateTile(sv, SL.orderW, SL.orderH, { kind = "Frame" })
@@ -1474,6 +1484,9 @@ local function RefreshShop(self, frame)
 	local ends = self.WeeklyEndsText and self:WeeklyEndsText()
 	if ends then head = head .. " · " .. ends end
 	if sv.arrivalsHead.SetText then sv.arrivalsHead:SetText(head) end
+	if sv.reroll then
+		if self.ShopOrdersCanReroll and self:ShopOrdersCanReroll() then sv.reroll:Show() else sv.reroll:Hide() end
+	end
 	-- les commandes
 	for index, card in ipairs(sv.orders) do
 		local order = orders and orders.list[index]

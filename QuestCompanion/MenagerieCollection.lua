@@ -328,9 +328,15 @@ function ns:MenagerieSealProgress(zoneID)
 	if not zoneID or not self.BestiaryStaticZone or not self:BestiaryStaticZone(zoneID) then return 0, 0 end
 	local have, need = 0, 0
 	for npcID, species in pairs(self:BestiarySpecies(zoneID)) do
-		if species.class ~= "worldboss" then
+		local caught = self.CaptureHas and self:CaptureHas(npcID, false) or false
+		-- 3.5.1 : les lignes de niveau 9999 de la table (créatures de script,
+		-- qu'on n'abat pas) ne comptent que si tu en as capturé une
+		local lvl = species.lvl
+		local lo = type(lvl) == "table" and tonumber(lvl[1]) or tonumber(lvl)
+		local unreachable = lo ~= nil and lo >= 9999 and not caught
+		if species.class ~= "worldboss" and not unreachable then
 			need = need + 1
-			if self.CaptureHas and self:CaptureHas(npcID, false) then have = have + 1 end
+			if caught then have = have + 1 end
 		end
 	end
 	return have, need

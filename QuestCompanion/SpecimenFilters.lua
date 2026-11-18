@@ -35,7 +35,6 @@ local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L
 
-ns.SPECIMEN_SCHEMA_V2 = 2
 -- crans de l'indice de taille (bornes comprises)
 ns.SPECIMEN_SIZE_INDEX = {
 	tiny = { 75, 81 }, small = { 82, 93 }, normal = { 94, 106 }, large = { 107, 118 }, giant = { 119, 125 },

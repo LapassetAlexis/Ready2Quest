@@ -29,6 +29,7 @@ local L = ns.L
 local Theme = ns.Theme
 
 ns.CAPTURE_QUEUE_TIME = 30        -- s par candidat, à partir de la fin du combat
+ns.CAPTURE_QUEUE_SHINY_TIME = 600 -- 3.5.1 : une brillante attend 10 minutes (et jamais n'expire en combat)
 ns.CAPTURE_QUEUE_MAX = 12         -- au-delà, les moins intéressants sortent
 ns.CAPTURE_STAR_MAX = 3
 -- (2.15.0 : les chances de qualité sont dans CaptureSpecimens.lua,
@@ -135,7 +136,7 @@ local FR = {
 	OPT_DAILY_CAPTURE_TOAST = "Bandeau « Capture possible »",
 	OPT_DAILY_CAPTURE_TOAST_DESC = "Un bandeau dès qu'un monstre abattu peut être capturé (après le combat). Clic dessus : le filet.",
 	CAPTURE_STARS_LABEL    = "Qualité : %s",
-	CAPTURE_MSG_STARS      = "%s : %s.",
+	CAPTURE_MSG_STARS      = "%s capturé : %s. Nouvelle espèce, elle entre au Codex.",
 	CAPTURE_MSG_STARS_BEST = "%s : %s, ton meilleur spécimen ! Il entre au Codex, l'ancien passe en Réserve.",
 	CAPTURE_MSG_STARS_KEPT = "%s : %s, rangé dans ta Réserve. Ton spécimen à %d étoiles reste au Codex.",
 	CAPTURE_STAGE_BEST     = "Meilleur spécimen !",
@@ -193,7 +194,7 @@ local EN = {
 	OPT_DAILY_CAPTURE_TOAST = "\"Capture possible\" banner",
 	OPT_DAILY_CAPTURE_TOAST_DESC = "A banner as soon as a defeated monster can be captured (after combat). Click it: the net.",
 	CAPTURE_STARS_LABEL    = "Quality: %s",
-	CAPTURE_MSG_STARS      = "%s: %s.",
+	CAPTURE_MSG_STARS      = "%s captured: %s. New species, it enters the Codex.",
 	CAPTURE_MSG_STARS_BEST = "%s: %s, your best specimen! It enters the Codex, the old one goes to the Reserve.",
 	CAPTURE_MSG_STARS_KEPT = "%s: %s, stored in your Reserve. Your %d-star specimen stays in the Codex.",
 	CAPTURE_STAGE_BEST     = "Best specimen yet!",
@@ -431,6 +432,10 @@ end
 -- Remet la file à jour : raisons recalculées (une capture a pu changer la
 -- donne), expirés et sans intérêt retirés, tri. Sur place, sans table
 -- nouvelle. Renvoie la file.
+local function QueueTime(candidate)
+	return candidate and candidate.shiny and ns.CAPTURE_QUEUE_SHINY_TIME or ns.CAPTURE_QUEUE_TIME
+end
+
 function ns:CaptureQueuePrune(now)
 	local queue = self:CaptureQueueState()
 	now = now or Clock()
@@ -441,7 +446,9 @@ function ns:CaptureQueuePrune(now)
 		local candidate = queue[index]
 		candidate.reason = self:CaptureQueueReason(candidate)
 		candidate.have = self:CaptureStars(candidate.npcID, candidate.shiny and true or false)
-		if candidate.reason and not (candidate.expires and clock > candidate.expires) then
+		local expired = candidate.expires and clock > candidate.expires
+		if expired and candidate.shiny and InCombat() then expired = false end   -- 3.5.1
+		if candidate.reason and not expired then
 			kept = kept + 1
 			queue[kept] = candidate
 		end
@@ -584,7 +591,7 @@ function ns:CaptureOffer(guid, entry, shiny)
 	if not candidate.reason then return nil end
 	-- en plein combat, le compte attend la fin du combat
 	-- (pendant une pause, il garde ses 30 s pour la reprise)
-	if not InCombat() then candidate.expires = self:CaptureQueueClock() + ns.CAPTURE_QUEUE_TIME end
+	if not InCombat() then candidate.expires = self:CaptureQueueClock() + QueueTime(candidate) end
 	queue[#queue + 1] = candidate
 	self:CaptureQueuePrune()
 	local still = false
@@ -629,7 +636,7 @@ function ns:CaptureQueueStartTimers(now)
 	local started = false
 	for _, candidate in ipairs(self:CaptureQueueState()) do
 		if not candidate.expires then
-			candidate.expires = now + ns.CAPTURE_QUEUE_TIME
+			candidate.expires = now + QueueTime(candidate)
 			started = true
 		end
 	end
@@ -745,6 +752,8 @@ do
 		-- 2.15.0 : la qualité du candidat (tirée au coup fatal), plus de tirage ici
 		rolling.stars = math.max(1, math.min(ns.CAPTURE_STAR_MAX, math.floor(tonumber(rolling.stars or target.stars) or 1)))
 		rolling.starsBefore = before
+		-- 3.5.1 : une seule ligne de chat par capture (la nôtre, plus bas)
+		rolling.queueMessage = true
 		-- la fiche d'avant a sa référence au Codex avant que le spécimen n'arrive
 		if self.SpecimenReconcile then self:SpecimenReconcile(target.npcID) end
 		local result = base(self, rolling)

@@ -1,0 +1,28 @@
+ASSUME {'kills_per_min': 1.0, 'seen_per_kill': 1.0, 'radiant_uptime': 0.3, 'leveling_hours': 180, 'zone_hours_per_80': 4.0, 'rare_per_hour_in_zone': 0.15, 'elite_weight': 0.3, 'weight_sigma': 2.0, 'lasso_per_week': 3, 'sifflet_per_week': 1, 'appat_per_day': 1, 'faction': 'A'}
+
+== casual 30min
+ days to: {10: 5, 50: 24, 100: 42, 250: 92, 500: 166, 'shiny1': 4, 'shiny10': 30, 'shiny25': 78}
+ reached-share: {10: 1.0, 50: 1.0, 100: 1.0, 250: 1.0, 500: 1.0, 'shiny1': 1.0, 'shiny10': 1.0, 'shiny25': 1.0}
+ reserve>=50 dups (no release) day: 53
+ curve (day, species, caps, dupShare, sealed): [(7, 12, 20, 0.25, 0), (30, 64, 102, 0.25, 0), (90, 243, 360, 0.25, 0), (180, 561, 824, 0.26, 0), (365, 1120, 1620, 0.24, 1), (730, 1515, 2293, 0.26, 1)]
+ end: species 1553 shinies 176 sealed 1 hours 366
+
+== heavy 3h
+ days to: {10: 1, 50: 4, 100: 8, 250: 16, 500: 28, 'shiny1': 1, 'shiny10': 7, 'shiny25': 16}
+ reached-share: {10: 1.0, 50: 1.0, 100: 1.0, 250: 1.0, 500: 1.0, 'shiny1': 1.0, 'shiny10': 1.0, 'shiny25': 1.0}
+ reserve>=50 dups (no release) day: 9
+ curve (day, species, caps, dupShare, sealed): [(7, 106, 157, 0.24, 0), (30, 550, 773, 0.23, 0), (90, 1310, 1931, 0.26, 1), (180, 1662, 2600, 0.28, 1), (365, 2102, 3601, 0.32, 1), (730, 2471, 4589, 0.34, 1)]
+ end: species 2510 shinies 564 sealed 1 hours 2193
+
+== heavy 3h hunt-on
+ days to: {10: 2, 50: 4, 100: 8, 250: 16, 500: 30, 'shiny1': 1, 'shiny10': 7, 'shiny25': 18}
+ reached-share: {10: 1.0, 50: 1.0, 100: 1.0, 250: 1.0, 500: 1.0, 'shiny1': 1.0, 'shiny10': 1.0, 'shiny25': 1.0}
+ reserve>=50 dups (no release) day: 2
+ curve (day, species, caps, dupShare, sealed): [(7, 96, 464, 0.78, 0), (30, 541, 2252, 0.74, 0), (90, 1315, 7359, 0.8, 1), (180, 1633, 15637, 0.88, 1), (365, 2034, 32290, 0.93, 1), (730, 2445, 63105, 0.95, 1)]
+ end: species 2511 shinies 592 sealed 1 hours 2193
+seal casual Westfall 83 species -> days 1026 never-share 0.75
+seal casual Loch Modan 58 species -> days 1095 never-share 0.625
+seal casual The Barrens 195 species -> days never never-share 1.0
+seal heavy Westfall 83 species -> days 329 never-share 0.125
+seal heavy Loch Modan 58 species -> days 390 never-share 0.25
+seal heavy The Barrens 195 species -> days 1041 never-share 0.25

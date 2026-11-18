@@ -107,14 +107,20 @@ end
 -- ---------------------------------------------------------------------------
 -- Allonger l'état qui finit le premier (caresse renforcée), d'une part de 45 min
 -- ---------------------------------------------------------------------------
+-- 3.5.1 : une seule fois par état (data.extended[key]) ; le droit revient
+-- quand l'état est regagné (déclencheur ou friandise). Avant : une caresse
+-- toutes les 15 s gardait Rayonnant pour toujours.
 function ns:CompanionStateExtend(fraction)
+	local data = self:CompanionData()
+	if type(data.extended) ~= "table" then data.extended = {} end
 	local best, bestMin
 	for _, key in ipairs(Keys()) do
 		local m = self:CompanionStateMinutes(key)
-		if m > 0 and (not bestMin or m < bestMin) then best, bestMin = key, m end
+		if m > 0 and not data.extended[key] and (not bestMin or m < bestMin) then best, bestMin = key, m end
 	end
 	if not best then return nil end
-	local needs = self:CompanionData().needs
+	data.extended[best] = true
+	local needs = data.needs
 	local add = (S().full - S().on) * math.max(0, tonumber(fraction) or 0)
 	needs[best] = math.min(S().max, needs[best] + add)
 	self:CompanionRefreshHover()
@@ -218,6 +224,8 @@ end
 -- un état obtenu : l'envie qu'il comble, et Rayonnant atteint
 if ns.RegisterCallback then
 	ns:RegisterCallback("COMPANION_STATE", function(self, key, was)
+		local extended = self:CompanionData().extended
+		if type(extended) == "table" then extended[key] = nil end   -- regagné : la caresse peut de nouveau l'allonger
 		if self:CompanionWish() == key then self:CompanionWishMet(key) end
 		if not was and self:CompanionRadiant() and self.CompanionSay then
 			self:CompanionSay("NEED_mood", { cd = "need" })

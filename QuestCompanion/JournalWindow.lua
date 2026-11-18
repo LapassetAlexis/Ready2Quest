@@ -1319,7 +1319,7 @@ local function BuildMenagerie(self, frame, content)
 		row.text:ClearAllPoints()
 		row.text:SetPoint("LEFT", row, "LEFT", 58 + rowH - 8 + 8, 0)
 		-- 2.15.0 : la place de l'épingle et de « Localiser » (deux icônes)
-		row.text:SetWidth(GRID_W - 58 - rowH - 158 - 2 * (MEN_ICON + 4) - 46)
+		row.text:SetWidth(GRID_W - 58 - rowH - 158 - 2 * (MEN_ICON + 4) - 54)
 		row.label = row.text
 		-- nom (ou « ??? ») à la couleur de sa rareté, type à droite, et
 		-- l'étoile d'une brillante ; capturée : liseré vert à gauche (1.5.1)
@@ -1341,10 +1341,12 @@ local function BuildMenagerie(self, frame, content)
 		row.locate:SetPoint("RIGHT", row.pin, "LEFT", -4, 0)
 		row.locate.onTip = function(b) Tip(b, L.JRN_LOCATE, { L.JRN_LOCATE_TIP_creature }) end
 		-- 3.4.0 : l'étude de l'espèce, cinq losanges (pleins : tâche faite)
+		-- 3.5.1 : un sixième, doré : la brillante (en plus)
 		row.study = {}
-		for index = 1, #(ns.STUDY_TASKS or {}) do
+		local nStudy = #(ns.STUDY_TASKS or {}) + 1
+		for index = 1, nStudy do
 			local d = Theme.CreateDiamond(row, 6)
-			d:SetPoint("RIGHT", row.locate, "LEFT", -6 - (#ns.STUDY_TASKS - index) * 8, 0)
+			d:SetPoint("RIGHT", row.locate, "LEFT", -6 - (nStudy - index) * 8, 0)
 			d:Hide()
 			row.study[index] = d
 		end
@@ -2796,9 +2798,10 @@ local function RefreshMenagerie(self, frame)
 			local study = entry.captured and self.SpecimenStudy and self:SpecimenStudy(entry.npc)
 			for index, d in ipairs(row.study or {}) do
 				if study then
-					local done = study.done[ns.STUDY_TASKS[index]]
+					local task = ns.STUDY_TASKS[index] or "shiny"
+					local done = study.done[task]
 					Theme.SetDiamond(d, not done)
-					local c = done and Theme.GREEN or Theme.MUTED
+					local c = (task == "shiny" and Theme.GOLD) or (done and Theme.GREEN or Theme.MUTED)
 					d:SetVertexColor(c[1], c[2], c[3], 1)
 					d:Show()
 				else

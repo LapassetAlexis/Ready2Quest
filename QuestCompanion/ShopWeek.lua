@@ -23,6 +23,7 @@ ns.SHOP_SLOTS = { base = 40, step = 20, slots = 10, max = 150 }
 ns.SHOP_NICK_PRICE = 15
 ns.SHOP_ARRIVALS = 2
 ns.ORDER_REWARDS = { 12, 14, 16 }
+ns.ORDER_BONUS_GLITTER = 30   -- 3.5.1 : les trois livrées, arrivages déjà possédés
 
 local FR = {
 	SHOP_DIS_stock   = "Plus en stock aujourd'hui",
@@ -45,6 +46,10 @@ local FR = {
 	ORDER_BONUS_TAKE = "Prendre",
 	ORDER_BONUS_GOT  = "%s : offert pour tes trois commandes.",
 	ORDER_WHY_match  = "Ce spécimen ne correspond pas à la commande.",
+	ORDER_BONUS_GLITTER = "Les trois commandes livrées, l'arrivage déjà à toi : +%d paillettes.",
+	ORDER_REROLL     = "Relancer",
+	ORDER_REROLL_TIP = "Trois nouvelles commandes, une fois par semaine, tant qu'aucune n'est livrée.",
+	ORDER_REROLLED   = "Commandes de la semaine : trois nouvelles demandes.",
 	ORDER_WHY_keep   = "Ce spécimen ne peut pas partir (protégé, porté ou meilleur que le Codex).",
 }
 local EN = {
@@ -68,6 +73,10 @@ local EN = {
 	ORDER_BONUS_TAKE = "Take",
 	ORDER_BONUS_GOT  = "%s: free for your three orders.",
 	ORDER_WHY_match  = "This specimen doesn't match the order.",
+	ORDER_BONUS_GLITTER = "All three orders delivered and the arrivals already yours: +%d glitter.",
+	ORDER_REROLL     = "Reroll",
+	ORDER_REROLL_TIP = "Three new orders, once a week, as long as none is delivered.",
+	ORDER_REROLLED   = "This week's orders: three new requests.",
 	ORDER_WHY_keep   = "This specimen can't leave (protected, worn or better than your Codex).",
 }
 ns.RegisterStrings(FR, EN)
@@ -122,19 +131,38 @@ end
 -- ---------------------------------------------------------------------------
 -- Arrivage de la semaine
 -- ---------------------------------------------------------------------------
+-- 3.5.1 : par paquet mélangé : sur un cycle de ceil(n / SHOP_ARRIVALS)
+-- semaines, chaque cosmétique passe une fois (avant : un tirage par semaine,
+-- les mêmes revenaient)
+local function WeekNumber(week)
+	local r = tostring(week):match("^r(%d+)$")
+	if r then return tonumber(r) end
+	local y, w = tostring(week):match("^w(%d+)%-(%d+)$")
+	if y then return tonumber(y) * 53 + tonumber(w) end
+	return Seed(week)
+end
 function ns:ShopArrivals()
 	local pool = {}
 	for _, item in ipairs(ns.PAILLETTES_SHOP or {}) do if item.arrival then pool[#pool + 1] = item end end
 	local week = WeekKey(self)
 	local cache = self.shopArrivalCache
 	if cache and cache.week == week and cache.n == #pool then return cache.list end
-	local list, taken, seed = {}, {}, Seed(week)
-	for _ = 1, math.min(ns.SHOP_ARRIVALS, #pool) do
-		local index = seed % #pool + 1
-		while taken[index] do index = index % #pool + 1 end
-		taken[index] = true
-		list[#list + 1] = pool[index]
-		seed = math.floor(seed / 7) + 13
+	local per = math.max(1, ns.SHOP_ARRIVALS)
+	local weeks = math.max(1, math.ceil(#pool / per))
+	local n = WeekNumber(week)
+	local cycle, slot = math.floor(n / weeks), n % weeks
+	-- le paquet du cycle (mélange de Fisher-Yates, graine du cycle)
+	local deck, seed = {}, Seed("arrivals:" .. cycle)
+	for i = 1, #pool do deck[i] = pool[i] end
+	for i = #deck, 2, -1 do
+		seed = (seed * 1103515245 + 12345) % 2147483648
+		local j = seed % i + 1
+		deck[i], deck[j] = deck[j], deck[i]
+	end
+	local list = {}
+	for k = 1, math.min(per, #deck) do
+		local item = deck[slot * per + k] or deck[k]
+		list[#list + 1] = item
 	end
 	self.shopArrivalCache = { week = week, n = #pool, list = list }
 	return list
@@ -227,13 +255,13 @@ end
 -- ---------------------------------------------------------------------------
 -- Commandes de la semaine
 -- ---------------------------------------------------------------------------
-local ORDER_SIZES = { "large", "giant" }
 local function Pick(list, seed) if #list == 0 then return nil end return list[seed % #list + 1] end
 
--- les zones de tes captures (une commande doit pouvoir être livrée)
+-- les zones de tes captures (une commande doit pouvoir être livrée) ;
+-- 3.5.1 : celles de ta Réserve (l'exemplaire du Codex ne se livre pas)
 local function Zones(self)
 	local seen, list = {}, {}
-	for _, spec in ipairs(self:SpecimenList({ where = "all", sort = "id" })) do
+	for _, spec in ipairs(self:SpecimenList({ where = "reserve", sort = "id" })) do
 		local zone = tonumber(spec.zone)
 		if zone and not seen[zone] then seen[zone] = true; list[#list + 1] = zone end
 	end
@@ -251,8 +279,19 @@ local function Draw(self, week)
 	end
 	for _, key in ipairs(ns.CREATURE_TYPES or {}) do if have[key] then types[#types + 1] = key end end
 	if #types == 0 then types = ns.CREATURE_TYPES or { "beast" } end
-	local traits = {}
-	for _, pair in ipairs(ns.SPECIMEN_TRAIT_WEIGHTS or {}) do traits[#traits + 1] = pair[1] end
+	-- 3.5.1 : pas de caractère rare (Zen, Espiègle) ; ceux de ta Réserve d'abord
+	local traits, inReserve = {}, {}
+	for _, spec in ipairs(self:SpecimenList({ where = "reserve", sort = "id" })) do
+		if spec.trait then inReserve[spec.trait] = true end
+	end
+	for _, pair in ipairs(ns.SPECIMEN_TRAIT_WEIGHTS or {}) do
+		if not (ns.SPECIMEN_TRAIT_RARE or {})[pair[1]] and inReserve[pair[1]] then traits[#traits + 1] = pair[1] end
+	end
+	if #traits == 0 then
+		for _, pair in ipairs(ns.SPECIMEN_TRAIT_WEIGHTS or {}) do
+			if not (ns.SPECIMEN_TRAIT_RARE or {})[pair[1]] then traits[#traits + 1] = pair[1] end
+		end
+	end
 	local list = {
 		{ kind = "typeSize", type = Pick(types, seed), size = "large", reward = ns.ORDER_REWARDS[1 + seed % 3] },
 		{ kind = "traitStars", trait = Pick(traits, math.floor(seed / 11)), stars = 2, reward = ns.ORDER_REWARDS[1 + math.floor(seed / 5) % 3] },
@@ -270,6 +309,22 @@ function ns:ShopOrders()
 		capture.orders = { week = week, list = Draw(self, week) }
 	end
 	return capture.orders
+end
+
+-- 3.5.1 : une relance gratuite par semaine, tant qu'aucune commande n'est livrée
+function ns:ShopOrdersCanReroll()
+	local orders = self:ShopOrders()
+	if orders.rerolled then return false, "used" end
+	for _, order in ipairs(orders.list) do if order.done then return false, "started" end end
+	return true
+end
+function ns:ShopOrdersReroll()
+	local ok, why = self:ShopOrdersCanReroll()
+	if not ok then return false, why end
+	local orders = self:ShopOrders()
+	orders.list, orders.rerolled = Draw(self, orders.week .. ":again"), true
+	self:Print(L.ORDER_REROLLED)
+	return true
 end
 
 function ns:ShopOrderLabel(order)
@@ -318,7 +373,20 @@ function ns:ShopOrderDeliver(index, id)
 	order.done = true
 	self:PaillettesAdd(order.reward, "order")
 	self:Print(self:F("ORDER_DELIVERED", label, order.reward))
-	if self:ShopOrdersAllDone() then self:Print(L.ORDER_BONUS) end
+	if self:ShopOrdersAllDone() then
+		-- 3.5.1 : les deux arrivages déjà à toi : 30 paillettes à la place
+		local free = false
+		for _, item in ipairs(self:ShopArrivals()) do
+			if not self:ShopCosmeticOwned(item.cosId) then free = true end
+		end
+		if free then
+			self:Print(L.ORDER_BONUS)
+		elseif not orders.bonus then
+			orders.bonus = "glitter"
+			self:PaillettesAdd(ns.ORDER_BONUS_GLITTER, "order")
+			self:Print(self:F("ORDER_BONUS_GLITTER", ns.ORDER_BONUS_GLITTER))
+		end
+	end
 	return true
 end
 

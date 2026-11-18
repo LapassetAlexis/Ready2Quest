@@ -93,8 +93,8 @@ local FR = {
 	SPEC_TRAIT_LINE      = "Caractère : %s",
 	SPEC_TRAIT_LINE_EFF  = "Caractère : %s (%s)",
 	SPEC_TAGS_SEP        = " · ",
-	TRAIT_DESC_SPEC_zen         = "Il respire, ne se presse jamais, t'apaise après un combat. Aime le calme : énergie +50 %%.",
-	TRAIT_DESC_SPEC_mischievous = "Il fait des farces et met des paillettes partout. Aime jouer : moral +50 %%.",
+	TRAIT_DESC_SPEC_zen         = "Il respire, ne se presse jamais, t'apaise après un combat. Aime le calme : Reposé dure une heure au lieu de 45 minutes.",
+	TRAIT_DESC_SPEC_mischievous = "Il fait des farces et met des paillettes partout. Aime jouer : Éveillé dure une heure au lieu de 45 minutes.",
 }
 local EN = {
 	SPEC_SIZE_tiny       = "Tiny",
@@ -110,8 +110,8 @@ local EN = {
 	SPEC_TRAIT_LINE      = "Character: %s",
 	SPEC_TRAIT_LINE_EFF  = "Character: %s (%s)",
 	SPEC_TAGS_SEP        = " · ",
-	TRAIT_DESC_SPEC_zen         = "Breathes, never hurries, calms you after a fight. Loves calm: energy +50 %%.",
-	TRAIT_DESC_SPEC_mischievous = "Plays pranks and puts sparkles everywhere. Loves to play: mood +50 %%.",
+	TRAIT_DESC_SPEC_zen         = "Breathes, never hurries, calms you after a fight. Loves calm: Rested lasts an hour instead of 45 minutes.",
+	TRAIT_DESC_SPEC_mischievous = "Plays pranks and puts sparkles everywhere. Loves to play: Alert lasts an hour instead of 45 minutes.",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.SPECIMEN_TRAIT_STRINGS = { fr = FR, en = EN } end

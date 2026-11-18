@@ -26,7 +26,7 @@ if ns.blocked then return end
 local L = ns.L
 
 ns.STUDY_TASKS = { "caught", "stars3", "five", "sizes", "traits" }
-ns.STUDY_REWARD = { task = 2, mastered = 5 }
+ns.STUDY_REWARD = { task = 2, mastered = 5, shiny = 5 }   -- 3.5.1 : la brillante (en plus) se paie aussi
 ns.STUDY_NEED = { five = 5, sizes = 3, traits = 3 }
 ns.STUDY_SCHEMA = 1
 
@@ -132,6 +132,14 @@ local function Note(row, spec, self)
 	return record, zi
 end
 
+-- les tâches payées parmi les cinq (bits 1 à #STUDY_TASKS ; le 6e : maîtrisée, le 7e : brillante)
+local function PaidTasks(row)
+	local n = 0
+	for index = 1, #ns.STUDY_TASKS do if Has(row.paid, index) then n = n + 1 end end
+	return n
+end
+local function ShinyBit() return #ns.STUDY_TASKS + 2 end
+
 -- Une fois : l'étude d'après tes captures actuelles, tâches cochées sans paiement
 function ns:SpecimenStudyRetro()
 	local study, capture = StudyTable(self)
@@ -152,8 +160,10 @@ function ns:SpecimenStudyRetro()
 		for index, task in ipairs(ns.STUDY_TASKS) do
 			if TaskDone(row, task) then row.paid = With(row.paid, index) end
 		end
-		if Count(row.paid) >= #ns.STUDY_TASKS then row.paid = With(row.paid, #ns.STUDY_TASKS + 1) end
+		if PaidTasks(row) >= #ns.STUDY_TASKS then row.paid = With(row.paid, #ns.STUDY_TASKS + 1) end
+		if TaskDone(row, "shiny") then row.paid = With(row.paid, ShinyBit()) end
 	end
+	capture.studyShinyV = 1
 	return true, n
 end
 
@@ -213,6 +223,12 @@ function ns:SpecimenStudyNote(spec)
 	local study = StudyTable(self)
 	-- première lecture : la rétro compte déjà cette capture, sans paiement
 	if self:SpecimenStudyRetro() then return 0 end
+	-- 3.5.1 : la brillante déjà étudiée avant la mise à jour : cochée sans paiement
+	local capture = self:CaptureData()
+	if capture.studyShinyV ~= 1 then
+		capture.studyShinyV = 1
+		for _, r in pairs(study) do if TaskDone(r, "shiny") then r.paid = With(r.paid, ShinyBit()) end end
+	end
 	local row = Row(study, spec.npc)
 	local record, zi = Note(row, spec, self)
 	local name = self:SpecimenLabel(spec)
@@ -226,7 +242,7 @@ function ns:SpecimenStudyNote(spec)
 		end
 	end
 	local masteredBit = #ns.STUDY_TASKS + 1
-	if Count(row.paid) >= #ns.STUDY_TASKS and not Has(row.paid, masteredBit) then
+	if PaidTasks(row) >= #ns.STUDY_TASKS and not Has(row.paid, masteredBit) then
 		row.paid = With(row.paid, masteredBit)
 		gained = gained + ns.STUDY_REWARD.mastered
 		self:PaillettesAdd(ns.STUDY_REWARD.mastered, "study")
@@ -234,9 +250,14 @@ function ns:SpecimenStudyNote(spec)
 		-- (haut fait : la source « studyMastered » relit le nombre d'espèces maîtrisées)
 		if self.FeatTouch and not ns.featsDormant then pcall(self.FeatTouch, self, "capture") end
 	end
+	if TaskDone(row, "shiny") and not Has(row.paid, ShinyBit()) then
+		row.paid = With(row.paid, ShinyBit())
+		gained = gained + ns.STUDY_REWARD.shiny
+		self:PaillettesAdd(ns.STUDY_REWARD.shiny, "study")
+		self:Print(self:F("STUDY_DONE", name, L.STUDY_shiny, ns.STUDY_REWARD.shiny))
+	end
 	if record and zi then
 		self:Print(self:F(record == "small" and "STUDY_RECORD_SMALL" or "STUDY_RECORD_BIG", name, zi))
-		if self.GuildFeatAnnounce then pcall(self.GuildFeatAnnounce, self, "record", { npc = spec.npc, zi = zi, kind = record }) end
 	end
 	-- hauts faits : toutes les tailles, tous les caractères tirés
 	if self.FeatFlag and not ns.featsDormant then

@@ -1,5 +1,18 @@
 # QuestCompanion
 
+## 3.5.1 — Correctifs
+
+- **Caresse renforcée** (Câlin, démons) : elle allonge chaque état une seule fois, jusqu'à ce qu'il soit regagné (avant, une caresse toutes les 15 secondes gardait Rayonnant pour toujours).
+- **Une brillante en file attend 10 minutes** (30 secondes avant), et n'expire jamais pendant un combat.
+- **Commandes de la semaine** : une relance gratuite par semaine tant qu'aucune n'est livrée ; plus de caractère rare (Zen, Espiègle) demandé ; la commande de zone vise ta Réserve ; les trois livrées avec l'arrivage déjà à toi : 30 paillettes.
+- **Arrivage** : les cosmétiques passent tous une fois toutes les 4 semaines, sans revenir avant.
+- **Le surnom de ton exemplaire** est maintenant son nom partout (médaillon, fiche au survol, bulles).
+- **Étude d'espèce** : la tâche « brillante » se voit (losange doré) et rapporte 5 paillettes.
+- **Sceaux** : les créatures de niveau 9999 (inaccessibles) ne comptent plus.
+- Une seule ligne de chat par capture d'une espèce nouvelle ; descriptions des caractères, astuces et visite guidée à jour (états, capture express) ; note de l'Échoppe complétée.
+
+*English:* boosted petting (Cuddly, demons) now extends each state only once until it is regained (before, petting every 15 seconds kept Radiant forever). A queued shiny now waits 10 minutes (30 seconds before) and never expires in combat. Weekly orders: one free reroll a week while none is delivered, no rare personality (Zen, Mischievous) requested, the zone order targets your Reserve, and all three delivered with the arrivals already yours give 30 glitter. Arrivals: every cosmetic comes once every 4 weeks. Your specimen's nickname is now its name everywhere. Species study: the shiny task shows (gold diamond) and pays 5 glitter. Seals: level-9999 creatures (unreachable) no longer count. One chat line per new-species capture; personality descriptions, tips and the guided tour updated (states, express capture); Stall note completed.
+
 ## 3.5.0 — Des états, pas des jauges
 
 - **Ses envies deviennent des bonus, jamais une perte** : les effets du compagnon valent toujours en entier. Faim, énergie, moral et curiosité laissent place à **trois états de 45 minutes** : **Repu** (un repas, « Bien nourri », partir avec de quoi manger), **Reposé** (deux minutes en ville, à l'auberge ou au camp, le tampon d'auberge du jour), **Éveillé** (une zone, un lieu ou un tampon nouveau, un donjon, un élite ou un rare, un coffre ; en mode chasse : 15 créatures en 10 minutes, une brillante, une espèce nouvelle).

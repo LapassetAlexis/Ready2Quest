@@ -713,12 +713,12 @@ do
 			and stage.prep ~= nil and NS.captureState.rolling == nil and P.StepId() == "card" and P.Ring().anchor == stage.details
 			and P.Title() == NS.L.TOUR_A2_T and Has(P.Text(), "aide") and not NS.tourNetPulse, tostring(P.StepId()))
 		P.Callout().nextButton:Click()
-		local launch = P.StepId() == "launch" and P.Ring().anchor == stage.launch and Has(P.Text(), "Maj + clic")
+		local launch = P.StepId() == "launch" and P.Ring().anchor == stage.launch and Has(P.Text(), "Ctrl + clic")
 			and not P.Callout().nextButton:IsShown()
 		P.Roll(0)
 		stage.launch:Click()
 		Mock:Advance(0.2)
-		Check("[CAP] étape 3 : Lancer / Passer, Maj+clic expliqué ; Lancer : la bulle se tait pendant la scène", launch
+		Check("[CAP] étape 3 : Lancer / Passer, raccourcis de la capture express expliqués ; Lancer : la bulle se tait pendant la scène", launch
 			and NS.captureState.rolling ~= nil and not P.Shown() and P.StepId() == "result")
 		P.PlayCapture()
 		Check("[CAP] verdict : capturé au Codex, ancré sur le compagnon, le clic droit expliqué", P.StepId() == "result" and P.Shown()

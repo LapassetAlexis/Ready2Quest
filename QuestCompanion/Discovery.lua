@@ -73,6 +73,7 @@ local function Used(self, key) return self:DiscoveryData().used[key] == true end
 local function Captures(self) return self.CaptureCaughtCount and tonumber(self:CaptureCaughtCount()) or 0 end
 local function Reserve(self) return self.SpecimenReserveCount and tonumber(self:SpecimenReserveCount()) or 0 end
 local function Level() return tonumber(Call("UnitLevel", "player")) or 1 end
+local function Express(self) return self.CaptureExpressOn ~= nil and self:CaptureExpressOn() and true or false end
 
 -- ---------------------------------------------------------------------------
 -- Le catalogue : id, FR, EN, learned, eligible, open (tout facultatif sauf
@@ -101,12 +102,12 @@ ns.DISCOVERY_TIPS = {
 		eligible = function(self) return Level() >= 10 end,
 		open = function(self) Page(self, "evolution") end },
 	{ id = "pet",
-		fr = "Un clic sur moi, c'est une caresse. Mon moral adore ça.",
-		en = "A click on me is a pat. My mood loves it.",
+		fr = "Un clic sur moi, c'est une caresse. J'adore ça.",
+		en = "A click on me is a pat. I love it.",
 		learned = function(self) return Used(self, "pet") end },
 	{ id = "pantry",
-		fr = "Maj + clic sur moi : mon garde-manger. Une friandise, et l'envie la plus basse remonte.",
-		en = "Shift + click on me: my pantry. One treat and my lowest need goes back up.",
+		fr = "Maj + clic sur moi : mon garde-manger. Une friandise, et son état dure une heure.",
+		en = "Shift + click on me: my pantry. One treat and its state lasts an hour.",
 		learned = function(self) return Used(self, "pantry") end,
 		open = function(self) if self.TreatMenuToggle then self:TreatMenuToggle() end end },
 	{ id = "journal",
@@ -121,8 +122,8 @@ ns.DISCOVERY_TIPS = {
 		eligible = function(self) return Captures(self) >= 1 end,
 		open = function(self) if self.CompanionMenuShow then self:CompanionMenuShow() end end },
 	{ id = "needs",
-		fr = "Survole-moi : ma faim, mon énergie, mon moral et ma curiosité. Heureux, j'évolue.",
-		en = "Hover me: my hunger, energy, mood and curiosity. Happy, I evolve.",
+		fr = "Survole-moi : Repu, Reposé, Éveillé et le temps qui reste. Les trois, et je rayonne.",
+		en = "Hover me: Fed, Rested, Alert and the time left. All three and I'm radiant.",
 		learned = function(self) return Used(self, "hover") end },
 	{ id = "personality",
 		fr = "J'ai mon caractère : il me donne une mission chaque jour. Il est écrit page Compagnon.",
@@ -144,16 +145,28 @@ ns.DISCOVERY_TIPS = {
 		en = "On the capture card, pick an aid: bait, lasso or whistle. Then Throw, or Skip.",
 		learned = function(self) return Used(self, "aid") end,
 		eligible = function(self) return Captures(self) >= 1 end },
+	-- 3.5.1 : les raccourcis du filet dépendent de la capture express (active
+	-- par défaut : clic = lancer, Maj + clic = tout, Ctrl + clic = la carte)
 	{ id = "direct",
 		fr = "Pressé ? Maj + clic sur le filet : il part tout de suite, sans la carte.",
 		en = "In a hurry? Shift + click the net: it goes at once, without the card.",
 		learned = function(self) return Used(self, "direct") or self:DB().companionCaptureDirect == true end,
-		eligible = function(self) return Captures(self) >= 3 end },
+		eligible = function(self) return Captures(self) >= 3 and not Express(self) end },
 	{ id = "batch",
 		fr = "Plusieurs créatures au filet ? Ctrl + clic sur le filet, ou /qc filet tout : tout capturer.",
 		en = "Several creatures in the net? Ctrl + click the net, or /qc filet tout: capture them all.",
 		learned = function(self) return Used(self, "batch") end,
-		eligible = function(self) return Captures(self) >= 3 end },
+		eligible = function(self) return Captures(self) >= 3 and not Express(self) end },
+	{ id = "expressAll",
+		fr = "Plusieurs créatures au filet ? Maj + clic sur le filet : il les vise toutes.",
+		en = "Several creatures in the net? Shift + click the net: it goes for all of them.",
+		learned = function(self) return Used(self, "batch") end,
+		eligible = function(self) return Captures(self) >= 3 and Express(self) end },
+	{ id = "expressPrep",
+		fr = "Envie de choisir ton aide ? Ctrl + clic sur le filet : la carte de préparation.",
+		en = "Want to pick your aid? Ctrl + click the net: the preparation card.",
+		learned = function(self) return Used(self, "prep") end,
+		eligible = function(self) return Captures(self) >= 3 and Express(self) end },
 	{ id = "pins",
 		fr = "Page Créatures, « À compléter » : épingle une espèce, le filet la guettera pour toi.",
 		en = "Creatures page, \"To complete\": pin a species, the net will watch for it.",
@@ -480,6 +493,7 @@ Mark("CompanionShowHover", "hover")
 Mark("CaptureToggleAid", "aid")
 Mark("CaptureThrow", function() return Call("IsShiftKeyDown") and "direct" or nil end)
 Mark("CaptureBatch", "batch")
+Mark("CapturePrepOpen", "prep")
 Mark("CodexTogglePin", "pin")
 Mark("HuntPin", "pin")
 Mark("LocateSpecies", "locate")

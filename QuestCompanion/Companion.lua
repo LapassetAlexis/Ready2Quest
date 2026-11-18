@@ -735,6 +735,10 @@ end
 -- Le nom affiché : une créature capturée garde le sien (« Champion
 -- Ravenclaw »), seule la mascotte porte le nom que tu lui as donné (1.5.2)
 function ns:CompanionName()
+	-- 3.5.1 : l'exemplaire porté a un surnom (Réserve, 3.4) : c'est son nom partout
+	-- (plaque, fiche au survol, bulles)
+	local worn = self.SpecimenWornHere and self:SpecimenWornHere()
+	if type(worn) == "table" and type(worn.nick) == "string" and worn.nick ~= "" then return worn.nick end
 	local data = self:CompanionData()
 	local npc = type(data.appearance) == "string" and tonumber(data.appearance:match("^cap:(%d+)"))
 	if npc and self.CaptureData then

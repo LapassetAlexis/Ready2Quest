@@ -1,5 +1,17 @@
 # Ready2Quest — notes techniques et historique
 
+## QuestCompanion 3.5.1 — correctifs (lot 0 de `docs/audit-pokemon-like-3.5/PLAN.md`)
+
+- `CompanionStateExtend` : `data.extended[key]` (une fois par état ; effacé au callback `COMPANION_STATE`).
+- `CaptureQueue.lua` : `CAPTURE_QUEUE_SHINY_TIME` (600 s) pour une brillante ; jamais expirée en combat (`CaptureQueuePrune`).
+- Une ligne de chat par capture : `rolling.queueMessage` (CaptureQueue) fait taire `CAPTURE_MSG_OK` (Capture.lua) ; `CAPTURE_MSG_STARS` dit l'espèce nouvelle.
+- `ShopWeek.lua` : arrivage par paquet mélangé (`WeekNumber`, cycle de ceil(n / 2) semaines) ; commandes sans caractère rare, de préférence ceux de la Réserve, zone d'après la Réserve ; `ShopOrdersCanReroll` / `ShopOrdersReroll` (bouton « Relancer » de l'Échoppe) ; `ORDER_BONUS_GLITTER` (30) quand les deux arrivages sont possédés.
+- `CompanionName()` : le surnom de l'exemplaire porté (`SpecimenWornHere().nick`).
+- `SpecimenStudy.lua` : tâche « brillante » payée (`STUDY_REWARD.shiny`, bit 7 ; `capture.studyShinyV` coche sans payer celles d'avant) ; « maîtrisée » ne compte que les bits des cinq tâches ; l'appel à `GuildFeatAnnounce` (inexistante) retiré. Créatures : sixième losange, doré.
+- `MenagerieSealProgress` : une ligne de niveau 9999 ne compte que si l'espèce est capturée. Les gardes de la faction adverse : non vérifié en jeu, pas touché.
+- Textes : `TRAIT_DESC_*` (« … dure une heure au lieu de 45 minutes »), astuces `expressAll` / `expressPrep` (capture express) à côté de `direct` / `batch` (sans), `TOUR_A3`, `SHOP_NOTE`.
+- Tests : `tests/modules/fixes_351.lua`.
+
 ## QuestCompanion 3.5.0 — les envies deviennent des états
 
 Spécification : `docs/design-envies-3.5/PLAN.md` (resimulation des règles finales : `docs/design-envies-3.5/sim/` ; montée de niveau Rayonnante 39 à 88 % du temps selon la session, chasse au niveau 60 : 11 % sans friandise, 36 % avec 4 par jour).

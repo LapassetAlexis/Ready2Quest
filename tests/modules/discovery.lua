@@ -153,13 +153,14 @@ do
 	s.ok("gestes joués : appris", #missed == 0, table.concat(missed, ","))
 	-- les autres : le drapeau posé par leur fonction (enveloppée)
 	local FLAG = { look = "look", frame = "frame", pantry = "pantry", aids = "aid", batch = "batch", locate = "locate",
-		release = "release", codex = "codex", shop = "shop", titles = "title", guild = "guildFeat", noel = "noel" }
+		release = "release", codex = "codex", shop = "shop", titles = "title", guild = "guildFeat", noel = "noel",
+		expressAll = "batch", expressPrep = "prep" }   -- 3.5.1 : astuces de la capture express
 	for id, flag in pairs(FLAG) do NS:DiscoveryUse(flag) end
 	local still = {}
 	for _, tip in ipairs(NS.DISCOVERY_TIPS) do if not tip.learned(NS) then still[#still + 1] = tip.id end end
 	s.ok("chaque astuce a sa condition « appris »", #still == 0, table.concat(still, ","))
 	-- les fonctions enveloppées posent bien leur drapeau
-	local wrapped = { "CompanionSetAppearance", "CompanionSetStyle", "TreatMenuToggle", "CaptureToggleAid", "CaptureBatch",
+	local wrapped = { "CompanionSetAppearance", "CompanionSetStyle", "TreatMenuToggle", "CaptureToggleAid", "CaptureBatch", "CapturePrepOpen",
 		"LocateSpecies", "SpecimenRelease", "SpecimenSetReference", "ShopBuy", "FeatSetTitle", "GuildFeatsEnqueue", "WinterVeilCommand" }
 	local lost = {}
 	for _, name in ipairs(wrapped) do if type(NS[name]) ~= "function" then lost[#lost + 1] = name end end
