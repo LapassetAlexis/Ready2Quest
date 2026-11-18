@@ -44,9 +44,10 @@ ns.PAILLETTES_SHOP = {
 	{ id = "lasso",   kind = "aid", aid = "lasso",   price = 12, icon = "Interface\\Icons\\Spell_Nature_StrangleVines" },
 	{ id = "sifflet", kind = "aid", aid = "sifflet", price = 35, icon = "Interface\\Icons\\INV_Misc_Horn_01" },
 	{ id = "slots",   kind = "slots", slots = 10,    price = 40, icon = "Interface\\Icons\\INV_Misc_Bag_10" },
-	{ id = "frame_glitter", kind = "cosmetic", cos = "frame", cosId = "shop_glitter", price = 80,
+	-- 3.4.0 : les deux cosmétiques de la 3.0 entrent dans l'arrivage de la semaine
+	{ id = "frame_glitter", kind = "cosmetic", cos = "frame", cosId = "shop_glitter", price = 80, arrival = true,
 		icon = "Interface\\Icons\\INV_Misc_Gem_Diamond_02" },
-	{ id = "bg_starfall",   kind = "cosmetic", cos = "bg",    cosId = "shop_starfall", price = 60,
+	{ id = "bg_starfall",   kind = "cosmetic", cos = "bg",    cosId = "shop_starfall", price = 60, arrival = true,
 		icon = "Interface\\Icons\\INV_Enchant_PrismaticSphere" },
 	-- 3.4.0 : l'arrivage de la semaine (deux à la fois, ns:ShopArrivals)
 	{ id = "frame_ember",   kind = "cosmetic", cos = "frame", cosId = "shop_ember",   price = 80,  arrival = true,
@@ -159,6 +160,13 @@ local FR = {
 	SHOP_BOUGHT          = "Échoppe du dresseur : %s (−%d paillettes, reste %d).",
 	SHOP_REQ             = "Échoppe du dresseur : %d paillettes",
 	PAILLETTES_MILESTONE_GAIN = "+%d paillettes : palier de zone (%d %%).",
+	-- 3.4.0 : l'échoppe de la semaine
+	SHOP_TOP             = "Les paillettes n'achètent ni lien ni caractère. Les aides ont un stock par jour.",
+	SHOP_NICK_DESC       = "Donne un nom à un spécimen, depuis sa fiche dans la Réserve. Offert une fois au lien Inséparable.",
+	SHOP_NICK_GO         = "La Réserve",
+	SHOP_NOTE_ORDERS     = "Un spécimen livré quitte la Réserve ; les trois commandes livrées : un cosmétique de l'arrivage, offert.",
+	ORDER_HAVE           = "%d dans ta Réserve",
+	ORDER_NONE           = "Aucun pour l'instant",
 }
 local EN = {
 	JRN_SEC_reserve      = "Reserve",
@@ -237,6 +245,12 @@ local EN = {
 	SHOP_BOUGHT          = "Trainer's Stall: %s (−%d glitter, %d left).",
 	SHOP_REQ             = "Trainer's Stall: %d glitter",
 	PAILLETTES_MILESTONE_GAIN = "+%d glitter: zone milestone (%d%%).",
+	SHOP_TOP             = "Glitter buys neither bond nor personality. Aids have a daily stock.",
+	SHOP_NICK_DESC       = "Name a specimen from its card in the Reserve. Free once at Inseparable bond.",
+	SHOP_NICK_GO         = "The Reserve",
+	SHOP_NOTE_ORDERS     = "A delivered specimen leaves the Reserve; all three orders delivered: an arrival cosmetic, free.",
+	ORDER_HAVE           = "%d in your Reserve",
+	ORDER_NONE           = "None for now",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.RESERVE_STRINGS = { fr = FR, en = EN } end
@@ -719,6 +733,8 @@ local function Build(self, frame, content, ui)
 	rv.preview = p
 	local actionsH = 3 * (LAY.actionH + LAY.actionGap) + 8
 	p.maxBottom = previewH - 10 - actionsH
+	-- la fiche d'une sélection n'a qu'une rangée de boutons : plus de place
+	rv.maxCard, rv.maxSelect = p.maxBottom, previewH - 10 - (LAY.actionH + 16)
 	local bw = PREVIEW_W - 24
 	rv.toCodex = Theme.CreateButton(p, bw, "sm", L.RES_TO_CODEX, function()
 		if frame.resPick then ns:ReserveToCodexAsk(frame.resPick) end
@@ -925,6 +941,53 @@ end
 -- en infobulle (bêta 6 ; avant : cliquable à l'aspect désactivé). Repeint à
 -- chaque mouvement du solde (achat, relâche, gain : MenagerieView.lua).
 -- ---------------------------------------------------------------------------
+-- 3.4.0 (maquette) : en haut, une ligne d'aide et le solde ; cinq rangées de
+-- 44 (pas de 48) : les trois aides (stock du jour), dix places (prix qui
+-- monte, 150 au plus), le surnom (dans la fiche du spécimen) ; « Arrivage de
+-- la semaine » (y −282 du contenu) : deux demi-rangées ; « Commandes de la
+-- semaine » (y −362) : trois cartes, « Livrer » ouvre la Réserve filtrée.
+ns.SHOP_LAYOUT = { first = 34, step = 48, h = 44, arrivalsY = 282, arrivalsRowY = 302, ordersY = 362, ordersRowY = 382,
+	orderW = 232, orderStep = 240, orderH = 74, noteY = 466 }
+local SL = ns.SHOP_LAYOUT
+
+local function ShopRow(sv, content, ui, width, x, y, frame)
+	local At, Text = ui.At, ui.Text
+	local row = Theme.CreateTile(sv, width, SL.h, { kind = "Frame" })
+	At(row, content, x, y)
+	row.icon = Theme.CreateIcon(row, LAY.shopIcon - 4, ns.PAILLETTES_ICON)
+	row.icon:SetPoint("LEFT", row, "LEFT", 7, 0)
+	local textX = 7 + LAY.shopIcon + 4
+	local textW = width - textX - (10 + LAY.shopButton + 10 + 84)
+	row.name = Text(row, Theme.F_LABEL, Theme.LABEL, textW)
+	row.name:SetPoint("TOPLEFT", row, "TOPLEFT", textX, -6)
+	if row.name.SetWordWrap then row.name:SetWordWrap(false) end
+	row.desc = Text(row, Theme.F_SMALL, Theme.MUTED_LIGHT, width - textX - (10 + LAY.shopButton + 10))
+	row.desc:SetPoint("TOPLEFT", row, "TOPLEFT", textX, -24)
+	if row.desc.SetWordWrap then row.desc:SetWordWrap(false) end
+	row.price = Text(row, Theme.F_LABEL, Theme.GOLD, 84)
+	row.price:SetPoint("TOPRIGHT", row, "TOPRIGHT", -(10 + LAY.shopButton + 10), -6)
+	row.price:SetJustifyH("RIGHT")
+	row.buy = Theme.CreateButton(row, LAY.shopButton, "sm", L.SHOP_BUY, function(b)
+		local item = b:GetParent().item
+		if not item then return end
+		if b.bonus then ns:ShopOrderBonus(item.id); ns:RefreshJournal(); return end
+		if b.qcEnabled == false then ns:ShopRefused(item.id); return end
+		frame.shopConfirm = item.id
+		ns:RefreshJournal()
+	end, "primary")
+	row.buy:SetPoint("RIGHT", row, "RIGHT", -10, 0)
+	local small = math.floor((LAY.shopButton - 4) / 2)
+	row.yes = Theme.CreateButton(row, small, "sm", L.SHOP_CONFIRM, function(b)
+		frame.shopConfirm = nil
+		ns:ShopBuy(b:GetParent().item.id)
+		ns:RefreshJournal()
+	end, "primary")
+	row.no = Theme.CreateButton(row, small, "sm", L.SHOP_CANCEL, function() ns:ReserveCancelConfirm() end, "outline")
+	row.no:SetPoint("RIGHT", row, "RIGHT", -10, 0)
+	row.yes:SetPoint("RIGHT", row.no, "LEFT", -4, 0)
+	return row
+end
+
 local function BuildShop(self, frame, content, ui)
 	local At, Text = ui.At, ui.Text
 	local TOP, INNER = ui.TOP, ui.INNER
@@ -932,51 +995,61 @@ local function BuildShop(self, frame, content, ui)
 	sv:SetAllPoints()
 	frame.shopPane = sv
 	sv.balance = ns.PaillettesBadge(sv, content, ui)
+	sv.top = Text(sv, Theme.F_SMALL, Theme.MUTED_LIGHT, INNER - 200)
+	At(sv.top, content, 0, TOP - 6)
+	if sv.top.SetWordWrap then sv.top:SetWordWrap(false) end
+	sv.top:SetText(L.SHOP_TOP)
 	sv.rows = {}
-	local shopTop = TOP - Theme.CONTROL_HEIGHT - 10
-	for index, item in ipairs(ns.PAILLETTES_SHOP) do
-		local row = Theme.CreateTile(sv, INNER, LAY.shopH, { kind = "Frame" })
-		At(row, content, 0, shopTop - (index - 1) * (LAY.shopH + LAY.shopGap))
+	local regular = {}
+	for _, item in ipairs(ns.PAILLETTES_SHOP) do if not item.arrival then regular[#regular + 1] = item end end
+	for index, item in ipairs(regular) do
+		local row = ShopRow(sv, content, ui, INNER, 0, TOP - SL.first - (index - 1) * SL.step, frame)
 		row.item = item
-		row.icon = row:CreateTexture(nil, "ARTWORK")
-		row.icon:SetSize(LAY.shopIcon, LAY.shopIcon)
-		row.icon:SetPoint("LEFT", row, "LEFT", 10, 0)
-		row.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
-		pcall(row.icon.SetTexture, row.icon, item.icon)
-		local textX = 10 + LAY.shopIcon + 10
-		local textW = INNER - textX - LAY.shopButton - 90 - 24
-		row.name = Text(row, Theme.F_LABEL, Theme.LABEL, textW)
-		row.name:SetPoint("TOPLEFT", row, "TOPLEFT", textX, -8)
-		if row.name.SetWordWrap then row.name:SetWordWrap(false) end
-		row.desc = Text(row, Theme.F_SMALL, Theme.MUTED_LIGHT, textW)
-		row.desc:SetPoint("TOPLEFT", row, "TOPLEFT", textX, -26)
-		if row.desc.SetWordWrap then row.desc:SetWordWrap(false) end
-		row.price = Text(row, Theme.F_LABEL, Theme.GOLD, 84)
-		row.price:SetPoint("RIGHT", row, "RIGHT", -(10 + LAY.shopButton + 10), 0)
-		row.price:SetJustifyH("RIGHT")
-		row.buy = Theme.CreateButton(row, LAY.shopButton, "sm", L.SHOP_BUY, function(b)
-			local id = b:GetParent().item.id
-			if b.qcEnabled == false then ns:ShopRefused(id); return end
-			frame.shopConfirm = id
-			ns:RefreshJournal()
-		end, "primary")
-		row.buy:SetPoint("RIGHT", row, "RIGHT", -10, 0)
-		local small = math.floor((LAY.shopButton - 4) / 2)
-		row.yes = Theme.CreateButton(row, small, "sm", L.SHOP_CONFIRM, function(b)
-			frame.shopConfirm = nil
-			ns:ShopBuy(b:GetParent().item.id)
-			ns:RefreshJournal()
-		end, "primary")
-		row.no = Theme.CreateButton(row, small, "sm", L.SHOP_CANCEL, function() ns:ReserveCancelConfirm() end, "outline")
-		row.no:SetPoint("RIGHT", row, "RIGHT", -10, 0)
-		row.yes:SetPoint("RIGHT", row.no, "LEFT", -4, 0)
-		sv.rows[index] = row
+		row.icon:SetTexture(item.icon)
+		sv.rows[#sv.rows + 1] = row
 	end
-	local noteY = shopTop - #ns.PAILLETTES_SHOP * (LAY.shopH + LAY.shopGap) - 6
+	-- le surnom : un article sans bouton (il se donne depuis la fiche du spécimen)
+	sv.nickRow = ShopRow(sv, content, ui, INNER, 0, TOP - SL.first - #regular * SL.step, frame)
+	sv.nickRow.icon:SetTexture(ns.RESERVE_ICONS and ns.RESERVE_ICONS.nick or ns.PAILLETTES_ICON)
+	sv.nickRow.buy:SetText(L.SHOP_NICK_GO)
+	sv.nickRow.buy:SetScript("OnClick", function() ns:OpenReserve("reserve") end)
+	-- l'arrivage
+	sv.arrivalsHead = Theme.CreateSection(sv, L.SHOP_ARRIVALS)
+	sv.arrivalsHead:SetWidth(INNER)
+	At(sv.arrivalsHead, content, 0, TOP - SL.arrivalsY)
+	sv.arrivals = {}
+	local half = math.floor((INNER - 8) / 2)
+	for index = 1, ns.SHOP_ARRIVALS or 2 do
+		local row = ShopRow(sv, content, ui, half, (index - 1) * (half + 8), TOP - SL.arrivalsRowY, frame)
+		sv.arrivals[index] = row
+		sv.rows[#sv.rows + 1] = row
+	end
+	-- les commandes
+	sv.ordersHead = Theme.CreateSection(sv, L.SHOP_ORDERS)
+	sv.ordersHead:SetWidth(INNER)
+	At(sv.ordersHead, content, 0, TOP - SL.ordersY)
+	sv.orders = {}
+	for index = 1, 3 do
+		local card = Theme.CreateTile(sv, SL.orderW, SL.orderH, { kind = "Frame" })
+		At(card, content, (index - 1) * SL.orderStep, TOP - SL.ordersRowY)
+		card.name = Text(card, Theme.F_LABEL, Theme.LABEL, SL.orderW - 20)
+		card.name:SetPoint("TOPLEFT", card, "TOPLEFT", 10, -8)
+		if card.name.SetWordWrap then card.name:SetWordWrap(false) end
+		card.sub = Text(card, Theme.F_SMALL, Theme.MUTED_LIGHT, SL.orderW - 20)
+		card.sub:SetPoint("TOPLEFT", card, "TOPLEFT", 10, -26)
+		if card.sub.SetWordWrap then card.sub:SetWordWrap(false) end
+		card.reward = Text(card, Theme.F_LABEL, Theme.GOLD, 100)
+		card.reward:SetPoint("BOTTOMLEFT", card, "BOTTOMLEFT", 10, 10)
+		card.go = Theme.CreateButton(card, "auto", "sm", L.ORDER_DELIVER, function(b)
+			if b.qcEnabled ~= false then ns:ShopOrderOpen(b:GetParent().index) end
+		end, "primary")
+		card.go:SetPoint("BOTTOMRIGHT", card, "BOTTOMRIGHT", -8, 6)
+		card.index = index
+		sv.orders[index] = card
+	end
 	sv.note = Text(sv, Theme.F_SMALL, Theme.MUTED_LIGHT, INNER)
-	At(sv.note, content, 0, noteY)
+	At(sv.note, content, 0, TOP - SL.noteY)
 	if sv.note.SetWordWrap then sv.note:SetWordWrap(true) end
-	sv.note:SetText(L.SHOP_NOTE)
 	if frame.HookScript then
 		frame:HookScript("OnHide", function(f) f.shopConfirm = nil end)
 	end
@@ -1041,6 +1114,7 @@ local function RefreshTidy(self, frame, rv)
 	lines[2] = self:F("RES_TIDY_TOTAL", gain)
 	lines[3] = aside > 0 and self:F("RES_SEL_ASIDE", aside) or ""
 	lines[4] = #all > 0 and L.RES_TIDY_HINT or ""
+	p.maxBottom = rv.maxSelect or p.maxBottom
 	UI().PreviewSet(p, self:F("RES_SEL_TITLE", #all), lines, {})
 	for index, line in ipairs(p.lines) do
 		local c = (index == 2 and Theme.GOLD) or (index == 3 and Theme.ORANGE) or (index == 4 and Theme.MUTED_LIGHT) or Theme.LABEL
@@ -1090,6 +1164,7 @@ local function RefreshDetails(self, frame, rv, spec)
 	local p = rv.preview
 	local ui = UI()
 	if frame.resTidy and self.ReserveTidySelection then return RefreshTidy(self, frame, rv) end
+	p.maxBottom = rv.maxCard or p.maxBottom
 	HideCard(rv)
 	if not spec then
 		ui.PreviewSet(p, "", { L.RES_PICK }, {})
@@ -1317,45 +1392,106 @@ local function RefreshReserve(self, frame, pane)
 	RefreshDetails(self, frame, rv, picked)
 end
 
+local function PaintShopRow(self, frame, row, item, glyph, bonus)
+	row.item = item
+	if not item then row:Hide(); return end
+	local state, a = self:ShopState(item)
+	row.state = state
+	row.icon:SetTexture(item.icon)
+	row.name:SetText(self:ShopLabel(item))
+	local desc
+	if item.kind == "aid" then
+		local def = AidDef(item.aid)
+		desc = self:F("SHOP_AID_HAVE", L["CAPTURE_AID_DESC_" .. item.aid] or "", self:CaptureAidCount(item.aid), def and def.cap or 0)
+		local left, cap
+		if self.ShopStockLeft then left, cap = self:ShopStockLeft(item.aid) end
+		if left and cap then desc = desc .. " " .. self:F("SHOP_STOCK", left, cap) .. "." end
+	elseif item.kind == "slots" then
+		desc = state == "max" and self:F("SHOP_MAX", self:ReserveCapacity())
+			or self:F("SHOP_SLOTS_NEXT", self:ReserveCapacity(), ns.SHOP_SLOTS and ns.SHOP_SLOTS.max or 150)
+	else
+		desc = L["SHOP_COS_" .. item.cos] or ""
+	end
+	row.desc:SetText(desc)
+	local owned = state == "owned"
+	row.price:SetText((owned or state == "max") and "" or self:F("SHOP_PRICE", item.price, glyph))
+	local c = (state == "short") and Theme.RED or Theme.GOLD
+	row.price:SetTextColor(c[1], c[2], c[3], 1)
+	row.buy.bonus = nil
+	local asking = frame.shopConfirm == item.id and state == "ok"
+	if asking then
+		row.buy:Hide(); row.yes:Show(); row.no:Show()
+	else
+		row.yes:Hide(); row.no:Hide()
+		if bonus and not owned then
+			-- les trois commandes livrées : un cosmétique de l'arrivage, offert
+			row.buy.bonus = true
+			row.buy:SetText(L.ORDER_BONUS_TAKE)
+			Enable(row.buy, true)
+		else
+			row.buy:SetText(owned and L.SHOP_OWNED or L.SHOP_BUY)
+			-- 3.0.0 (bêta 6) : refusé = désactivé pour de bon (grisé, pas de
+			-- clic), la raison en infobulle
+			Enable(row.buy, state == "ok", self:ShopDisabledTip(state, a))
+		end
+		row.buy:Show()
+	end
+	row:SetAccent(asking and Theme.SELECT or nil)   -- choisi : la sélection (= or en Sobre)
+	row:SetAlpha(1)
+	row:Show()
+end
+
 local function RefreshShop(self, frame)
 	local sv = frame.shopPane
 	if not sv then return end
 	sv.balance:SetValue(self:Paillettes())
 	local glyph = ns.PaillettesGlyph(14)
+	local orders = self.ShopOrders and self:ShopOrders()
+	local bonus = orders and not orders.bonus and self:ShopOrdersAllDone()
+	local arrivals = self.ShopArrivals and self:ShopArrivals() or {}
+	for index, row in ipairs(sv.arrivals) do row.item = arrivals[index] end
 	for _, row in ipairs(sv.rows) do
-		local item = row.item
-		local state, a, b = self:ShopState(item)
-		row.state = state
-		row.name:SetText(self:ShopLabel(item))
-		local desc
-		if item.kind == "aid" then
-			local def = AidDef(item.aid)
-			desc = self:F("SHOP_AID_HAVE", L["CAPTURE_AID_DESC_" .. item.aid] or "", self:CaptureAidCount(item.aid), def and def.cap or 0)
-		elseif item.kind == "slots" then
-			desc = self:F("SHOP_SLOTS_DESC", self:ReserveCapacity())
-		else
-			desc = L["SHOP_COS_" .. item.cos] or ""
-		end
-		row.desc:SetText(desc)
-		row.price:SetText(state == "owned" and "" or self:F("SHOP_PRICE", item.price, glyph))
-		local c = (state == "short") and Theme.RED or Theme.GOLD
-		row.price:SetTextColor(c[1], c[2], c[3], 1)
-		row.price.azKeep = nil
-		local asking = frame.shopConfirm == item.id and state == "ok"
-		if asking then
-			row.buy:Hide(); row.yes:Show(); row.no:Show()
-		else
-			row.yes:Hide(); row.no:Hide()
-			row.buy:SetText(state == "owned" and L.SHOP_OWNED or L.SHOP_BUY)
-			-- 3.0.0 (bêta 6) : refusé = désactivé pour de bon (grisé, pas de
-			-- clic), la raison en infobulle
-			Enable(row.buy, state == "ok", self:ShopDisabledTip(state, a))
-			row.buy:Show()
-		end
-		row:SetAccent(asking and Theme.SELECT or nil)   -- choisi : la sélection (= or en Sobre)
-		row:SetAlpha(1)
-		row:Show()
+		local isArrival = false
+		for _, a in ipairs(sv.arrivals) do if a == row then isArrival = true end end
+		PaintShopRow(self, frame, row, row.item, glyph, isArrival and bonus)
 	end
+	-- le surnom
+	local nick = sv.nickRow
+	nick.name:SetText(L.SHOP_NICK)
+	nick.desc:SetText(L.SHOP_NICK_DESC)
+	nick.price:SetText(self:F("SHOP_PRICE", ns.SHOP_NICK_PRICE or 15, glyph))
+	nick.price:SetTextColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+	nick.yes:Hide(); nick.no:Hide()
+	Enable(nick.buy, true)
+	nick.buy:Show()
+	local head = L.SHOP_ARRIVALS
+	local ends = self.WeeklyEndsText and self:WeeklyEndsText()
+	if ends then head = head .. " · " .. ends end
+	if sv.arrivalsHead.SetText then sv.arrivalsHead:SetText(head) end
+	-- les commandes
+	for index, card in ipairs(sv.orders) do
+		local order = orders and orders.list[index]
+		if order then
+			card.name:SetText(self:ShopOrderLabel(order))
+			card.reward:SetText(self:F("ORDER_REWARD", order.reward))
+			if order.done then
+				card.sub:SetText(L.ORDER_DONE)
+				card.go:Hide()
+			else
+				local n = 0
+				for _, spec in ipairs(self:SpecimenList({ where = "reserve" })) do
+					if self:ShopOrderMatches(order, spec) and self:SpecimenCanRelease(spec.id) then n = n + 1 end
+				end
+				card.sub:SetText(n > 0 and self:F("ORDER_HAVE", n) or L.ORDER_NONE)
+				card.go:Show()
+				Enable(card.go, n > 0, L.ORDER_NONE)
+			end
+			card:Show()
+		else
+			card:Hide()
+		end
+	end
+	sv.note:SetText(bonus and L.ORDER_BONUS or (L.SHOP_NOTE_ORDERS .. " " .. L.SHOP_NOTE))
 	if frame.shopConfirm and not (self:ShopItem(frame.shopConfirm) and self:ShopState(frame.shopConfirm) == "ok") then
 		frame.shopConfirm = nil
 	end

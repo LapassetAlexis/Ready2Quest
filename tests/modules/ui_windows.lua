@@ -537,6 +537,13 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 	Want(style .. " : pastille de l'Échoppe : même composant, même solde", sv.balance ~= f.res.balance
 		and sv.balance:GetHeight() == f.res.balance:GetHeight() and sv.balance.value:GetText() == "30" and sv.balance.Flash ~= nil)
 	Verdict("[UI30] " .. style .. " : onglet « Échoppe du dresseur » après la Réserve, sa page, sa pastille (même composant, même solde)")
+	-- 3.4.0 : les deux cosmétiques de la 3.0 dans l'arrivage de cette semaine
+	do
+		local n = 0
+		for _, item in ipairs(NS.PAILLETTES_SHOP) do if item.arrival then n = n + 1 end end
+		NS.shopArrivalCache = { week = NS:WeeklyId(), n = n, list = { NS:ShopItem("frame_glitter"), NS:ShopItem("bg_starfall") } }
+		NS:RefreshJournal()
+	end
 	local rows = {}
 	for _, row in ipairs(sv.rows) do rows[row.item.id] = row end
 	-- bêta 6 : un « Acheter » hors de portée est désactivé (état désactivé du

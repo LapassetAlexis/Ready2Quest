@@ -32,7 +32,7 @@ local Theme = ns.Theme
 ns.RESERVE_BROWSE = {
 	search = 166, filters = 86, filtersX = 172, sort = 124, sortX = 264, dir = 24, dirX = 390, views = 64, viewsX = 420,
 	rowStep = 32, pillMax = 128, pills = 2, chipH = 20, chipGap = 4, rowGap = 4, labelW = 74, pad = 10,
-	selectLines = 12, footerH = 28,
+	selectLines = 10, footerH = 28,
 }
 local B = ns.RESERVE_BROWSE
 -- textures du client (par référence)
