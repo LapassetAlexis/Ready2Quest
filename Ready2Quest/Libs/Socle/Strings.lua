@@ -15,13 +15,16 @@ local SOCLE_ADDON, SOCLE_NS = ...
 ;(SOCLE_NS.SocleFile or function(_, factory) return factory end)("Strings", function(...)
 local ADDON, ns = ...
 
-local frFR, enUS = {}, {}
+local frFR, enUS, esES = {}, {}, {}
 
 local base = frFR
 local locale = (GetLocale and GetLocale()) or "frFR"
 local french = locale == "frFR" or locale == "fr"
+-- socle 3.6 : espagnol (Espagne et Mexique, un seul texte). Les textes
+-- anglais restent chargés en repli (une clé sans traduction espagnole)
+local spanish = locale == "esES" or locale == "esMX" or locale == "es"
 if not french then
-	base = enUS
+	base = spanish and esES or enUS
 end
 
 -- Mémoire (1.6.1 / 1.29.3) : seule la langue du client est gardée. Sur un
@@ -32,6 +35,10 @@ end
 ns.KEEP_STRINGS = rawget(_G, "ADDON_TESTING") and true or false
 -- langue gardée : le français (client frFR), sinon l'anglais
 ns.STRINGS_FRENCH = french
+-- socle 3.6 : langue du texte affiché, "fr", "es" ou "en" (les données qui
+-- ont leur propre texte par langue, répliques, histoire des lieux, la lisent)
+ns.STRINGS_LANG = french and "fr" or (spanish and "es" or "en")
+ns.STRINGS_SPANISH = spanish
 
 -- Sources de textes calculés (QC 2.8.1 / R2Q 1.29.5) : fn(clé) -> texte ou
 -- nil, consultées quand la clé n'est déclarée dans aucune langue. Sert aux
@@ -60,7 +67,18 @@ function ns.RegisterStrings(fr, en)
 	end
 end
 
--- Repli : toute clé absente de la langue active retombe sur le français.
+-- socle 3.6 : textes d'une langue de plus, par-dessus l'anglais (fichiers
+-- <Addon>/Locales_es.lua, chargés en dernier). Seul le client de cette langue
+-- les garde ; les tests (KEEP_STRINGS) les gardent tous.
+function ns.RegisterLocaleStrings(lang, strings)
+	if lang ~= "es" or type(strings) ~= "table" then return end
+	if not (spanish or ns.KEEP_STRINGS) then return end
+	for k, v in pairs(strings) do esES[k] = v end
+end
+if ns.KEEP_STRINGS then ns.STRINGS_TABLES = { fr = frFR, en = enUS, es = esES } end
+
+-- Repli : toute clé absente de la langue active retombe sur l'anglais (client
+-- espagnol), puis sur le français.
 -- IMPORTANT : la métatable est posée sur une table PROXY, jamais sur `base`.
 -- Sinon, sur un client français, `base` vaut `frFR` et la lecture de `frFR[key]`
 -- dans `__index` se rappelle elle-même -> « C stack overflow ».
@@ -68,6 +86,10 @@ local L = {}
 setmetatable(L, { __index = function(_, key)
 	local value = base[key]
 	if value ~= nil then return value end
+	if spanish then
+		value = enUS[key]
+		if value ~= nil then return value end
+	end
 	value = frFR[key]
 	if value ~= nil then return value end
 	for i = 1, #sources do

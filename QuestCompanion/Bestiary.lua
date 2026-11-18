@@ -180,6 +180,8 @@ end
 function ns:BestiaryStaticName(entry)
 	if type(entry) ~= "table" then return nil end
 	if IsFrenchClient() then return entry.fr or entry.en end
+	-- 3.3.0 : client espagnol, le nom de Questie (NamesES.lua) s'il y en a un
+	if ns.STRINGS_SPANISH and entry.es then return entry.es end
 	return entry.en or entry.fr
 end
 

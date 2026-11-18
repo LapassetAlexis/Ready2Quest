@@ -1368,7 +1368,8 @@ end
 local function FormatDate(ts)
 	ts = tonumber(ts)
 	if not ts or ts <= 0 then return nil end
-	local fmt = (Call(G("GetLocale")) == "frFR") and "%d/%m/%Y" or "%Y-%m-%d"
+	local locale = Call(G("GetLocale"))
+	local fmt = (locale == "frFR" or locale == "esES" or locale == "esMX") and "%d/%m/%Y" or "%Y-%m-%d"
 	local dateFn = G("date") or (os and os.date)
 	local ok, text = pcall(dateFn, fmt, ts)
 	return ok and text or nil

@@ -61,8 +61,8 @@ do
 		not QC_TOC:find("## Dependencies", 1, true) and not QC_TOC:find("## RequiredDeps", 1, true)
 		and QC_TOC:find("\n## OptionalDeps: Ready2Quest\n", 1, true) ~= nil
 		and QC_TOC:find("\n## SavedVariables: QuestCompanionDB\n", 1, true) ~= nil)
-	Check("[QC] versions : QC 3.2.0, R2Q 2.0.0, comme leurs namespaces", QC_TOC:find("\n## Version: 3.2.0\n", 1, true)
-		and R2Q_TOC:find("\n## Version: 2.0.0\n", 1, true) and QNS.version == "3.2.0" and NS.version == "2.0.0")
+	Check("[QC] versions : QC 3.3.0, R2Q 2.0.0, comme leurs namespaces", QC_TOC:find("\n## Version: 3.3.0\n", 1, true)
+		and R2Q_TOC:find("\n## Version: 2.0.0\n", 1, true) and QNS.version == "3.3.0" and NS.version == "2.0.0")
 	for _, addon in ipairs({ { "Ready2Quest", R2Q_TOC }, { "QuestCompanion", QC_TOC } }) do
 		local files = QCT.TocFiles(addon[2])
 		Want(addon[1] .. " : Config.lua puis le socle en tête", files[1] == "Config.lua"
@@ -75,7 +75,7 @@ do
 	local r2qFiles, leak = {}, {}
 	for _, file in ipairs(QCT.TocFiles(R2Q_TOC)) do r2qFiles[file] = true end
 	for _, file in ipairs(QCT.TocFiles(QC_TOC)) do
-		if r2qFiles[file] and not file:find("^Libs/Socle/") and file ~= "Config.lua" and file ~= "Locales.lua"
+		if r2qFiles[file] and not file:find("^Libs/Socle/") and file ~= "Config.lua" and file ~= "Locales.lua" and file ~= "Locales_es.lua"
 			and file ~= "Core.lua" then leak[#leak + 1] = file end
 	end
 	Check("[QC] aucun module partagé entre les deux .toc (hors socle), plus de fichiers d'addon à la racine du dépôt",

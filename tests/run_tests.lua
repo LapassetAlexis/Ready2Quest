@@ -333,7 +333,9 @@ _G.GetCursorPosition = function()
 end
 _G.SlashCmdList = {}
 
-_G.GetLocale = function() return "frFR" end
+-- langue du client simulé : français, sauf TEST_LOCALE (tools/i18n.py fit,
+-- tests/snapshot.py avec SNAPSHOT_LOCALE)
+_G.GetLocale = function() return rawget(_G, "TEST_LOCALE") or "frFR" end
 _G.GetBuildInfo = function()
 	local b = Mock.world.build or { version = "1.60.1", build = "69893", date = "Oct 1 2026", toc = 16001 }
 	return b.version, b.build, b.date, b.toc
@@ -901,6 +903,19 @@ end
 -- 3 ter. Aperçu hors-jeu (tests/snapshot.py) : l'addon est chargé, on rend
 -- une scène de tests/snapshot.lua en HTML et on s'arrête là, sans les tests.
 ----------------------------------------------------------------------------
+-- Export des textes (tools/i18n.py) : l'addon et ses modules chargés, les
+-- tables de chaînes fr / en / es des deux addons rendues, sans les tests
+if rawget(_G, "I18N_DUMP") then
+	Mock.world.build = nil
+	NS:DetectCapabilities()
+	for _, file in ipairs(Mock.moduleFiles) do LoadAddonFile(file) end
+	_G.I18N_RESULT = { r2q = NS.STRINGS_TABLES, qc = QNS and QNS.STRINGS_TABLES }
+	_G.I18N_NS = { r2q = NS, qc = QNS }
+	Mock:Fire("ADDON_LOADED", "Ready2Quest")
+	Mock:Fire("ADDON_LOADED", "QuestCompanion")
+	return
+end
+
 if SNAPSHOT_SCENE then
 	local function LoadModules()
 		if Mock.modulesLoaded then return end

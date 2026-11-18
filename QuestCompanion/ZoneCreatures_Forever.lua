@@ -3,7 +3,7 @@
 -- FICHIER GÉNÉRÉ par tools/gen_zone_data.py, ne pas éditer à la main :
 -- corrige data/forever/ et relance le script (voir docs/DONNEES.md).
 -- Source : notre base data/forever/, importée de Questie/QuestieDB
---   (commit c5de61ab7c629132a772cccddf7f604ac48cecf9, data/Forever ; Questie 12.4.0) le 2026-11-04. Générée le 2026-11-10.
+--   (commit c5de61ab7c629132a772cccddf7f604ac48cecf9, data/Forever ; Questie 12.4.0) le 2026-11-04. Générée le 2026-11-18.
 -- Couches appliquées : brut -> legacy (corrections Era héritées) -> delta-base générée -> traces -> corrections Forever.
 -- Licence : GPL-3.0 (https://www.gnu.org/licenses/gpl-3.0.html), comme la
 --   base de Questie dont ces données dérivent ; voir NOTICE.md.
@@ -29,9 +29,11 @@ if ns.IsForeverClient and ns:IsForeverClient() ~= true then return end
 
 local function Zone(text)
 	local zone = {}
+	local SPANISH = ns.SpanishName ~= nil   -- client espagnol (NamesES.lua)
 	for npc, lo, hi, rank, fr, en, f in text:gmatch("(%d+)\t(%-?%d+)\t(%-?%d+)\t(%-?%d+)\t([^\t\n]*)\t([^\t\n]*)\t?([^\t\n]*)\n") do
 		zone[tonumber(npc)] = { lvl = { tonumber(lo), tonumber(hi) }, rank = tonumber(rank),
-			fr = fr ~= "" and fr or en, en = en, f = f ~= "" and f or nil }
+			fr = fr ~= "" and fr or en, en = en, f = f ~= "" and f or nil,
+			es = SPANISH and ns.SpanishName("npc", npc) or nil }
 	end
 	return zone
 end

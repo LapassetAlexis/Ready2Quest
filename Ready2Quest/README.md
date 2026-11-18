@@ -4,7 +4,7 @@
 
 **The adventurer's departure companion.** Before you leave town, Ready2Quest checks that your bags are ready: something to eat, room for loot, gear in good shape, your buffs, your hearthstone… and tells you at the right moment, not when it's too late.
 
-For **World of Warcraft Forever**. Interface in English and French.
+For **World of Warcraft Forever**. Interface in English, French and Spanish.
 
 ---
 
@@ -308,7 +308,7 @@ Ready2Quest is free software under the **GPL-3.0** license (see `LICENSE`): you 
 
 **Le compagnon de départ de l'aventurier.** Avant que tu quittes la ville, Ready2Quest vérifie que ton sac est prêt : de quoi manger, de la place pour le butin, un équipement en état, tes buffs, ta pierre de foyer… et te le dit au bon moment, pas quand il est trop tard.
 
-Pour **World of Warcraft Forever**. Interface en français et en anglais.
+Pour **World of Warcraft Forever**. Interface en français, en anglais et en espagnol.
 
 ---
 

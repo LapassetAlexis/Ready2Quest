@@ -111,7 +111,9 @@ function ns:TravelText(meters)
 	local km = meters / 1000
 	local text = km >= 100 and tostring(math.floor(km + 0.5)) or string.format("%.1f", km)
 	-- virgule décimale sur un client français (« 12,4 km »)
-	if Call(G("GetLocale")) == "frFR" then text = text:gsub("%.", ",") end
+	-- (et sur un client d'Espagne, 3.3.0)
+	local locale = Call(G("GetLocale"))
+	if locale == "frFR" or locale == "esES" then text = text:gsub("%.", ",") end
 	return self:F("TRAVEL_KM", text)
 end
 

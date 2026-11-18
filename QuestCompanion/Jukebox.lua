@@ -162,8 +162,12 @@ function ns:MusicCatalog()
 	local french = ns.STRINGS_FRENCH ~= false
 	-- groupes : nom dans la langue du client, zones
 	local groups = {}
+	-- 3.3.0 : client espagnol, ns.MUSIC_GROUPS_ES (Locales_es.lua), même ordre
+	local spanish = not french and ns.STRINGS_SPANISH and ns.MUSIC_GROUPS_ES
 	for fr, en, areas in (ns.MUSIC_GROUPS or ""):gmatch("([^\t\n]*)\t([^\t\n]*)\t([^\t\n]*)") do
-		groups[#groups + 1] = { name = (french or en == "") and fr or en, areas = areas ~= "" and areas or nil, cat = false }
+		local name = (french or en == "") and fr or en
+		if spanish and spanish[#groups + 1] then name = spanish[#groups + 1] end
+		groups[#groups + 1] = { name = name, areas = areas ~= "" and areas or nil, cat = false }
 	end
 	local sep = french and " : " or ": "
 	for _, cat in ipairs(ns.MUSIC_CATEGORIES or {}) do

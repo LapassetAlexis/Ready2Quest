@@ -109,7 +109,9 @@ function ns:GatheringItemName(itemID)
 	local name = ns.ItemInfo(itemID)
 	if type(name) == "string" and name ~= "" then return name end
 	if not entry then return tostring(itemID) end
-	return (IsFrench() and entry.fr or entry.en) or entry.en or entry.fr or tostring(itemID)
+	-- 3.3.0 : client espagnol, le nom de Questie (NamesES.lua)
+	local spanish = not IsFrench() and ns.SpanishName and ns.SpanishName("item", itemID)
+	return (IsFrench() and entry.fr or spanish or entry.en) or entry.en or entry.fr or tostring(itemID)
 end
 
 -- ---------------------------------------------------------------------------

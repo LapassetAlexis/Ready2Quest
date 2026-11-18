@@ -4,7 +4,7 @@
 
 **A creature-collecting road companion.** Capture the monsters you defeat, normal and shiny, complete your collection and take the right companion along: each creature helps you hunt. A little creature travels with you, talks to you and grows with you; its journal tracks every zone and your missions.
 
-For **World of Warcraft Forever**. Interface in English and French.
+For **World of Warcraft Forever**. Interface in English, French and Spanish.
 
 > **Standalone.** QuestCompanion works on its own: its `/qc` command, its settings panel, its minimap button. It pairs nicely with [Ready2Quest](../Ready2Quest/README.md) but doesn't need it: if Ready2Quest is there, the companion also reacts when you leave town and come back.
 
@@ -224,7 +224,7 @@ QuestCompanion is free software under the **GPL-3.0** license (see `LICENSE`). T
 
 **Un compagnon de route qui collectionne les créatures.** Capture les monstres que tu abats, normaux et brillants, complète ta collection et emmène le bon compagnon : chaque créature t'aide à chasser. Une petite créature voyage avec toi, te parle et grandit avec toi ; son carnet suit chaque zone et tes missions.
 
-Pour **World of Warcraft Forever**. Interface en français et en anglais.
+Pour **World of Warcraft Forever**. Interface en français, en anglais et en espagnol.
 
 > **Autonome.** QuestCompanion fonctionne seul : sa commande `/qc`, son panneau de réglages, son bouton de minicarte. Il va très bien avec [Ready2Quest](../Ready2Quest/README.md#francais), sans en avoir besoin : si Ready2Quest est là, le compagnon réagit en plus à tes départs et retours en ville.
 

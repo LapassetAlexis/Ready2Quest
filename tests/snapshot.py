@@ -77,6 +77,8 @@ def render(scene, out):
     g.ADDON_ROOT = ROOT
     g.MODULE_TEST_FILES = lua.table_from([])
     g.SNAPSHOT_SCENE = scene
+    if os.environ.get("SNAPSHOT_LOCALE"):
+        g.TEST_LOCALE = os.environ["SNAPSHOT_LOCALE"]   # esES : l'aperçu en espagnol
     g.SNAPSHOT_OUT = out
     with open(TEST_FILE, "r", encoding="utf-8") as handle:
         lua.execute(handle.read())

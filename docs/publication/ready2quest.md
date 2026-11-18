@@ -1,7 +1,7 @@
 <!--
 Fiche de la page Ready2Quest sur CurseForge et Wago (à copier à la main, voir docs/PUBLIER.md).
 Summary EN (obligatoire en anglais sur CurseForge, 256 caractères max, ici 220) :
-  WoW Forever QoL: a readiness score before you leave town (food, bags, repairs, buffs, hearthstone), trip reports, dungeon briefs, aggro range on nameplates, quest reward picks and favorite items safe from selling. EN/FR.
+  WoW Forever QoL: a readiness score before you leave town (food, bags, repairs, buffs, hearthstone), trip reports, dungeon briefs, aggro range on nameplates, quest reward picks and favorite items safe from selling. EN/FR/ES.
 Catégories : Quests & Leveling (principale), Bags & Inventory (additionnelle).
 Licence : GPLv3. Logo : docs/publication/logo_ready2quest.png (l'écu coché dans son médaillon d'or, 1.35 : à remettre sur les deux stores).
 Captures à prendre en jeu, au style Azeroth (thème forgé) : la fenêtre « Avant le départ », le bilan de retour, la fiche de donjon avec sa section « Groupe », le bouton « Tout apprendre » chez un maître, la fenêtre des rangs de sorts avec « Nouveaux sorts », l'étiquette « Pour toi » d'une récompense de quête, le cadre « Sac plein », les réglages.
@@ -11,7 +11,7 @@ Une seule description, anglais d'abord puis français (règle des stores : l'ang
 
 **Get ready before you leave town.** When you step out of a village, a capital or a camp, Ready2Quest checks that you are ready: food and water, room in your bags, gear in good shape, your usual buffs, your hearthstone… and tells you at the right moment, not when it is too late.
 
-For **WoW Forever** (1.60). English and French.
+For **WoW Forever** (1.60). English, French and Spanish.
 
 ![Pre-departure check: a readiness score out of 100 with tips](https://media.forgecdn.net/attachments/2147/118/r2q-1-png.png)
 
@@ -19,6 +19,7 @@ For **WoW Forever** (1.60). English and French.
 - **Six families** in the left column: Home, Departure check, Bags & loot, Travel, Quests & spells, Combat. Their pages become tabs.
 - **One switch per feature**, right in its head; **Home › Overview** shows every feature with its switch on one screen.
 - **The gear button** of each window opens the settings on its feature; `/r2q options loot` too. Search also finds features and tabs.
+- **En español**: the whole addon now speaks Spanish on esES and esMX clients.
 
 ## Also new in 2.0: combat helpers
 - **A Combat section**: the aggro range plus four helpers, each with its switch.
@@ -91,12 +92,13 @@ Free software, **GPL-3.0**. Source code: https://github.com/LapassetAlexis/Ready
 
 **Prépare ta sortie avant de quitter la ville.** Quand tu quittes un village, une capitale ou un camp, Ready2Quest vérifie que tu es prêt : vivres, place dans les sacs, équipement en état, tes buffs habituels, ta pierre de foyer… et te le dit au bon moment, pas quand il est trop tard.
 
-Pour **WoW Forever** (1.60). En français et en anglais.
+Pour **WoW Forever** (1.60). En français, en anglais et en espagnol.
 
 ## Nouveau en 2.0 : un menu des réglages plus clair
 - **Six familles** dans la colonne de gauche : Accueil, Check avant le départ, Sacs & butin, Voyage, Quêtes & sorts, Combat. Leurs pages deviennent des onglets.
 - **Un interrupteur par fonction**, dans sa tête ; **Accueil › Vue d'ensemble** montre toutes les fonctions avec leur interrupteur sur un seul écran.
 - **La roue crantée** de chaque fenêtre ouvre les réglages sur sa fonction ; `/r2q options butin` aussi. La recherche trouve aussi les fonctions et les onglets.
+- **En español** : tout l'addon parle espagnol sur les clients esES et esMX.
 
 ## Aussi en 2.0 : l'aide au combat
 - **Une section Combat** : la portée d'aggro et quatre aides, chacune avec son interrupteur.

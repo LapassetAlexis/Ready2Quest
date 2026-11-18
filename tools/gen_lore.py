@@ -344,6 +344,9 @@ def lines(data, lang):
         for e in data["subzones"][mid]:
             if lang == "fr":
                 names = e["names_fr"] or [e["key"]]
+            elif lang == "es":
+                # noms du client espagnol, et la clé anglaise en repli
+                names = list(e.get("names_es") or []) + [e["key"]]
             else:
                 names = sorted({e["key"]} | set(e["names_en"]))
             out.append("S\t%s\t%s\t%s\t%s" % (mid, "|".join(names), e[lang], e["src"]))
@@ -352,14 +355,52 @@ def lines(data, lang):
     return "\n".join(out)
 
 
+# QuestCompanion 3.3.0 : l'espagnol. Textes traduits de l'anglais (même
+# licence CC BY-SA 4.0, voir NOTICE.md) dans data/forever/lore/lore_es.json
+# ({ "Z:<uiMapID>": texte, "S:<uiMapID>:<clé>": texte }) ; noms des sous-zones
+# du client espagnol (Espagne et Mexique) : data/forever/names_es.json (lieux).
+SPANISH = os.path.join(ROOT, "data", "forever", "lore", "lore_es.json")
+NAMES_ES = os.path.join(ROOT, "data", "forever", "names_es.json")
+
+
+def spanish(data):
+    """Les textes espagnols posés sur `data` (champ es, noms names_es) ; False sans eux."""
+    if not os.path.exists(SPANISH):
+        return False
+    texts = json.load(open(SPANISH, encoding="utf-8"))
+    names = json.load(open(NAMES_ES, encoding="utf-8")).get("area", {})
+    by_key = {}
+    with open(os.path.join(ROOT, "data", "forever", "areas.jsonl"), encoding="utf-8") as handle:
+        for line in handle:
+            area = json.loads(line)
+            for name in names.get(str(area["id"]), []):
+                by_key.setdefault(normalise(area.get("name", "")), [])
+                if name not in by_key[normalise(area.get("name", ""))]:
+                    by_key[normalise(area.get("name", ""))].append(name)
+    for mid, z in data["zones"].items():
+        z["es"] = texts.get("Z:%s" % mid) or z["en"]
+    for mid, entries in data["subzones"].items():
+        for e in entries:
+            e["es"] = texts.get("S:%s:%s" % (mid, e["key"])) or e["en"]
+            e["names_es"] = by_key.get(e["key"], [])
+    return True
+
+
 def build(out_path=OUT, snapshot_path=SNAPSHOT):
     data = json.load(open(snapshot_path, encoding="utf-8"))
+    has_es = spanish(data)
     body = HEADER % {"repo": REPO, "sha": data["commit"]}
     # [[ saute le premier saut de ligne : le second ouvre la chaîne (motifs « \nZ\t »)
     body += "local FR = [[\n\n%s\n]]\n" % lines(data, "fr")
     body += "local EN = [[\n\n%s\n]]\n" % lines(data, "en")
-    body += "if ns.KEEP_STRINGS then\n\tns.LORE_RAW = { fr = FR, en = EN }\nelse\n"
-    body += "\tns.LORE_RAW = { [ns.STRINGS_FRENCH ~= false and \"fr\" or \"en\"] = ns.STRINGS_FRENCH ~= false and FR or EN }\nend\n"
+    if has_es:
+        body += "local ES = [[\n\n%s\n]]\n" % lines(data, "es")
+        body += "if ns.KEEP_STRINGS then\n\tns.LORE_RAW = { fr = FR, en = EN, es = ES }\nelse\n"
+        body += "\tlocal lang = ns.STRINGS_LANG or (ns.STRINGS_FRENCH ~= false and \"fr\" or \"en\")\n"
+        body += "\tns.LORE_RAW = { [lang] = (lang == \"fr\" and FR) or (lang == \"es\" and ES) or EN }\nend\n"
+    else:
+        body += "if ns.KEEP_STRINGS then\n\tns.LORE_RAW = { fr = FR, en = EN }\nelse\n"
+        body += "\tns.LORE_RAW = { [ns.STRINGS_FRENCH ~= false and \"fr\" or \"en\"] = ns.STRINGS_FRENCH ~= false and FR or EN }\nend\n"
     with open(out_path, "w", encoding="utf-8", newline="\n") as handle:
         handle.write(body)
     return data

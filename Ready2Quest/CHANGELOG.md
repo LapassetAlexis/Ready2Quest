@@ -2,6 +2,12 @@
 
 ## 2.0.0 — Aide au combat et nouveau menu des réglages
 
+### En español
+
+- **Ready2Quest parle espagnol** (clients esES et esMX) : toute l'interface, les messages, l'aide et les réglages. La langue du jeu est détectée toute seule ; une phrase pas encore traduite s'affiche en anglais.
+
+*English:* Ready2Quest now speaks Spanish (esES and esMX clients): the whole interface, messages, help and settings, picked from the game language; anything not translated yet shows in English.
+
 ### Un nouveau menu des réglages
 
 - **Six familles fixes** dans la colonne de gauche, chacune avec son icône et une ligne qui dit ce qu'elle contient : **Accueil**, **Check avant le départ**, **Sacs & butin**, **Voyage**, **Quêtes & sorts**, **Combat**. La colonne ne défile plus ; « Modules » et « Confort de jeu » disparaissent comme catégories. Les pages d'une famille deviennent ses onglets, en haut.

@@ -14,7 +14,10 @@ Une seule description, anglais d'abord puis français (règle des stores : l'ang
 
 ![A shiny creature tries its luck against the net](https://media.forgecdn.net/attachments/2161/225/f-gif.gif)
 
-For **WoW Forever** (1.60). English and French. Free and standalone (`/qc`). Pairs well with [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
+For **WoW Forever** (1.60). English, French and Spanish. Free and standalone (`/qc`). Pairs well with [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
+
+## New in 3.3: en español
+- **Quest Companion speaks Spanish** on esES and esMX clients: interface, every companion line, joke and shout, titles, jukebox and place lore. Creature and quest names come from the game's official Spanish names.
 
 ## New in 3.2: your companion shouts
 - **It shouts when it matters**, in CAPITALS: in red for danger (a monster about to aggro you, by name, with Ready2Quest's aggro range; several monsters on you; low health; a monster running away; drowning; out of arrows; a skull elite), in gold for big joys (a close call, a blue or purple item, your level). Once per fight, never on a loop; you can turn it off.
@@ -99,7 +102,10 @@ Free software, **GPL-3.0**. Zone data (creatures, gathering, quests) is generate
 
 ![Une brillante tente sa chance contre le filet](https://media.forgecdn.net/attachments/2161/225/f-gif.gif)
 
-Pour **WoW Forever** (1.60). En français et en anglais. Gratuit et autonome (`/qc`). Va très bien avec [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
+Pour **WoW Forever** (1.60). En français, en anglais et en espagnol. Gratuit et autonome (`/qc`). Va très bien avec [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
+
+## Nouveau en 3.3 : en español
+- **Quest Companion parle espagnol** sur les clients esES et esMX : interface, toutes les répliques, blagues et cris du compagnon, titres, juke-box et histoire des lieux. Les noms des créatures et des quêtes sont les noms officiels espagnols du jeu.
 
 ## Nouveau en 3.2 : ton compagnon crie
 - **Il crie quand ça compte**, en MAJUSCULES : en rouge pour le danger (un monstre sur le point de t'aggro, nommé, avec la portée d'aggro de Ready2Quest ; plusieurs monstres sur toi ; ta vie au plus bas ; un monstre qui s'enfuit ; la noyade ; plus de flèches ; un élite crâne), en or pour les grandes joies (survie de justesse, objet bleu ou violet, ton niveau). Une fois par combat, jamais en boucle ; ça se coupe.
