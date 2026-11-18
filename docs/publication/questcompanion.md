@@ -23,6 +23,8 @@ For **WoW Forever** (1.60). English, French and Spanish. Free and standalone (`/
 - **Treats** give their state for 60 minutes (Feast: all three); a full pantry turns the extra treat into 1 glitter.
 - **Companion page**: three state plates with the time left, the mood line and its wish.
 
+![The Companion page: three states with the time left, its mood and its wish](https://media.forgecdn.net/attachments/2229/965/qc35-compagnon-png.png)
+
 ## New in 3.4: your travel partner
 - **A Reserve you can sort finely**: search by name, nickname or zone; a **Filters** panel (stars, version, size, personality, type, rank, zone, catch date, bond, state) with a count on every chip; sort by stars, date, name, size, bond, duplicates or value, both ways; ready-made views (Duplicates, Releasable, Better than Codex, Recent, Protected) and your own **My view**. The same panel helps you pick what to offer in a trade.
 - **Batch selection**: the **Select** button, or Ctrl + click and Shift + click on tiles; protect, trade (3 at most) or release in one go. Shinies and protected specimens are left aside when releasing.
@@ -33,11 +35,11 @@ For **WoW Forever** (1.60). English, French and Spanish. Free and standalone (`/
 - **This week's Trainer's Stall**: a daily stock of capture aids, Reserve slots at 40 then 20 more each time (150 at most), two cosmetics that change every week, and **three weekly orders** (deliver a specimen for 12 to 16 glitter; all three: a free cosmetic).
 - **A bigger Reserve**: 50 slots to start with, and releasing pays more (2 / 4 / 10 glitter, 25 for a shiny).
 
-![The Reserve: search, filters, sorting, views, and the specimen card with its upside, downside and bond](https://media.forgecdn.net/attachments/2229/334/qc34-reserve-png.png)
+![The Reserve: search, filters, sorting, views, and the specimen card with its upside, downside and bond](https://media.forgecdn.net/attachments/2229/967/qc35-reserve-png.png)
 
-![The Trainer's Stall: daily stock, this week's arrivals and orders](https://media.forgecdn.net/attachments/2229/335/qc34-echoppe-png.png)
+![The Trainer's Stall: daily stock, this week's arrivals and orders](https://media.forgecdn.net/attachments/2229/969/qc35-echoppe-png.png)
 
-![Creatures: species study, the To study filter and size records](https://media.forgecdn.net/attachments/2229/336/qc34-creatures-png.png)
+![Creatures: species study, the To study filter and size records](https://media.forgecdn.net/attachments/2229/966/qc35-creatures-png.png)
 
 ## New in 3.3: in Spanish
 - **Quest Companion speaks Spanish** on esES and esMX clients: interface, every companion line, joke and shout, titles, jukebox and place lore. Creature and quest names come from the game's official Spanish names.
@@ -80,9 +82,7 @@ For **WoW Forever** (1.60). English, French and Spanish. Free and standalone (`/
 - **Treats and cosmetics**: zone milestones fill its pantry (Shift + click it); nineteen mascot appearances plus every creature you capture, ornaments, frames and backgrounds.
 - **Winter Veil** (December 15 – January 2): lights and snow on the journal and the companion, a snowball instead of the net, and three seasonal companions (Greatfather Winter, Metzen the reindeer, the Tiny Snowman). `/qc noel` to force it on or off.
 
-![Your companion: its needs, stats and looks](https://media.forgecdn.net/attachments/2155/842/qc-1-png.png)
-
-![The companion on screen](https://media.forgecdn.net/attachments/2155/841/qc-2-png.png)
+![Hover your companion: its stage, mood, states and the time left](https://media.forgecdn.net/attachments/2229/975/qc35-fiche-survol-png.png)
 
 ## The journal
 
@@ -93,9 +93,15 @@ For **WoW Forever** (1.60). English, French and Spanish. Free and standalone (`/
 - **Jukebox**: the game's own music on demand, 434 tracks with search, favourites, playlists and shuffle (`/qc juke`).
 - **An on-screen tracker** with your closest goals.
 
-![Missions of the day and week, pantry and capture aids](https://media.forgecdn.net/attachments/2155/839/qc-4-png.png)
+![Missions of the day and week, pantry and capture aids](https://media.forgecdn.net/attachments/2229/961/qc35-missions-png.png)
 
-![Exploration: every zone, its milestones and chest](https://media.forgecdn.net/attachments/2155/838/qc-5-png.png)
+![Exploration: every zone, its milestones and chest](https://media.forgecdn.net/attachments/2229/971/qc35-exploration-png.png)
+
+![Achievements: points, categories and titles](https://media.forgecdn.net/attachments/2229/970/qc35-hauts-faits-png.png)
+
+![The jukebox: the game's music by place, mood and moment](https://media.forgecdn.net/attachments/2229/972/qc35-juke-box-png.png)
+
+![The Guide: every system explained](https://media.forgecdn.net/attachments/2229/973/qc35-guide-png.png)
 
 ## Commands
 
