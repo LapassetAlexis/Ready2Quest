@@ -472,8 +472,42 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 			and Apart(hint, grid) and rv.hint:GetText() == NS.L.RES_HINT)
 		Want(style .. " : au-dessus du pied du carnet", f.footer == nil or button.top + button.height <= R(f.footer).top)
 	end
-	Want(style .. " : 2e rangée : listes et puces Tous / Brillants à la même hauteur", rv.sort:GetHeight() == H
-		and rv.species:GetHeight() == H and rv.show.chips[1]:GetHeight() == H and rv.show:GetHeight() == H)
+	-- 3.4.0 : rangée 1 : recherche, Filtres, tri, sens, Vues, à la même hauteur,
+	-- côte à côte dans la largeur de la grille ; rangée 2 sous elle
+	do
+		local function R(region) return Snap.Rect(region, { memo = {} }) end
+		local bar = rv.bar
+		local row = { R(bar.search), R(bar.filters), R(bar.sort), R(bar.dir), R(bar.views) }
+		local grid = R(rv.grid)
+		local okRow = true
+		for index, r in ipairs(row) do
+			if index > 1 and r.left < row[index - 1].left + row[index - 1].width then okRow = false end
+			if r.top ~= row[1].top or r.left + r.width > grid.left + grid.width then okRow = false end
+		end
+		Want(style .. " : rangée 1 (recherche, Filtres, tri, sens, Vues) alignée, sans chevauchement, dans la largeur de la grille",
+			okRow and bar.search:GetHeight() == H and bar.sort:GetHeight() == H and bar.views:GetHeight() == H)
+		local sel, count = R(bar.select), R(bar.count)
+		Want(style .. " : rangée 2 (compte, Sélection) entre la rangée 1 et la grille", sel.top >= row[1].top + row[1].height
+			and sel.top + sel.height <= grid.top and sel.left + sel.width <= grid.left + grid.width
+			and count.left + count.width <= sel.left)
+		NS:ReservePanelOpen(true)
+		local panel = R(rv.panel)
+		local inside = true
+		for group, chips in pairs(rv.panel.chips) do
+			for _, chip in ipairs(chips) do
+				if chip:IsShown() then
+					local c = R(chip)
+					if c.left < panel.left or c.left + c.width > panel.left + panel.width or c.top + c.height > panel.top + panel.height then
+						inside = group .. " " .. c.left .. "," .. c.top .. "," .. c.width .. "," .. c.height .. " / " .. panel.left .. "," .. panel.top .. "," .. panel.width .. "," .. panel.height
+					end
+				end
+			end
+		end
+		Want(style .. " : panneau de filtres sur la grille, à côté de la fiche, puces dedans, vignettes cachées", rv.panel:IsShown()
+			and panel.left == grid.left and panel.left + panel.width <= R(rv.preview).left and inside == true
+			and not rv.tiles[1]:IsShown(), tostring(inside) .. " " .. panel.left .. "/" .. grid.left .. " " .. tostring(rv.tiles[1]:IsShown()))
+		NS:ReservePanelOpen(false)
+	end
 	Want(style .. " : pastille de la Réserve : solde", not pane.balance.mockHidden and pane.balance.value:GetText() == "40"
 		and pane.balance.flash ~= nil, tostring(pane.balance:IsShown()) .. " " .. tostring(pane.balance.value:GetText()))
 	local before = #Mock.frames
@@ -503,8 +537,19 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 	Want(style .. " : pastille de l'Échoppe : même composant, même solde", sv.balance ~= f.res.balance
 		and sv.balance:GetHeight() == f.res.balance:GetHeight() and sv.balance.value:GetText() == "30" and sv.balance.Flash ~= nil)
 	Verdict("[UI30] " .. style .. " : onglet « Échoppe du dresseur » après la Réserve, sa page, sa pastille (même composant, même solde)")
+	-- 3.4.0 : les deux cosmétiques de la 3.0 dans l'arrivage de cette semaine
+	do
+		local n = 0
+		for _, item in ipairs(NS.PAILLETTES_SHOP) do if item.arrival then n = n + 1 end end
+		NS.shopArrivalCache = { week = NS:WeeklyId(), n = n, list = { NS:ShopItem("frame_glitter"), NS:ShopItem("bg_starfall") } }
+		NS:RefreshJournal()
+	end
 	local rows = {}
 	for _, row in ipairs(sv.rows) do rows[row.item.id] = row end
+	-- 3.4.0 (bêta 1, en jeu) : l'icône d'une rangée est une texture (un cadre n'a pas SetTexture)
+	local textures = sv.nickRow.icon:GetObjectType() == "Texture"
+	for _, row in ipairs(sv.rows) do if row.icon:GetObjectType() ~= "Texture" then textures = false end end
+	Want(style .. " : icônes de l'Échoppe : des textures", textures)
 	-- bêta 6 : un « Acheter » hors de portée est désactivé (état désactivé du
 	-- socle), la raison en infobulle ; il suit le solde page ouverte
 	local function TipOf(button)
@@ -515,11 +560,11 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 		return lines[1]
 	end
 	local buy = rows.sifflet.buy
-	Want(style .. " : Sifflet (40) pour 30 : désactivé, grisé, « Il te manque 10 paillettes » au survol",
+	Want(style .. " : Sifflet (35) pour 30 : désactivé, grisé, « Il te manque 5 paillettes » au survol",
 		rows.sifflet.state == "short" and not buy:IsEnabled() and buy.disabledLook and not buy.inactive
-		and buy.qcEnabled == false and buy.size == "sm" and TipOf(buy) == "Il te manque 10 paillettes",
+		and buy.qcEnabled == false and buy.size == "sm" and TipOf(buy) == "Il te manque 5 paillettes",
 		tostring(buy:IsEnabled()) .. " / " .. tostring(TipOf(buy)))
-	Want(style .. " : prix au-dessus du solde : tous désactivés (40, 50, 60, 80), à portée : actifs (5, 15)",
+	Want(style .. " : prix au-dessus du solde : tous désactivés (35, 40, 60, 80), à portée : actifs (4, 12)",
 		not rows.slots.buy:IsEnabled() and not rows.frame_glitter.buy:IsEnabled() and not rows.bg_starfall.buy:IsEnabled()
 		and rows.appat.buy:IsEnabled() and rows.lasso.buy:IsEnabled() and not rows.appat.buy.disabledLook)
 	NS:CaptureData().items = NS:CaptureData().items or {}
@@ -542,13 +587,13 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 	-- le solde bouge, page ouverte : les boutons suivent (gain, puis achat)
 	NS:PaillettesAdd(20, "test")
 	if Mock.RunTimers then Mock:RunTimers() end
-	Want(style .. " : +20 paillettes, page ouverte : Sifflet et places (50) actifs, pastille à 50", buy:IsEnabled()
+	Want(style .. " : +20 paillettes, page ouverte : Sifflet et places (40) actifs, pastille à 50", buy:IsEnabled()
 		and rows.slots.buy:IsEnabled() and not rows.frame_glitter.buy:IsEnabled() and sv.balance.value:GetText() == "50",
 		tostring(buy:IsEnabled()) .. " / " .. tostring(sv.balance.value:GetText()))
 	rows.slots.buy:GetScript("OnClick")(rows.slots.buy)
 	rows.slots.yes:GetScript("OnClick")(rows.slots.yes)
-	Want(style .. " : après l'achat des places (50) : solde 0, tout désactivé", NS:Paillettes() == 0
-		and not buy:IsEnabled() and not rows.lasso.buy:IsEnabled() and TipOf(rows.lasso.buy) == "Il te manque 15 paillettes")
+	Want(style .. " : après l'achat des places (40) : solde 10, sifflet et lasso désactivés", NS:Paillettes() == 10
+		and not buy:IsEnabled() and not rows.lasso.buy:IsEnabled() and TipOf(rows.lasso.buy) == "Il te manque 2 paillettes")
 	NS:PaillettesAdd(30, "test")
 	if Mock.RunTimers then Mock:RunTimers() end
 	rows.lasso.buy:GetScript("OnClick")(rows.lasso.buy)

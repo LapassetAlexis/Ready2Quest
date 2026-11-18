@@ -5,7 +5,7 @@
 ## Notes-frFR: Capture les monstres que tu abats : étoiles, brillantes, compagnon de chasse, sceaux de zone, titres et fiche de dresseur, exploits de guilde. Et un carnet de voyage.
 ## Notes-esES: Captura los monstruos que derrotas: estrellas, brillantes, un compañero de caza, sellos de zona, títulos y ficha de entrenador, logros de hermandad. Y un diario de viaje.
 ## Notes-esMX: Captura los monstruos que derrotas: estrellas, brillantes, un compañero de caza, sellos de zona, títulos y ficha de entrenador, logros de hermandad. Y un diario de viaje.
-## Version: 3.3.0
+## Version: 3.4.0
 ## X-License: GPL-3.0
 ## Author: Tristabeau
 ## X-Website: https://github.com/LapassetAlexis/Ready2Quest
@@ -103,6 +103,7 @@ CompanionAllure.lua
 JournalReserve.lua
 CaptureTrades.lua
 ReserveTidy.lua
+SpecimenFilters.lua
 Share.lua
 GuidedTour.lua
 Bindings.lua
@@ -111,5 +112,9 @@ CaptureExpress.lua
 CaptureAidBar.lua
 CaptureNetMove.lua
 OptionsCompanionSplit.lua
+SpecimenBond.lua
+SpecimenStudy.lua
+ShopWeek.lua
+ReserveBrowse.lua
 NamesES.lua
 Locales_es.lua

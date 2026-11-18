@@ -107,13 +107,19 @@ do
 			if pair then seen[pair.hunt] = true end
 		end
 		for id, def in pairs(NS.COMPANION_EFFECTS) do
-			if def.cap > 1.5 or def.base > 0.5 then bad[#bad + 1] = id .. " (trop fort)" end
+			-- 3.4.0 : la paillette de palier de Curieux se compte en unités
+			if def.kind ~= "milestone" and (def.cap > 1.5 or def.base > 0.5) then bad[#bad + 1] = id .. " (trop fort)" end
+			if (def.minus and def.base >= 0) or (def.base < 0 and not def.minus) then bad[#bad + 1] = id .. " (signe)" end
 		end
 		Check("[EFF] 8 types : chasse propre à chacun et confort, valeurs modestes et plafonnées", #NS.CREATURE_TYPES == 8
 			and #bad == 0, table.concat(bad, ", "))
 		local missing = {}
+		-- 3.4.0 : second atout, revers, taille (CompanionEffects, FR34 / EN34)
+		local more = NS.EFFECT_STRINGS_34 or { fr = {}, en = {} }
 		for id in pairs(NS.COMPANION_EFFECTS) do
-			if not (strings.fr["EFF_" .. id] and strings.en["EFF_" .. id]) then missing[#missing + 1] = id end
+			if not ((strings.fr["EFF_" .. id] or more.fr["EFF_" .. id]) and (strings.en["EFF_" .. id] or more.en["EFF_" .. id])) then
+				missing[#missing + 1] = id
+			end
 		end
 		for key in pairs(strings.fr) do if strings.en[key] == nil then missing[#missing + 1] = "en:" .. key end end
 		for key in pairs(strings.en) do if strings.fr[key] == nil then missing[#missing + 1] = "fr:" .. key end end
@@ -131,10 +137,14 @@ do
 		local function S(id) return NS:CompanionEffectsFor(id, { full = true }).strength end
 		Check("[EFF] force : normal ×1, élite ×1,5 (type anglais compris), rare ×2, boss ×2,5, brillante +0,5", S("cap:5001") == 1
 			and S("cap:5002") == 1.5 and S("cap:5003") == 2 and S("cap:5004") == 2.5 and S("cap:5003:s") == 2.5)
-		NS.CaptureStars = function(_, npc, shiny) if npc == 5001 and not shiny then return 3 end return nil end
+		-- 3.4.0 : les étoiles de l'exemplaire porté (référence du Codex)
+		local ref = NS:SpecimenReference(5001, false)
+		local refStars = ref and ref.stars
+		if ref then ref.stars = 3 end
 		local stars = S("cap:5001") == 1.5 and S("cap:5002") == 1.5
 		NS.MenagerieTypeBonus = function(_, key) return key == "humanoid" and 0.5 or 0 end
-		Check("[EFF] force : +0,25 par étoile au-dessus de 1, puis la complétion du type", stars and S("cap:5001") == 2)
+		Check("[EFF] force : +0,25 par étoile au-dessus de 1 (exemplaire porté), puis la complétion du type", stars and S("cap:5001") == 2)
+		if ref then ref.stars = refStars end
 		NS.CaptureStars, NS.MenagerieTypeBonus = EF.savedStars, EF.savedBonus
 		local e = NS:CompanionEffectsFor("cap:5002", { full = true })
 		Check("[EFF] Humanoïde élite : capture des Humanoïdes +15 %, friandise en plus aux paliers", e.typeKey == "humanoid"

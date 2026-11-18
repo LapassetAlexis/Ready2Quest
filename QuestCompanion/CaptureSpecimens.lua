@@ -7,9 +7,9 @@
 --   * la qualité est tirée AU COUP FATAL, selon le rang du monstre
 --     (CAPTURE_QUALITY_ODDS), et rend la capture plus dure (CAPTURE_QUALITY_FACTOR) ;
 --   * le CODEX garde, par espèce et par version (normale, brillante), le
---     spécimen de référence ; les autres vont dans la RÉSERVE (20 places au
+--     spécimen de référence ; les autres vont dans la RÉSERVE (50 places au
 --     départ, + places achetées plus tard) ; relâcher un spécimen de la
---     Réserve rend des PAILLETTES (1 / 3 / 8 / 20) ;
+--     Réserve rend des PAILLETTES (2 / 4 / 10 / 25) ;
 --   * le filet ne vient plus que si ça vaut le coup (CaptureQueue.lua,
 --     CaptureQueueReason) : espèce nouvelle, brillante, spécimen meilleur que
 --     le tien, espèce épinglée (liste de chasse), ou MODE CHASSE ;
@@ -67,7 +67,7 @@
 --   ns:SpecimenSetReference(id) -> true | false, raison ("missing"|"already")
 --       « Mettre au Codex » : il devient la référence, l'ancienne va en Réserve
 --   ns:SpecimenWorn(id) -> bool (référence portée comme apparence par un personnage)
---   ns:SpecimenReleaseValue(id|spec) -> paillettes rendues (1/3/8, brillant 20)
+--   ns:SpecimenReleaseValue(id|spec) -> paillettes rendues (2/4/10, brillant 25)
 --   ns:SpecimenCanRelease(id) -> true | false, raison ("missing"|"reference"|"worn"|"better")
 --       2.15.0 : "better" = meilleur que la référence du Codex (relâcher ne
 --       fait jamais baisser tes étoiles : « Mets-le au Codex avant »)
@@ -116,7 +116,8 @@ if ns.blocked then return end
 local L = ns.L
 
 ns.SPECIMEN_SCHEMA = 1
-ns.CAPTURE_RESERVE_BASE = 20
+-- 3.3.1 : 20 -> 50 (la Réserve se remplissait en une demi-heure de chasse)
+ns.CAPTURE_RESERVE_BASE = 50
 -- qualité tirée au coup fatal (en %), selon le rang du monstre
 ns.CAPTURE_QUALITY_ODDS = {
 	normal = { 65, 28, 7 },
@@ -129,7 +130,8 @@ ns.CAPTURE_QUALITY_GROUP = { trivial = "normal", minus = "normal", normal = "nor
 ns.CAPTURE_QUALITY_FACTOR = { 1, 0.8, 0.6 }
 -- (guide, tutoriel : les chances d'un monstre ordinaire, comme avant 2.15)
 -- relâcher : paillettes par étoiles (un brillant vaut toujours `shiny`)
-ns.PAILLETTES_RELEASE = { 1, 3, 8, shiny = 20 }
+-- 3.3.1 : 1 / 3 / 8 / 20 -> 2 / 4 / 10 / 25 (~3 en moyenne au lieu de ~2)
+ns.PAILLETTES_RELEASE = { 2, 4, 10, shiny = 25 }
 -- mode chasse : durées proposées (minutes), comme la sourdine
 ns.HUNT_CHOICES = { 5, 15, 30, 60 }
 -- méfiance : −15 % par capture de la même espèce dans la journée, plancher ×0,4
@@ -257,6 +259,8 @@ end
 local function Touch(capture)
 	capture.specSerial = (tonumber(capture.specSerial) or 0) + 1
 end
+-- 3.4.0 : pour les modules des spécimens (SpecimenFilters, SpecimenBond…)
+ns.SpecimenTouch = Touch
 
 -- Chaque version possédée d'après la vue par espèce a sa référence au Codex :
 -- un spécimen de Réserve s'il y en a (le meilleur), sinon un spécimen
@@ -393,9 +397,11 @@ function ns:SpecimenAdd(spec)
 	local place, previous = "reserve", nil
 	if not old then
 		codex[field], place = id, "codex"
-	elseif (not best or new.stars > best.stars) and not spec.keepReserve then
+	elseif (not best or new.stars > best.stars) and not spec.keepReserve
+		and not (self.SpecimenKeepReference and self:SpecimenKeepReference(capture.specimens[old])) then
 		-- 3.0.0 : un spécimen reçu par échange (keepReserve) reste en Réserve,
-		-- marqué « Meilleur que ton spécimen du Codex » : le joueur choisit
+		-- marqué « Meilleur que ton spécimen du Codex » : le joueur choisit.
+		-- 3.4.0 : de même quand ton exemplaire est lié (lien 2+) ou protégé
 		codex[field], place, previous = id, "codex", old
 	end
 	if new.origin == "capture" then capture.caught = (tonumber(capture.caught) or 0) + 1 end
@@ -544,8 +550,18 @@ function ns:SpecimenCanRelease(id)
 	if self:SpecimenIsReference(id) then return false, "reference" end
 	-- 2.15.0 : relâcher ne fait jamais baisser tes étoiles. Un spécimen de
 	-- Réserve meilleur que la référence de sa version passe d'abord au Codex.
-	if self:SpecimenBetterThanCodex(id) then return false, "better" end
+	-- 3.4.0 : sauf si ton exemplaire du Codex est lié ou protégé (tu l'as
+	-- gardé exprès) : la page demande alors confirmation
+	if self:SpecimenBetterLocked(id) then return false, "better" end
 	return true
+end
+
+-- 3.4.0 : meilleur que le Codex ET bloqué pour ça (exemplaire ni lié ni protégé)
+function ns:SpecimenBetterLocked(id)
+	if not self:SpecimenBetterThanCodex(id) then return false end
+	local spec = self:SpecimenGet(id)
+	local ref = spec and self:SpecimenReference(spec.npc, spec.shiny)
+	return not (ref and self.SpecimenKeepReference and self:SpecimenKeepReference(ref))
 end
 
 -- 3.2.0 : `quiet` (Faire de la place, ReserveTidy.lua) : pas de ligne par
@@ -757,6 +773,8 @@ local function DayKey()
 	dayAt, dayKey = now, key or tostring(math.floor(now / 86400))
 	return dayKey
 end
+
+ns.CaptureDayKey = DayKey   -- 3.4.0 : lien par jour (SpecimenBond.lua), échoppe
 
 local function Wary(capture)
 	local wary = capture.wary

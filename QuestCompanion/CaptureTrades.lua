@@ -372,7 +372,7 @@ function ns:SpecimenCanTrade(id, ignoreLock)
 	if not spec then return false, "missing" end
 	if self:SpecimenWorn(spec.id) then return false, "worn" end
 	if self:SpecimenIsReference(spec.id) then return false, "reference" end
-	if self:SpecimenBetterThanCodex(spec.id) then return false, "better" end
+	if self:SpecimenBetterLocked(spec.id) then return false, "better" end
 	if not ignoreLock and Locked(self, spec.id) then return false, "locked" end
 	return true
 end
@@ -420,6 +420,9 @@ local function Fields(self, spec)
 		o = ns.TRADE_ORIGINS[origin or ""] and origin or "capture",
 		nm = Cut(spec.name or entry.name, M.nm), cl = ns.TRADE_CLASSES[entry.class or ""] and entry.class or nil,
 		ty = Cut(entry.type, M.ty), fa = Cut(entry.family, M.fa), hp = tonumber(spec.hops) or 0,
+		-- 3.4.0 : l'indice de taille (clé nouvelle, ignorée d'un client 3.3) ;
+		-- ni cadenas, ni surnom, ni lien : ils restent chez soi
+		x = ns.SpecimenSizeIndex and ns.SpecimenSizeIndex(self, spec) or nil,
 	}
 end
 
@@ -455,6 +458,8 @@ function ns:TradeDecodeSpec(text)
 		origin = ns.TRADE_ORIGINS[origin] and origin or "capture", name = Str("nm"),
 		class = ns.TRADE_CLASSES[class or ""] and class or nil, type = Str("ty"), family = Str("fa"),
 		hops = Int(raw.hp, 0, 999) or 0,
+		-- 3.4.0 : absent (client 3.3) : le milieu du cran, posé à l'arrivée
+		zi = Int(raw.x, 75, 125),
 	}
 end
 
@@ -761,6 +766,13 @@ local function Commit(self, pending)
 				keepReserve = true })
 			local added = id and capture.specimens[id]
 			if added then
+				-- 3.4.0 : l'indice dans son cran (sinon le milieu du cran)
+				local band = ns.SPECIMEN_SIZE_INDEX and ns.SPECIMEN_SIZE_INDEX[added.size or "normal"]
+				if band then
+					local zi = spec.zi
+					if not (zi and zi >= band[1] and zi <= band[2]) then zi = math.floor((band[1] + band[2]) / 2) end
+					added.zi = zi
+				end
 				added.tradedFrom, added.tradedAt = Short(self, peer), now
 				added.firstOrigin, added.hops = spec.origin, (spec.hops or 0) + 1
 				got[#got + 1] = Brief(added)
@@ -1432,6 +1444,16 @@ function ns.TradeBuildView(self, frame, pane, content, ui)
 	tv.pickHead = Text(tv, Theme.F_LABEL, Theme.LABEL, INNER)
 	At(tv.pickHead, content, 0, pickY)
 	if tv.pickHead.SetWordWrap then tv.pickHead:SetWordWrap(false) end
+	-- 3.4.0 : recherche et « Filtres » de la Réserve (ReserveBrowse.lua, état « trd »)
+	if ns.ReserveBuildBar then
+		local B = ns.RESERVE_BROWSE
+		local barX = INNER - (B.search + 6 + B.filters)
+		tv.bar = ns.ReserveBuildBar(frame, tv, content, ui, "trd", barX, pickY + 4, { compact = true })
+		tv.bar.content = tv.bar.content or content
+		tv.bar.filters:ClearAllPoints()
+		At(tv.bar.filters, content, barX + B.search + 6, pickY + 4)
+		tv.pickHead:SetWidth(barX - 8)
+	end
 	local gridTop = pickY - 20
 	local cols = math.floor((INNER + RLAY.gap) / (RLAY.tileW + RLAY.gap))
 	local gridRows = math.max(1, math.floor((gridTop - ui.PAGER_Y - 8 + RLAY.gap) / (RLAY.tileH + RLAY.gap)))
@@ -1457,6 +1479,9 @@ function ns.TradeBuildView(self, frame, pane, content, ui)
 	tv.pickEmpty = Text(tv, Theme.F_BODY, Theme.MUTED_LIGHT, INNER - 20)
 	At(tv.pickEmpty, content, 10, gridTop - 20)
 	ui.Pager(tv, content)
+	if ns.ReserveBuildPanel then
+		tv.panel = ns.ReserveBuildPanel(frame, tv, content, ui, "trd", 0, gridTop, INNER, gridTop - ui.PAGER_Y + 2)
+	end
 	tv:Hide()
 end
 
@@ -1512,7 +1537,13 @@ local function RefreshHistory(self, frame, tv)
 end
 
 local function RefreshPicker(self, frame, tv, s)
-	local all = self:ReserveView("stars")
+	-- 3.4.0 : la Réserve filtrée (recherche, panneau) ; le panneau posé sur la grille
+	local all = self.ReserveBrowseList and self:ReserveBrowseList("trd") or self:ReserveView("stars")
+	local panelOpen = tv.panel and frame.trdPanel and true or false
+	if tv.bar then self:ReserveBarRefresh(tv.bar, frame) end
+	if tv.panel then
+		if panelOpen then tv.panel:Show(); self:ReservePanelRefresh(tv.panel) else tv.panel:Hide() end
+	end
 	local cols, rows = tv.pickCols, tv.pickRows
 	local totalRows = math.ceil(#all / cols)
 	local maxOffset = math.max(0, totalRows - rows)
@@ -1522,7 +1553,7 @@ local function RefreshPicker(self, frame, tv, s)
 	for index, tile in ipairs(tv.picks) do
 		local spec = all[first + index]
 		tile.tradeSpec = spec
-		if spec then
+		if spec and not panelOpen then
 			self:ReserveTilePaint(tile, spec)
 			local offered = false
 			for _, id in ipairs(s.mine) do if id == spec.id then offered = true end end
@@ -1594,6 +1625,11 @@ function ns:TradeRefreshView(frame, pane)
 	for _, row in ipairs(tv.hist) do if window then row.line:Hide(); row.sub:Hide() end end
 	ShowList(tv, ALL_ACTIVE, window)
 	ShowList(tv, ALL_IDLE, not window)
+	-- 3.4.0 : la recherche et les filtres suivent la fenêtre d'échange
+	if tv.bar then
+		for _, region in ipairs({ tv.bar.search, tv.bar.filters }) do if window then region:Show() else region:Hide() end end
+		if not window and tv.panel then tv.panel:Hide() end
+	end
 	if window then
 		tv.status:SetText(StatusText(self, s, now))
 		tv.note:SetText("")

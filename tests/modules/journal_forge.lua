@@ -356,3 +356,31 @@ do
 	s.check("[JFG] contrastes des nouveaux textes du carnet et de la fiche forgés (≥ 4,5 texte, ≥ 3 titre)")
 	Done()
 end
+
+-- 8. QC 3.4 : contrastes de la Réserve (puces, fiche du spécimen, compte), dans les deux styles ----------
+for _, style in ipairs({ "sobre", "azeroth" }) do
+	Say("-- Réserve 3.4 : contrastes mesurés (" .. style .. ")")
+	Fresh(style)
+	local s = Steps()
+	local chipOn = Theme.Over(Theme.NAV, Theme.SELECT, 0.22)
+	for _, item in ipairs({
+		{ "puce : libellé sur le panneau", Theme.MUTED_LIGHT, Theme.NAV, 4.5 },
+		{ "puce : compteur sur le panneau", Theme.MUTED, Theme.NAV, 3 },
+		{ "puce cochée : libellé sur son fond", Theme.PARCHMENT, chipOn, 4.5 },
+		{ "puce cochée : compteur sur son fond", Theme.LABEL, chipOn, 4.5 },
+		{ "panneau : nom du groupe (identité)", Theme.IDENTITY, Theme.NAV, 4.5 },
+		{ "fiche : atout (vert)", Theme.GREEN, Theme.NAV, 4.5 },
+		{ "fiche : revers (orange)", Theme.ORANGE, Theme.NAV, 4.5 },
+		{ "fiche : revers à venir (estompé)", Theme.MUTED, Theme.NAV, 3 },
+		{ "fiche : lien (identité)", Theme.IDENTITY, Theme.NAV, 4.5 },
+		{ "fiche : raison d'un refus (rouge)", Theme.RED, Theme.NAV, 4.5 },
+		{ "sélection : laissés de côté (orange)", Theme.ORANGE, Theme.NAV, 4.5 },
+		{ "rangée 2 : compte presque pleine (rouge) sur la page", Theme.RED, Theme.WINDOW, 4.5 },
+		{ "rangée 2 : compte sur la page", Theme.MUTED_LIGHT, Theme.WINDOW, 4.5 },
+	}) do
+		local c = Theme.Contrast(item[2], item[3])
+		s.ok(item[1] .. " ≥ " .. item[4], c >= item[4], string.format("%.2f", c))
+	end
+	s.check("[R34UI] " .. style .. " : contrastes de la Réserve 3.4 (≥ 4,5 texte ; ≥ 3 compteurs et texte estompé)")
+	Done()
+end

@@ -404,12 +404,14 @@ end
 do
 	Say("-- qc215 : Réserve")
 	Q.Reset()
-	local empty = NS.CAPTURE_RESERVE_BASE == 20 and NS:ReserveCapacity() == 20 and not NS:ReserveFull()
+	-- 3.3.1 : 50 places au départ (la valeur vient de la constante)
+	local B = NS.CAPTURE_RESERVE_BASE
+	local empty = B == 50 and NS:ReserveCapacity() == B and not NS:ReserveFull()
 	local first, place = NS:SpecimenAdd({ npc = 900, stars = 1, name = "Crabe" })
 	NS:CaptureData().creatures[900] = NS:CaptureData().creatures[900] or { name = "Crabe", normal = true, stars = 1 }
-	Check("[RES] 20 places au départ ; premier spécimen : au Codex", empty and place == "codex" and NS:SpecimenIsReference(first))
-	for _ = 1, 20 do NS:SpecimenAdd({ npc = 900, stars = 1, name = "Crabe" }) end
-	Check("[RES] vingt de plus : Réserve pleine", NS:SpecimenReserveCount() == 20 and NS:ReserveFull())
+	Check("[RES] 50 places au départ ; premier spécimen : au Codex", empty and place == "codex" and NS:SpecimenIsReference(first))
+	for _ = 1, B do NS:SpecimenAdd({ npc = 900, stars = 1, name = "Crabe" }) end
+	Check("[RES] la capacité de plus : Réserve pleine", NS:SpecimenReserveCount() == B and NS:ReserveFull())
 	Check("[RES] candidat d'une espèce au Codex : bloqué", NS:CaptureBlockedReason({ npcID = 900 }) == "reserveFull")
 	Check("[RES] espèce nouvelle ou brillante nouvelle : jamais bloquée", NS:CaptureBlockedReason({ npcID = 901 }) == nil
 		and NS:CaptureBlockedReason({ npcID = 900, shiny = true }) == nil)
@@ -421,7 +423,7 @@ do
 	Check("[RES] lancer refusé, il reste au filet", NS:CaptureThrow() == false and #NS:CaptureQueue() == 1
 		and Mock:Output():find("Réserve pleine", 1, true) ~= nil, Mock:Output())
 	NS:HuntStop()
-	Check("[RES] places en plus (boutique)", NS:ReserveAddSlots(5) == 25 and not NS:ReserveFull()
+	Check("[RES] places en plus (boutique)", NS:ReserveAddSlots(10) == B + 10 and not NS:ReserveFull()
 		and NS:CaptureBlockedReason({ npcID = 900 }) == nil)
 	NS:CaptureQueueClear()
 end
@@ -444,16 +446,17 @@ do
 		and data.creatures[950].stars == 3)
 	local again, why = NS:SpecimenSetReference(two)
 	Check("[CODEX] déjà au Codex : refusé", again == false and why == "already")
-	Check("[CODEX] valeurs : 1 / 3 / 8, brillant 20", NS:SpecimenReleaseValue({ stars = 1 }) == 1
-		and NS:SpecimenReleaseValue({ stars = 2 }) == 3 and NS:SpecimenReleaseValue({ stars = 3 }) == 8
-		and NS:SpecimenReleaseValue({ stars = 1, shiny = true }) == 20)
+	-- 3.3.1 : 2 / 4 / 10, brillant 25
+	Check("[CODEX] valeurs : 2 / 4 / 10, brillant 25", NS:SpecimenReleaseValue({ stars = 1 }) == 2
+		and NS:SpecimenReleaseValue({ stars = 2 }) == 4 and NS:SpecimenReleaseValue({ stars = 3 }) == 10
+		and NS:SpecimenReleaseValue({ stars = 1, shiny = true }) == 25)
 	-- 2.15.0 (journal) : relâcher ne fait jamais baisser tes étoiles
 	local better, betterWhy = NS:SpecimenRelease(three)
 	Check("[REL] meilleur que la référence du Codex : « better », gardé", better == false and betterWhy == "better"
 		and NS:SpecimenGet(three) ~= nil and NS:Paillettes() == 0)
 	NS:SpecimenSetReference(three)
 	local gain = NS:SpecimenRelease(two)
-	Check("[REL] relâcher un 2 étoiles de Réserve : +3 paillettes", gain == 3 and NS:Paillettes() == 3
+	Check("[REL] relâcher un 2 étoiles de Réserve : +4 paillettes", gain == 4 and NS:Paillettes() == 4
 		and NS:SpecimenGet(two) == nil and data.creatures[950].stars == 3)
 	local no, reason = NS:SpecimenRelease(three)
 	Check("[REL] la référence du Codex : interdit", no == false and reason == "reference" and NS:SpecimenGet(three) ~= nil)
@@ -465,12 +468,12 @@ do
 	Check("[REL] spécimen inconnu : « missing »", missing == "missing")
 	local shinyId = NS:SpecimenAdd({ npc = 950, stars = 1, shiny = true })
 	local shinyRes = NS:SpecimenAdd({ npc = 950, stars = 1, shiny = true })
-	Check("[REL] brillant de Réserve : +20", NS:SpecimenIsReference(shinyId) and NS:SpecimenRelease(shinyRes) == 20
-		and NS:Paillettes() == 23)
-	local spent = select(1, NS:PaillettesSpend(5, "test")) == true and NS:Paillettes() == 18
+	Check("[REL] brillant de Réserve : +25", NS:SpecimenIsReference(shinyId) and NS:SpecimenRelease(shinyRes) == 25
+		and NS:Paillettes() == 29)
+	local spent = select(1, NS:PaillettesSpend(5, "test")) == true and NS:Paillettes() == 24
 	local ok, short = NS:PaillettesSpend(100, "test")
-	Check("[PAIL] dépenser ; pas assez : refusé, solde intact", spent and ok == false and short == "short" and NS:Paillettes() == 18)
-	Check("[PAIL] gagner", NS:PaillettesAdd(7, "mission") == 25 and NS:CaptureData().paillettesEarned == 30)
+	Check("[PAIL] dépenser ; pas assez : refusé, solde intact", spent and ok == false and short == "short" and NS:Paillettes() == 24)
+	Check("[PAIL] gagner", NS:PaillettesAdd(7, "mission") == 31 and NS:CaptureData().paillettesEarned == 36)
 	local list = NS:SpecimenList({ npc = 950, where = "codex" })
 	Check("[LIST] filtre Codex d'une espèce : normale + brillante ; la Réserve", #list == 2 and #NS:SpecimenReserve() == 1
 		and NS:SpecimenReserve()[1].id == one)

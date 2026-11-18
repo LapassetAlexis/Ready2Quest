@@ -18,7 +18,8 @@ if ns.blocked then return end
 local L = ns.L
 
 ns.RESERVE_TIDY_COUNT = 5
-ns.RESERVE_TIDY_NEAR = 2
+-- 3.3.1 : 2 -> 5 places (Réserve de 50 : on prévient plus tôt)
+ns.RESERVE_TIDY_NEAR = 5
 ns.RESERVE_TIDY_DIM = 0.4     -- vignettes hors sélection
 
 local FR = {
@@ -59,10 +60,16 @@ ns.RegisterCompanionLines({
 		{ "Ma réserve déborde (%d/%d) ! On fait le tri ? /qc tri", "My reserve is overflowing (%d/%d)! Tidy up? /qc tri" },
 		{ "Plus beaucoup de place (%d/%d)… On relâche les moins jolis ? /qc tri", "Running out of room (%d/%d)… Release the plainest ones? /qc tri" },
 		{ "%d sur %d, ça se bouscule là-dedans ! /qc tri", "%d out of %d, it's getting crowded in there! /qc tri" },
+		{ "Attention, presque plus de place dans ta Réserve (%d/%d) ! /qc tri", "Careful, your Reserve is almost full (%d/%d)! /qc tri" },
+	},
+	-- 3.3.1 : la Réserve pleine (une fois, jusqu'à ce qu'elle se vide un peu)
+	RESERVE_FULL = {
+		{ "Réserve pleine (%d/%d) ! Plus rien n'y rentre : fais de la place, /qc tri", "Reserve full (%d/%d)! Nothing else fits: make room, /qc tri" },
+		{ "Plus une place dans la Réserve (%d/%d). On relâche les moins jolis ? /qc tri", "Not a single slot left in the Reserve (%d/%d). Release the plainest ones? /qc tri" },
 	},
 }, true)
 local rules = ns.COMPANION_RULES
-if rules and type(rules.cooldowns) == "table" then rules.cooldowns.reserve = 600 end
+if rules and type(rules.cooldowns) == "table" then rules.cooldowns.reserve, rules.cooldowns.reservefull = 600, 120 end
 
 -- ---------------------------------------------------------------------------
 -- Choix des spécimens
@@ -113,7 +120,10 @@ function ns:ReserveTidyActive()
 	return frame ~= nil and frame.resTidy ~= nil
 end
 
--- Ouvre la sélection : rend le nombre de spécimens proposés
+-- Ouvre la sélection : rend le nombre de spécimens proposés.
+-- 3.4.0 : la page passe sur la vue Relâchables triée par valeur croissante
+-- (filtre et tri d'avant gardés pour Annuler ou après le relâcher) et coche
+-- les RESERVE_TIDY_COUNT premiers, ni brillants ni protégés
 function ns:ReserveTidyStart()
 	local frame = Frame(self)
 	local list = self:ReserveTidyCandidates()
@@ -124,6 +134,19 @@ function ns:ReserveTidyStart()
 		return 0
 	end
 	if frame then
+		if self.ReserveView2 and self.ReserveQuery then
+			if not frame.resTidyPrev then
+				frame.resTidyPrev = { f = frame.resFilter, sort = frame.resSort, desc = frame.resDesc, view = frame.resViewId }
+			end
+			frame.resFilter, frame.resViewId = self:ReserveView2("releasable"), "releasable"
+			frame.resSort, frame.resDesc, frame.resOffset = "value", false, 0
+			local picked = {}
+			for _, spec in ipairs(self:ReserveQuery(frame.resFilter, "value", false, "reserve")) do
+				if #picked >= ns.RESERVE_TIDY_COUNT then break end
+				if not spec.shiny and not (self.SpecimenProtected and self:SpecimenProtected(spec.id)) then picked[#picked + 1] = spec end
+			end
+			if #picked > 0 then list = picked end
+		end
 		frame.resTidy, frame.resTidyOrder = {}, {}
 		for _, spec in ipairs(list) do
 			frame.resTidy[spec.id] = true
@@ -133,6 +156,14 @@ function ns:ReserveTidyStart()
 	end
 	if self.RefreshJournal then self:RefreshJournal() end
 	return #list
+end
+
+-- 3.4.0 : le filtre et le tri d'avant « Faire de la place »
+local function Restore(frame)
+	local prev = frame and frame.resTidyPrev
+	if not prev then return end
+	frame.resFilter, frame.resSort, frame.resDesc, frame.resViewId = prev.f, prev.sort, prev.desc, prev.view
+	frame.resTidyPrev, frame.resOffset = nil, 0
 end
 
 -- Clic sur une vignette pendant la sélection : ajoute ou retire
@@ -145,8 +176,9 @@ function ns:ReserveTidyToggle(id)
 			if other == id then table.remove(frame.resTidyOrder, index); break end
 		end
 	else
-		local spec = self:SpecimenGet(id)
-		if not spec or spec.shiny or not self:SpecimenCanRelease(id) then return false end
+		-- 3.4.0 : tout se coche (protéger, échanger) ; « Relâcher (n) » laisse
+		-- de côté brillants, protégés et ce qui ne se relâche pas
+		if not self:SpecimenGet(id) then return false end
 		frame.resTidy[id] = true
 		frame.resTidyOrder[#frame.resTidyOrder + 1] = id
 	end
@@ -156,7 +188,7 @@ end
 
 function ns:ReserveTidyCancel()
 	local frame = Frame(self)
-	if frame then frame.resTidy, frame.resTidyOrder = nil, nil end
+	if frame then frame.resTidy, frame.resTidyOrder = nil, nil; Restore(frame) end
 	if self.RefreshJournal then self:RefreshJournal() end
 end
 
@@ -176,14 +208,14 @@ end
 
 -- « Relâcher (n) » : rend le nombre relâché, les paillettes gagnées
 function ns:ReserveTidyConfirm()
-	local list = self:ReserveTidySelection()
+	local list = self.ReserveSelectReleasable and self:ReserveSelectReleasable() or self:ReserveTidySelection()
 	local count, gain = 0, 0
 	for _, spec in ipairs(list) do
 		local got = self:SpecimenRelease(spec.id, true)
 		if got then count, gain = count + 1, gain + got end
 	end
 	local frame = Frame(self)
-	if frame then frame.resTidy, frame.resTidyOrder, frame.resPick = nil, nil, nil end
+	if frame then frame.resTidy, frame.resTidyOrder, frame.resPick = nil, nil, nil; Restore(frame) end
 	if count > 0 then self:Print(self:F("RES_TIDY_DONE", count, gain, self:Paillettes())) end
 	if self.RefreshJournal then self:RefreshJournal() end
 	return count, gain
@@ -216,12 +248,20 @@ function ns:ReserveTidyWarn()
 	local capture = self.CaptureData and self:CaptureData()
 	if not capture then return false end
 	if not self:ReserveNearFull() then
-		capture.tidyWarned = nil
+		capture.tidyWarned, capture.fullWarned = nil, nil
 		return false
 	end
-	if capture.tidyWarned or #self:ReserveTidyCandidates(1) == 0 then return false end
-	local said = self.CompanionSay and self:CompanionSay("RESERVE_NEAR", { cd = "reserve",
-		args = { self:SpecimenReserveCount(), self:ReserveCapacity() } })
+	if not self:ReserveFull() then capture.fullWarned = nil end
+	if #self:ReserveTidyCandidates(1) == 0 then return false end
+	local args = { self:SpecimenReserveCount(), self:ReserveCapacity() }
+	-- pleine : une fois (3.3.1) ; presque pleine : une fois avant
+	if self:ReserveFull() and not capture.fullWarned then
+		local said = self.CompanionSay and self:CompanionSay("RESERVE_FULL", { cd = "reservefull", args = args })
+		if said then capture.fullWarned, capture.tidyWarned = true, true end
+		return said and true or false
+	end
+	if capture.tidyWarned then return false end
+	local said = self.CompanionSay and self:CompanionSay("RESERVE_NEAR", { cd = "reserve", args = args })
 	if said then capture.tidyWarned = true end
 	return said and true or false
 end

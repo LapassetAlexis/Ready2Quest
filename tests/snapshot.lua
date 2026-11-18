@@ -1522,6 +1522,47 @@ Snap.scenes["qc-journal-reserve-full"] = function(T) return OwnDraws(T, function
 	return frame, "QuestCompanion : carnet, Réserve presque pleine (Faire de la place)"
 end) end
 
+-- 3.3.1 : la liste « Filtre » ouverte (tous, brillants, tailles, caractères)
+Snap.scenes["qc-journal-reserve-filter"] = function(T) return OwnDraws(T, function(T)
+	local frame = QCJournal(T, "reserve", function(ns)
+		for index = 1, 8 do
+			ns:SpecimenAdd({ npc = 3236, stars = index % 3 + 1, name = "Kodo des Tarides", origin = "capture", by = "Testeur",
+				zone = 1413, at = 1793000000 + index })
+		end
+	end)
+	-- 3.4.0 : le panneau de filtres, une taille cochée
+	T.QNS:ReserveToggleFilter("stars", 2)
+	T.QNS:ReservePanelOpen(true)
+	return frame, "QuestCompanion : carnet, Réserve, panneau de filtres ouvert"
+end) end
+
+-- 3.4.0 : la sélection par lot (barre de lot, fiche de la sélection)
+Snap.scenes["qc-journal-reserve-select"] = function(T) return OwnDraws(T, function(T)
+	local frame = QCJournal(T, "reserve", function(ns)
+		local npcs = { 3236, 3110, 3242, 3415, 3255 }
+		for index = 1, 46 do
+			ns:SpecimenAdd({ npc = npcs[index % #npcs + 1], stars = index % 3 + 1, name = "Spécimen " .. index,
+				origin = "capture", by = "Testeur", zone = 1413, at = 1793000000 + index })
+		end
+	end)
+	T.QNS:ReserveTidyStart()
+	local first = T.QNS:ReserveBrowseList("res")[8]
+	if first then T.QNS:SpecimenProtect(first.id, true); T.QNS:ReserveTidyToggle(first.id) end
+	return frame, "QuestCompanion : carnet, Réserve, Faire de la place (sélection par lot)"
+end) end
+
+-- 3.4.0 : l'Échoppe de la semaine (aides en stock, places, surnom, arrivage, commandes)
+Snap.scenes["qc-journal-shop"] = function(T) return OwnDraws(T, function(T)
+	local frame = QCJournal(T, "shop", function(ns)
+		ns:PaillettesAdd(64, "snap")
+		for index = 1, 6 do
+			ns:SpecimenAdd({ npc = 3236, stars = index % 3 + 1, name = "Kodo des Tarides", origin = "capture", by = "Testeur",
+				zone = 1413, at = 1793000000 + index })
+		end
+	end)
+	return frame, "QuestCompanion : carnet, Échoppe du dresseur (3.4)"
+end) end
+
 -- 3.1.0 : page Juke-box
 Snap.scenes["qc-journal-juke"] = function(T) return OwnDraws(T, function(T)
 	local frame = QCJournal(T, "juke")

@@ -840,8 +840,8 @@ do
 		local rv = f.res.reserve
 		TileOf(rv, ids.better):GetScript("OnClick")(TileOf(rv, ids.better))
 		rv.toCodex:GetScript("OnClick")(rv.toCodex)
-		Check("[J215] sobre : la page Réserve, « Réserve · 5 / 20 », vignettes, Mettre au Codex, sans erreur", f.kind == "reserve"
-			and f.res:IsShown() and f.header.title:GetText() == "Réserve · 5 / 20" and ShownTiles(rv) == 5
+		Check("[J215] sobre : la page Réserve, « Réserve · 5 / 50 », vignettes, Mettre au Codex, sans erreur", f.kind == "reserve"
+			and f.res:IsShown() and f.header.title:GetText() == "Réserve · 5 / 50" and ShownTiles(rv) == 5
 			and NS:SpecimenIsReference(ids.better) and NoErrors(), f.header.title:GetText())
 		J.Done()
 	end
@@ -855,17 +855,16 @@ do
 		local function ok(label, cond, extra) if not cond then bad[#bad + 1] = label .. (extra ~= nil and (" [" .. tostring(extra) .. "]") or "") end end
 		local f = NS:OpenReserve()
 		local rv = f.res.reserve
-		ok("5/20 : pas de bouton", not rv.tidyButton:IsShown())
-		-- 18/20 : presque pleine
-		for i = 1, 13 do NS:SpecimenAdd({ npc = 900, stars = 1, name = "Raptor", at = 1793000000 + i }) end
+		ok("5/50 : pas de bouton", not rv.tidyButton:IsShown())
+		-- 48/50 : presque pleine (3.3.1 : Réserve de 50)
+		for i = 1, 43 do NS:SpecimenAdd({ npc = 900, stars = 1, name = "Raptor", at = 1793000000 + i }) end
 		NS:RefreshJournal()
-		ok("18/20 : « Faire de la place »", NS:ReserveNearFull() and rv.tidyButton:IsShown() and rv.tidyButton:GetText() == "Faire de la place")
-		-- 3.2.1 : sa rangée propre, 8 px sous les filtres et 8 px au-dessus de la grille
-		local filtersBottom = select(5, rv.sort:GetPoint()) - NS.Theme.CONTROL_HEIGHT
-		local btnTop = select(5, rv.giftButton:GetPoint())
-		ok("bouton espacé : ni sur les filtres ni sur la grille", btnTop == rv.warnY and filtersBottom - btnTop >= 8
-			and (btnTop - rv.tidyButton:GetHeight()) - rv.gridTop >= 8 and rv.rows >= 4,
-			filtersBottom .. " / " .. btnTop .. " / " .. rv.gridTop .. " / " .. rv.rows)
+		ok("48/50 : « Faire de la place »", NS:ReserveNearFull() and rv.tidyButton:IsShown() and rv.tidyButton:GetText() == "Faire de la place")
+		-- 3.3.1 : en bas à gauche, « Échanger avec ma cible » juste après
+		local _, _, _, tidyX, tidyY = rv.tidyButton:GetPoint()
+		local _, _, _, tradeX, tradeY = rv.tradeButton:GetPoint()
+		ok("bouton en bas, à gauche de « Échanger avec ma cible »", tidyY == rv.bottomY and tradeY == rv.bottomY
+			and tradeX >= tidyX + rv.tidyButton:GetWidth() + 8 and not rv.hint:IsShown(), tostring(tidyX) .. "," .. tostring(tidyY) .. " / " .. tostring(tradeX) .. "," .. tostring(tradeY))
 		local list, gain = NS:ReserveTidyCandidates()
 		local protected = false
 		for _, spec in ipairs(list) do
@@ -882,7 +881,7 @@ do
 		rv.tidyButton:GetScript("OnClick")(rv.tidyButton)
 		local text = PreviewText(rv.preview.lines)
 		ok("sélection : la fiche liste, le total, « Relâcher (5) »", f.resTidy ~= nil and #f.resTidyOrder == 5
-			and rv.tidyYes:IsShown() and rv.tidyYes:GetText() == "Relâcher (5)" and text:find("Total : +5 paillettes", 1, true) ~= nil
+			and rv.tidyYes:IsShown() and rv.tidyYes:GetText() == "Relâcher (5)" and text:find("Total : +" .. (5 * NS:SpecimenReleaseValue({ stars = 1 })) .. " paillettes", 1, true) ~= nil
 			and not rv.tidyButton:IsShown() and not rv.release:IsShown(), text)
 		local dimmed, lit = 0, 0
 		for _, tile in ipairs(rv.tiles) do
@@ -895,7 +894,11 @@ do
 		local first = f.resTidyOrder[1]
 		NS:ReserveTidyToggle(first)
 		ok("clic : retiré (4)", not f.resTidy[first] and #f.resTidyOrder == 4 and rv.tidyYes:GetText() == "Relâcher (4)")
-		ok("brillant : refusé", NS:ReserveTidyToggle(ids.shiny) == false and not f.resTidy[ids.shiny])
+		-- 3.4.0 : un brillant se coche (protéger, échanger) mais « Relâcher » le laisse de côté
+		ok("brillant : coché, laissé de côté", NS:ReserveTidyToggle(ids.shiny) == true and f.resTidy[ids.shiny]
+			and rv.tidyYes:GetText() == "Relâcher (4)" and PreviewText(rv.preview.lines):find("Laissés de côté : 1", 1, true) ~= nil,
+			PreviewText(rv.preview.lines))
+		NS:ReserveTidyToggle(ids.shiny)
 		local count, balance = NS:SpecimenReserveCount(), NS:Paillettes()
 		Mock:Reset()
 		rv.tidyYes:GetScript("OnClick")(rv.tidyYes)
@@ -919,9 +922,15 @@ do
 		NS.CompanionSay = function(_, pool, opts) said[#said + 1] = pool .. " " .. table.concat(opts.args or {}, "/"); return true end
 		for i = 1, 4 do NS:SpecimenAdd({ npc = 900, stars = 1, name = "Raptor", at = 1794000000 + i }) end
 		NS.CompanionSay = savedSay
-		ok("presque pleine : le compagnon prévient une fois", #said == 1 and said[1] == "RESERVE_NEAR 18/20", table.concat(said, ", "))
+		ok("presque pleine (5 places) : le compagnon prévient une fois", #said == 1 and said[1] == "RESERVE_NEAR 45/50", table.concat(said, ", "))
+		-- 3.3.1 : pleine : il le dit aussi, une fois
+		said = {}
+		NS.CompanionSay = function(_, pool, opts) said[#said + 1] = pool .. " " .. table.concat(opts.args or {}, "/"); return true end
+		for i = 1, NS:ReserveCapacity() - NS:SpecimenReserveCount() + 1 do NS:SpecimenAdd({ npc = 900, stars = 1, name = "Raptor", at = 1795000000 + i }) end
+		NS.CompanionSay = savedSay
+		ok("pleine : le compagnon le dit une fois", #said == 1 and said[1] == "RESERVE_FULL 50/50", table.concat(said, ", "))
 		ok("réplique avec /qc tri", NS.L.COMP_SAY_RESERVE_NEAR:find("/qc tri", 1, true) ~= nil)
-		Check("[TIDY] Faire de la place : 18/20, les moins précieux, sélection, retrait, relâcher, annuler, /qc tri, avertissement",
+		Check("[TIDY] Faire de la place : 48/50, les moins précieux, sélection, retrait, relâcher, annuler, /qc tri, avertissement",
 			#bad == 0 and NoErrors(), table.concat(bad, " ; "))
 		J.Done()
 	end
@@ -936,9 +945,9 @@ do
 		NS:PaillettesAdd(126, "test")
 		NS:RefreshJournal()
 		-- 3.0.0 : le solde en pastille (chiffre, « paillettes »)
-		Check("[J215] la page Réserve dans la navigation, « Réserve · 5 / 20 », solde de paillettes", f.kind == "reserve"
+		Check("[J215] la page Réserve dans la navigation, « Réserve · 5 / 50 », solde de paillettes", f.kind == "reserve"
 			and f.sections.reserve ~= nil and pane:IsShown() and rv:IsShown() and not f.shopPane:IsShown()
-			and f.header.title:GetText() == "Réserve · 5 / 20" and pane.balance.value:GetText() == "126"
+			and f.header.title:GetText() == "Réserve · 5 / 50" and pane.balance.value:GetText() == "126"
 			and pane.balance.label:GetText() == "paillettes", f.header.title:GetText())
 		Check("[J215] une vignette par spécimen, la meilleure d'abord, perle des brillants", ShownTiles(rv) == 5
 			and rv.tiles[1].spec.id == ids.better and rv.tiles[1].stars[3].full and rv.tiles[1].label:GetText() == "Kodo"
@@ -947,18 +956,55 @@ do
 		NS:RefreshJournal(); NS:RefreshJournal()
 		Check("[J215] rafraîchi sans rien créer (vignettes réutilisées)", #Mock.frames == before, #Mock.frames .. "/" .. before)
 		local bad = {}
-		rv.sort:Choose("date")
+		-- 3.4.0 : la barre (tri, sens, recherche, vues) et le panneau de filtres
+		local bar = rv.bar
+		bar.sort:Choose("date")
 		if not (rv.tiles[1].spec.id == ids.shiny and f.resSort == "date") then bad[#bad + 1] = "date" end
-		rv.sort:Choose("name")
+		bar.dir:GetScript("OnClick")(bar.dir)
+		if not (f.resDesc == false and rv.tiles[1].spec.id ~= ids.shiny) then bad[#bad + 1] = "sens" end
+		bar.sort:Choose("name")
 		if rv.tiles[1].spec.name ~= "Grue" then bad[#bad + 1] = "nom" end
-		rv.species:Choose(900)
-		if not (ShownTiles(rv) == 2 and TileOf(rv, ids.low) and TileOf(rv, ids.mid)) then bad[#bad + 1] = "espèce" end
-		rv.species:Choose("all")
-		rv.show:Select("shiny")
-		if not (TileOf(rv, ids.shiny) and not TileOf(rv, ids.low)) then bad[#bad + 1] = "brillants" end
-		rv.show:Select("all")
-		rv.sort:Choose("stars")
-		Check("[J215] tris (date, nom) et filtres (espèce, brillants)", #bad == 0, table.concat(bad, ", "))
+		NS:ReserveSearch("raptor")
+		NS:RefreshJournal()
+		if not (ShownTiles(rv) == 2 and TileOf(rv, ids.low) and TileOf(rv, ids.mid)) then bad[#bad + 1] = "recherche" end
+		NS:ReserveSearch("")
+		NS:RefreshJournal()
+		-- le panneau : puces avec leur compteur, OU dans un groupe
+		bar.filters:GetScript("OnClick")(bar.filters)
+		local shinyChip
+		for _, chip in ipairs(rv.panel.chips.version) do if chip.value == "shiny" and chip:IsShown() then shinyChip = chip end end
+		local shinies = 0
+		for _, spec in ipairs(NS:SpecimenList({ where = "reserve" })) do if spec.shiny then shinies = shinies + 1 end end
+		if not (rv.panel:IsShown() and shinyChip and shinyChip.n == shinies and shinies > 0) then
+			bad[#bad + 1] = "panneau " .. tostring(rv.panel:IsShown()) .. " " .. tostring(shinyChip and shinyChip.n) .. " " .. tostring(#rv.panel.chips.version)
+				.. " " .. tostring(rv.panel.chips.version[2] and rv.panel.chips.version[2].rowY)
+		end
+		if shinyChip then shinyChip:GetScript("OnClick")(shinyChip) end
+		rv.panel.show:GetScript("OnClick")(rv.panel.show)
+		if not (not rv.panel:IsShown() and TileOf(rv, ids.shiny) and not TileOf(rv, ids.low)
+			and bar.filters:GetText() == "Filtres (1)" and rv.bar.pills[1]:IsShown()) then bad[#bad + 1] = "brillants" end
+		-- la pastille : clic, le groupe s'efface
+		rv.bar.pills[1]:GetScript("OnClick")(rv.bar.pills[1])
+		if f.resFilter.sets.version ~= nil then bad[#bad + 1] = "pastille" end
+		-- 3.3.1 : une taille, un caractère
+		-- (tailles et caractères tirés au hasard : fixés ici)
+		for _, spec in ipairs(NS:SpecimenList({ where = "reserve" })) do
+			local stored = NS:SpecimenGet(spec.id)
+			stored.size, stored.trait = "normal", "lazy"
+		end
+		NS:SpecimenGet(ids.low).size, NS:SpecimenGet(ids.mid).trait = "giant", "zen"
+		NS:SpecimenGet(ids.low).trait = "curious"
+		NS:ReserveToggleFilter("size", "giant")
+		if not (ShownTiles(rv) == 1 and TileOf(rv, ids.low)) then bad[#bad + 1] = "taille" end
+		NS:ReserveClearFilter()
+		NS:ReserveToggleFilter("trait", "zen")
+		if not (TileOf(rv, ids.mid) and not TileOf(rv, ids.low)) then bad[#bad + 1] = "caractère" end
+		-- les vues
+		bar.views:Choose("better")
+		if not (ShownTiles(rv) == 1 and TileOf(rv, ids.better) and bar.views.text:GetText() == "Vues") then bad[#bad + 1] = "vue" end
+		NS:ReserveClearFilter()
+		bar.sort:Choose("stars")
+		Check("[J215] tris (date, sens, nom), recherche, panneau (brillants), pastille, taille, caractère, vues", #bad == 0, table.concat(bad, ", "))
 		-- fiche : origine, meilleur que le Codex, bouton grisé et pourquoi
 		TileOf(rv, ids.better):GetScript("OnClick")(TileOf(rv, ids.better))
 		local p = rv.preview
@@ -976,38 +1022,151 @@ do
 			and PreviewText(p.lines):find("Avant la 3.0", 1, true) ~= nil)
 		-- Relâcher : confirmation dans la page
 		TileOf(rv, ids.low):GetScript("OnClick")(TileOf(rv, ids.low))
-		local label = rv.release.qcEnabled == true and (rv.release:GetText() or ""):find("+1", 1, true) ~= nil
+		local label = rv.release.qcEnabled == true and (rv.release:GetText() or ""):find("+2", 1, true) ~= nil
 		local balance = NS:Paillettes()
 		rv.release:GetScript("OnClick")(rv.release)
 		local asking = f.resConfirm == ids.low and rv.confirm:IsShown() and rv.confirmYes:IsShown() and not rv.release:IsShown()
 			and NS:SpecimenGet(ids.low) ~= nil and NS:Paillettes() == balance
 		rv.confirmNo:GetScript("OnClick")(rv.confirmNo)
-		Check("[J215] Relâcher (+1) : 1er clic, la confirmation dans la fiche, rien relâché ; Annuler", label and asking
+		Check("[J215] Relâcher (+2) : 1er clic, la confirmation dans la fiche, rien relâché ; Annuler", label and asking
 			and f.resConfirm == nil and rv.release:IsShown() and not rv.confirm:IsShown())
 		rv.release:GetScript("OnClick")(rv.release)
 		rv.confirmYes:GetScript("OnClick")(rv.confirmYes)
-		Check("[J215] confirmé : relâché, +1 paillette, le choix passe au suivant", NS:SpecimenGet(ids.low) == nil
-			and NS:Paillettes() == balance + 1 and f.resPick ~= ids.low and f.resPick ~= nil and not rv.confirm:IsShown())
+		Check("[J215] confirmé : relâché, +2 paillettes, le choix passe au suivant", NS:SpecimenGet(ids.low) == nil
+			and NS:Paillettes() == balance + 2 and f.resPick ~= ids.low and f.resPick ~= nil and not rv.confirm:IsShown())
 		-- Localiser l'espèce
 		local pins = PinApi(OTHER)
 		TileOf(rv, ids.mid):GetScript("OnClick")(TileOf(rv, ids.mid))
 		rv.locate:GetScript("OnClick")(rv.locate)
-		local located = pins.set == 1 and pins.point.map == ZONE and pins.opened == ZONE and rv.locate:GetText() == "Effacer le repère"
+		local located = pins.set == 1 and pins.point.map == ZONE and pins.opened == ZONE and rv.locate.tipTitle == "Effacer le repère"
 		TileOf(rv, ids.shiny):GetScript("OnClick")(TileOf(rv, ids.shiny))
 		Check("[J215] Localiser l'espèce : repère et carte ; espèce sans point : grisé", located and rv.locate.qcEnabled == false
 			and rv.locate.disabledTip ~= nil)
 		-- Réserve pleine
-		local quiet = (rv.warn:GetText() or "") == ""
-		for _ = 1, 17 do NS:SpecimenAdd({ npc = 904, stars = 1, name = "Sanglier" }) end
+		local quiet = not (rv.bar.count:GetText() or ""):find("pleine", 1, true)
+		for _ = 1, NS:ReserveCapacity() - NS:SpecimenReserveCount() do NS:SpecimenAdd({ npc = 904, stars = 1, name = "Sanglier" }) end
 		NS:RefreshJournal()
 		Check("[J215] Réserve pleine : le dire (rien avant)", quiet and NS:ReserveFull()
-			and (rv.warn:GetText() or ""):find("Réserve pleine", 1, true) ~= nil)
+			and (rv.bar.count:GetText() or "") == NS:F("RES_COUNT_FULL", NS:ReserveCapacity(), NS:ReserveCapacity()))
 		-- vide
 		NS:DB().capture.specimens, NS:DB().capture.codex = {}, {}
 		NS:DB().capture.specDirty = true    -- le Codex se refait d'après les fiches : Réserve vide
 		NS:RefreshJournal()
 		Check("[J215] Réserve vide : expliquée, fiche vide ; aucune erreur", rv.empty:IsShown() and not rv.release:IsShown()
 			and NoErrors(), next(NS.errors or {}))
+		J.Done()
+	end
+
+	-- 3.4.0 : sélection par lot, fiche (atout, lien, protéger, surnom), Codex lié, commande
+	do
+		Say("-- carnet 3.4 : sélection, lot, fiche, surnom, Codex lié, commande")
+		J.Reset("azeroth")
+		local ids = FillReserve()
+		local bad = {}
+		local function ok(label, cond, extra) if not cond then bad[#bad + 1] = label .. (extra ~= nil and (" [" .. tostring(extra) .. "]") or "") end end
+		local f = NS:OpenReserve()
+		local rv = f.res.reserve
+		NS:PaillettesAdd(100, "test")
+		NS:RefreshJournal()
+		-- fiche : surnom ou nom, profil, atout, lien, origine en dernier
+		NS:SpecimenGet(ids.mid).trait, NS:SpecimenGet(ids.mid).size = "zen", "large"
+		NS:ReservePick(ids.mid)
+		local text = PreviewText(rv.preview.lines)
+		ok("fiche : profil, atout, lien, origine", text:find("Grand (", 1, true) and text:find("Atout : ", 1, true)
+			and text:find("Lien : Inconnu (0 / 10)", 1, true) and text:find("Capturé par Dyokrion", 1, true)
+			and rv.toCodex:IsShown() and rv.protect:IsShown() and rv.release:IsShown() and rv.locate:IsShown() and rv.nick:IsShown(), text)
+		-- protéger depuis la fiche : cadenas, Relâcher grisé et pourquoi
+		rv.protect:GetScript("OnClick")(rv.protect)
+		local tile = TileOf(rv, ids.mid)
+		ok("protéger : cadenas sur la vignette, relâcher grisé", NS:SpecimenProtected(ids.mid) and tile and tile.lock:IsShown()
+			and rv.release.qcEnabled == false and rv.release.disabledTip == NS.L.SPEC_WHY_protected
+			and rv.protect:GetText() == "Enlever la protection")
+		rv.protect:GetScript("OnClick")(rv.protect)
+		ok("déprotéger", not NS:SpecimenProtected(ids.mid) and rv.release.qcEnabled == true)
+		-- surnom : 15 paillettes, dans la fiche
+		rv.nick:GetScript("OnClick")(rv.nick)
+		ok("surnom : le champ et « Donner (15) »", f.resNick == ids.mid and rv.nickBox:IsShown() and rv.nickYes:GetText() == "Donner (15)"
+			and not rv.toCodex:IsShown())
+		rv.nickBox:SetText("Bob")
+		local balance = NS:Paillettes()
+		rv.nickYes:GetScript("OnClick")(rv.nickYes)
+		ok("surnom donné : −15, la fiche et la vignette le montrent", NS:SpecimenNick(ids.mid) == "Bob" and NS:Paillettes() == balance - 15
+			and rv.preview.title:GetText() == "Bob" and TileOf(rv, ids.mid).label:GetText() == "Bob" and f.resNick == nil)
+		-- recherche par surnom
+		NS:ReserveSearch("bob")
+		NS:RefreshJournal()
+		ok("recherche par surnom", ShownTiles(rv) == 1 and TileOf(rv, ids.mid))
+		NS:ReserveClearFilter()
+		-- Codex lié : « Mettre au Codex » demande d'abord
+		local ref = NS:SpecimenReference(900, false)
+		NS:SpecimenGet(ref.id).bond = { p = 12 }
+		NS:ReservePick(ids.mid)
+		rv.toCodex:GetScript("OnClick")(rv.toCodex)
+		ok("Codex lié : la question dans la fiche, rien d'échangé", f.resCodexAsk == ids.mid and rv.confirm:IsShown()
+			and rv.confirmYes:GetText() == "Remplacer" and NS:SpecimenIsReference(ref.id))
+		rv.confirmYes:GetScript("OnClick")(rv.confirmYes)
+		ok("Remplacer : il entre au Codex, l'ancien (lié) en Réserve", NS:SpecimenIsReference(ids.mid) and not NS:SpecimenIsReference(ref.id)
+			and f.resCodexAsk == nil)
+		-- sélection : Ctrl+clic hors mode, puis Maj+clic (plage), Tout (n)
+		NS:ReserveClearFilter()
+		local list = f.resList
+		local savedCtrl, savedShift = _G.IsControlKeyDown, _G.IsShiftKeyDown
+		_G.IsControlKeyDown, _G.IsShiftKeyDown = function() return true end, function() return false end
+		TileOf(rv, list[1].id):GetScript("OnClick")(TileOf(rv, list[1].id))
+		_G.IsControlKeyDown, _G.IsShiftKeyDown = function() return false end, function() return true end
+		TileOf(rv, list[3].id):GetScript("OnClick")(TileOf(rv, list[3].id))
+		_G.IsControlKeyDown, _G.IsShiftKeyDown = savedCtrl, savedShift
+		ok("Ctrl+clic ouvre la sélection, Maj+clic coche la plage", f.resTidy ~= nil and #f.resTidyOrder == 3
+			and f.resTidy[list[1].id] and f.resTidy[list[2].id] and f.resTidy[list[3].id], #(f.resTidyOrder or {}))
+		ok("barre de lot à la place de la rangée du bas ; coche sur les vignettes", rv.batch.count:IsShown()
+			and rv.batch.count:GetText() == "3 choisi(s)" and rv.batch.protect:IsShown() and not rv.tradeButton:IsShown()
+			and TileOf(rv, list[1].id).check:IsShown() and rv.bar.select:GetText() == "Tout (" .. #list .. ")")
+		rv.bar.select:GetScript("OnClick")(rv.bar.select)
+		ok("Tout (n)", #f.resTidyOrder == #list)
+		ok("Échanger : plus de 3, grisé et pourquoi", rv.batch.trade.qcEnabled == false
+			and rv.batch.trade.disabledTip == NS.L.RES_BATCH_TRADE_MAX)
+		rv.batch.protect:GetScript("OnClick")(rv.batch.protect)
+		local all = true
+		for _, spec in ipairs(list) do if not NS:SpecimenProtected(spec.id) then all = false end end
+		local text2 = PreviewText(rv.preview.lines)
+		ok("Protéger : tous protégés ; la fiche : rien à relâcher, laissés de côté", all and rv.tidyYes.qcEnabled == false
+			and text2:find("Laissés de côté : " .. #list, 1, true) and rv.batch.protect:GetText() == "Déprotéger", text2)
+		rv.batch.protect:GetScript("OnClick")(rv.batch.protect)
+		rv.batch.cancel:GetScript("OnClick")(rv.batch.cancel)
+		ok("Annuler : la sélection se ferme, la rangée du bas revient", f.resTidy == nil and rv.tradeButton:IsShown()
+			and not rv.batch.count:IsShown())
+		-- « Faire de la place » : vue Relâchables, tri par valeur, puis le filtre d'avant revient
+		NS:ReserveToggleFilter("stars", 1)
+		NS:ReserveTidyStart()
+		ok("Faire de la place : vue Relâchables, tri valeur croissante", f.resViewId == "releasable" and f.resSort == "value"
+			and f.resDesc == false and f.resTidy ~= nil)
+		NS:ReserveTidyCancel()
+		ok("Annuler : le filtre et le tri d'avant", f.resFilter.sets.stars and f.resFilter.sets.stars[1] and f.resSort ~= "value")
+		NS:ReserveClearFilter()
+		-- Ma vue
+		NS:ReserveToggleFilter("version", "shiny")
+		NS:ReservePanelOpen(true)
+		rv.panel.save:GetScript("OnClick")(rv.panel.save)
+		NS:ReserveClearFilter()
+		rv.bar.views:Choose("mine")
+		ok("Ma vue : gardée, rappelée", f.resFilter.sets.version and f.resFilter.sets.version.shiny and f.resViewId == "mine")
+		NS:ReservePanelOpen(false)
+		NS:ReserveClearFilter()
+		-- une commande : « Livrer » ouvre la Réserve filtrée, livre, +n paillettes
+		local orders = NS:ShopOrders()
+		orders.list = { { kind = "zone", zone = ZONE, reward = 14 } }
+		NS:ShopOrderOpen(1)
+		local target
+		for _, spec in ipairs(f.resList) do if NS:SpecimenCanRelease(spec.id) then target = spec.id; break end end
+		if target then NS:ReservePick(target) end
+		local before = NS:Paillettes()
+		ok("commande : Réserve filtrée, bouton « Livrer »", f.resOrder == 1 and target and rv.release.order
+			and (rv.release:GetText() or ""):find("Livrer (+14", 1, true), rv.release:GetText())
+		if target then rv.release:GetScript("OnClick")(rv.release) end
+		ok("livrée : il part, +14, la commande est faite", target and NS:SpecimenGet(target) == nil and NS:Paillettes() == before + 14
+			and orders.list[1].done and f.resOrder == nil)
+		Check("[R34UI] Réserve 3.4 : fiche, protéger, surnom, Codex lié, sélection (Ctrl, Maj, Tout), lot, Faire de la place, Ma vue, commande",
+			#bad == 0 and NoErrors(), table.concat(bad, " ; "))
 		J.Done()
 	end
 
@@ -1018,7 +1177,7 @@ do
 		local f = NS:OpenReserve("shop")
 		NS:PaillettesAdd(10, "test")
 		Check("[J215] sobre : l'onglet Échoppe, un achat, sans erreur", f.kind == "shop" and f.shopPane:IsShown()
-			and NS:ShopBuy("appat") == true and NS:Paillettes() == 5 and NoErrors())
+			and NS:ShopBuy("appat") == true and NS:Paillettes() == 6 and NoErrors())
 		J.Done()
 	end
 
@@ -1031,12 +1190,22 @@ do
 		local sv = f.shopPane
 		Check("[J215] l'onglet Échoppe", f.kind == "shop" and sv:IsShown() and not pane:IsShown()
 			and f.header.title:GetText() == "Échoppe du dresseur")
+		-- 3.4.0 : les deux cosmétiques de la 3.0 dans l'arrivage de cette semaine
+		do
+			local n = 0
+			for _, item in ipairs(NS.PAILLETTES_SHOP) do if item.arrival then n = n + 1 end end
+			NS.shopArrivalCache = { week = NS:WeeklyId(), n = n, list = { NS:ShopItem("frame_glitter"), NS:ShopItem("bg_starfall") } }
+			NS:RefreshJournal()
+		end
 		local rows = {}
 		for _, row in ipairs(sv.rows) do rows[row.item.id] = row end
-		Check("[J215] articles et prix de la table ; solde à 0 : grisé, il manque n", #sv.rows == #NS.PAILLETTES_SHOP
-			and rows.appat.item.price == 5 and rows.lasso.item.price == 15 and rows.sifflet.item.price == 40
-			and rows.slots.item.price == 50 and rows.appat.buy.qcEnabled == false
-			and rows.appat.buy.disabledTip == "Il te manque 5 paillettes" and not rows.appat.buy:IsEnabled() and rows.appat.state == "short"
+		-- 3.4.0 : les articles hors arrivage, puis les deux de l'arrivage
+		local regular = 0
+		for _, item in ipairs(NS.PAILLETTES_SHOP) do if not item.arrival then regular = regular + 1 end end
+		Check("[J215] articles et prix de la table ; solde à 0 : grisé, il manque n", #sv.rows == regular + NS.SHOP_ARRIVALS
+			and rows.appat.item.price == 4 and rows.lasso.item.price == 12 and rows.sifflet.item.price == 35
+			and rows.slots.item.price == 40 and rows.slots.item.slots == 10 and rows.appat.buy.qcEnabled == false
+			and rows.appat.buy.disabledTip == "Il te manque 4 paillettes" and not rows.appat.buy:IsEnabled() and rows.appat.state == "short"
 			and rows.appat.buy.disabledLook == true)
 		NS:PaillettesAdd(200, "test")
 		NS:RefreshJournal()
@@ -1050,26 +1219,26 @@ do
 		Mock:Reset()
 		rows.appat.buy:GetScript("OnClick")(rows.appat.buy)
 		rows.appat.yes:GetScript("OnClick")(rows.appat.yes)
-		Check("[J215] achat : aide dans la besace, −5, ligne dans le chat, solde affiché", (items.appat or 0) == had + 1
-			and NS:Paillettes() == 195 and Mock:Output():find("Échoppe du dresseur", 1, true) ~= nil and sv.balance.value:GetText() == "195")
+		Check("[J215] achat : aide dans la besace, −4, ligne dans le chat, solde affiché", (items.appat or 0) == had + 1
+			and NS:Paillettes() == 196 and Mock:Output():find("Échoppe du dresseur", 1, true) ~= nil and sv.balance.value:GetText() == "196")
 		items.sifflet = 3
 		NS:RefreshJournal()
 		Check("[J215] besace pleine : grisé, la limite dite", rows.sifflet.state == "full" and rows.sifflet.buy.qcEnabled == false
 			and rows.sifflet.buy.disabledTip == "Ta besace est pleine" and select(2, NS:ShopBuy("sifflet")) == "full")
-		Check("[J215] places de Réserve : +5", NS:ShopBuy("slots") == true and NS:ReserveCapacity() == 25 and NS:Paillettes() == 145)
+		Check("[J215] places de Réserve : +10", NS:ShopBuy("slots") == true and NS:ReserveCapacity() == 60 and NS:Paillettes() == 156)
 		-- cosmétique : au compte, condition « Échoppe du dresseur : n paillettes »
 		local frameDef
 		for _, def in ipairs(NS.COMPANION_FRAMES) do if def.id == "shop_glitter" then frameDef = def end end
 		Check("[J215] cadre de l'échoppe : verrouillé, condition dite ; acheté : débloqué pour le compte", frameDef
 			and not NS:CompanionIsUnlocked("frame", frameDef) and NS:CompanionLockText(frameDef) == "Échoppe du dresseur : 80 paillettes"
 			and NS:ShopBuy("frame_glitter") == true and NS:CompanionIsUnlocked("frame", frameDef)
-			and NS:DB().capture.shopOwned.shop_glitter == true and NS:Paillettes() == 65)
+			and NS:DB().capture.shopOwned.shop_glitter == true and NS:Paillettes() == 76)
 		NS:RefreshJournal()
-		Check("[J215] déjà à toi : « Acquis », grisé ; le fond (60) acheté, le lasso (15) : il manque", rows.frame_glitter.state == "owned"
+		Check("[J215] déjà à toi : « Acquis », grisé ; le fond (60) acheté, le sifflet (35) : il manque", rows.frame_glitter.state == "owned"
 			and rows.frame_glitter.buy:GetText() == "Acquis" and rows.frame_glitter.buy.qcEnabled == false
 			and rows.frame_glitter.buy.disabledTip == "Déjà obtenu"
 			and select(2, NS:ShopBuy("frame_glitter")) == "owned" and NS:ShopBuy("bg_starfall") == true
-			and NS:Paillettes() == 5 and select(2, NS:ShopBuy("lasso")) == "short")
+			and NS:Paillettes() == 16 and (function() NS:CaptureData().items.sifflet = 0; return select(2, NS:ShopBuy("sifflet")) == "short" end)())
 		NS:DB().companionCapture = false
 		NS:RefreshJournal()
 		Check("[J215] capture coupée : pas d'aides", rows.appat.state == "off" and rows.appat.buy.qcEnabled == false)
