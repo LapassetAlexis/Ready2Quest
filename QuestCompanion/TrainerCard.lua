@@ -1360,22 +1360,24 @@ end
 -- 2.8.0 : fenêtre agrandie (bloc des hauts faits) ; le choix du titre passe
 -- sous l'en-tête (« Titre affiché : … »), loin du bouton de fermeture ; le
 -- portrait du compagnon fait 206 px
--- 3.6.0 : une rangée de plus (médailles de type), sous les chiffres
-local WIN_W, WIN_H, FOOT_H, PAD = 780, 614, 52, 20
+-- 3.6.0 : une rangée de plus (médailles de type) ; bêta 2 (en jeu : « très
+-- dense ») : fiche plus haute, lignes plus espacées, médailles sous le
+-- compagnon (la colonne de gauche avait de la place), blocs séparés
+local WIN_W, WIN_H, FOOT_H, PAD = 780, 664, 52, 20
 local MODEL_W, MODEL_H = 206, 206
 local COL_X = PAD + MODEL_W + 20
 local COL_W = WIN_W - COL_X - PAD
 local TILE_GAP = 10
 local TILE_W, TILE_H = math.floor((WIN_W - 2 * PAD - 2 * TILE_GAP) / 3), 64
 local TITLE_Y, BODY_Y = -68, -96          -- rangée du titre affiché, haut des colonnes
-local LINES_W, LINE_STEP = 304, 18        -- chiffres (1-5), à gauche des sceaux
+local LINES_W, LINE_STEP = 304, 21        -- chiffres (1-5), à gauche des sceaux
 local BADGE_X = COL_X + LINES_W + 10
-local MEDAL_Y = -276                      -- 3.6.0 : médailles de type (colonne de droite)
-local MEDAL_SIZE, MEDAL_STEP = 18, 26
-local FEATS_Y = -298                      -- bloc des hauts faits (colonne de droite)
+local MEDAL_Y = -396                      -- 3.6.0 : médailles de type (sous le compagnon)
+local MEDAL_SIZE, MEDAL_STEP = 20, 26
+local FEATS_Y = -312                      -- bloc des hauts faits (colonne de droite)
 local FEAT_GAP, FEAT_H = 8, 52
 local FEAT_W = math.floor((COL_W - 2 * FEAT_GAP) / 3)
-local SHOW_Y = -426
+local SHOW_Y = -472
 ns.TRAINER_LAYOUT = { width = WIN_W, height = WIN_H, footer = FOOT_H, pad = PAD, titleY = TITLE_Y, bodyY = BODY_Y,
 	colX = COL_X, colW = COL_W, model = MODEL_W, featsY = FEATS_Y, showY = SHOW_Y, featW = FEAT_W, featH = FEAT_H,
 	medalY = MEDAL_Y, medalStep = MEDAL_STEP, styleW = 170 }
@@ -1484,7 +1486,7 @@ end
 local function BuildFeatBar(self, parent, index, cat)
 	local col, row = (index - 1) % 2, math.floor((index - 1) / 2)
 	local half = math.floor((COL_W - 16) / 2)
-	local x, y = COL_X + col * (half + 16), FEATS_Y - 24 - FEAT_H - 10 - row * 18
+	local x, y = COL_X + col * (half + 16), FEATS_Y - 24 - FEAT_H - 14 - row * 22
 	local bar = { cat = cat }
 	bar.label = Line(parent, Theme.F_SMALL, Theme.MUTED_LIGHT, 96)
 	bar.label:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
@@ -1676,14 +1678,14 @@ function ns:EnsureTrainerWindow()
 
 	-- 3.6.0 : médailles de type, une par type : l'icône de la famille et un
 	-- losange du socle à la teinte du palier (au trait : paliers 1 et 2)
-	frame.medalLabel = Line(body, Theme.F_SMALL, Theme.MUTED_LIGHT, 130)
-	frame.medalLabel:SetPoint("TOPLEFT", body, "TOPLEFT", COL_X, MEDAL_Y - 3)
-	frame.medalLabel:SetText(L.TRAINER_MEDALS)
+	frame.medalLabel = Theme.CreateSection(body, L.TRAINER_MEDALS)
+	frame.medalLabel:SetPoint("TOPLEFT", body, "TOPLEFT", PAD, MEDAL_Y)
+	frame.medalLabel:SetWidth(MODEL_W)
 	frame.medals = {}
 	for index, key in ipairs(ns.CREATURE_TYPES or {}) do
 		local medal = CreateFrame("Frame", nil, body)
 		medal:SetSize(MEDAL_SIZE, MEDAL_SIZE)
-		medal:SetPoint("TOPLEFT", body, "TOPLEFT", COL_X + 134 + (index - 1) * MEDAL_STEP, MEDAL_Y)
+		medal:SetPoint("TOPLEFT", body, "TOPLEFT", PAD + (index - 1) * MEDAL_STEP, MEDAL_Y - 24)
 		medal.icon = medal:CreateTexture(nil, "ARTWORK")
 		medal.icon:SetAllPoints()
 		medal.icon:SetTexCoord(0.08, 0.92, 0.08, 0.92)
