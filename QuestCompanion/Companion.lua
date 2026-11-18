@@ -61,6 +61,7 @@ ns.COMPANION_STATE = { on = NEED_ON, full = NEED_FULL, max = NEED_MAX, minutes =
 	restSeconds = 120,     -- Reposé : 2 minutes cumulées au repos (ville, auberge, camp)
 	huntKills = 15, huntWindow = 600,   -- Éveillé en chasse : 15 tuées ou capturées en 10 minutes
 	wishGap = 1200,        -- une nouvelle envie 20 minutes après la précédente
+	wishGrace = 120,       -- pas d'envie dans les 2 minutes après la connexion
 	wishSoon = 15,         -- tous actifs : l'envie vise celui qui a moins de 15 minutes
 	wishBond = 1, wishBondDaily = 3,
 	schema = 2 }
@@ -355,7 +356,7 @@ local FR = {
 	COMP_MSG_UNLOCK_ORN    = "Compagnon : nouvel ornement débloqué, %s.",
 	COMP_MSG_EVOLVE        = "Compagnon : %s devient %s !",
 	COMP_MSG_STATUS        = "%s (%s, %s) — %s",
-	COMP_MSG_NEEDS         = "Faim %d · Énergie %d · Moral %d · Curiosité %d",
+	COMP_MSG_NEEDS         = "%s %s · %s %s · %s %s",
 	COMP_MSG_COLLECTION    = "Apparences %d/%d · Ornements %d/%d",
 	COMP_MSG_RENAMED       = "Ton compagnon s'appelle maintenant %s.",
 	COMP_MSG_NAME_BAD      = "Donne-lui un nom : /qc compagnon nom <nom>",
@@ -531,7 +532,7 @@ local EN = {
 	COMP_MSG_UNLOCK_ORN    = "Companion: new ornament unlocked, %s.",
 	COMP_MSG_EVOLVE        = "Companion: %s becomes %s!",
 	COMP_MSG_STATUS        = "%s (%s, %s) — %s",
-	COMP_MSG_NEEDS         = "Hunger %d · Energy %d · Mood %d · Curiosity %d",
+	COMP_MSG_NEEDS         = "%s %s · %s %s · %s %s",
 	COMP_MSG_COLLECTION    = "Appearances %d/%d · Ornaments %d/%d",
 	COMP_MSG_RENAMED       = "Your companion is now called %s.",
 	COMP_MSG_NAME_BAD      = "Give it a name: /qc compagnon nom <name>",
@@ -1277,7 +1278,10 @@ function ns:CompanionSay(pool, opts)
 	-- tutoriel reprendra son étape après la bulle
 	if seq and not opts.seq then
 		if seq.kind == "tuto" then
-			seq.index = math.max(0, seq.index - 1)
+			-- 3.5.0 : on ne recule que si la bulle coupée était bien celle du tutoriel
+			if self.companionBubblePrio == PRIORITY.tuto and self.companionBubbleUntil and now < self.companionBubbleUntil then
+				seq.index = math.max(0, seq.index - 1)
+			end
 			seq.nextAt = now + BUBBLE_TIME
 		else
 			rt.seq = nil
@@ -4314,6 +4318,10 @@ end
 -- ---------------------------------------------------------------------------
 -- Commande : /qc compagnon [nom <nom> | caresse | apparence | muet | tuto [passer]]
 -- ---------------------------------------------------------------------------
+local function StateText(self, key)
+	local m = self:CompanionStateMinutes(key)
+	return m > 0 and self:F("COMP_STATE_MIN", math.ceil(m)) or L.COMP_STATE_OFF
+end
 function ns:CompanionStatusLine()
 	local data = self:CompanionData()
 	local apps, orns = 0, 0
@@ -4322,7 +4330,9 @@ function ns:CompanionStatusLine()
 	local n = data.needs
 	return self:F("COMP_MSG_STATUS", self:CompanionName(), L[self:CompanionCurrentAppearance().label],
 			self:CompanionStageLabel(), L["COMP_MOOD_" .. self:CompanionMood()]),
-		self:F("COMP_MSG_NEEDS", math.floor(n.hunger + 0.5), math.floor(n.energy + 0.5), math.floor(n.mood + 0.5), math.floor(n.curiosity + 0.5)),
+		-- 3.5.0 : les trois états et leurs minutes
+		self:F("COMP_MSG_NEEDS", L.COMP_STATE_hunger, StateText(self, "hunger"), L.COMP_STATE_energy, StateText(self, "energy"),
+			L.COMP_STATE_curiosity, StateText(self, "curiosity")),
 		self:F("COMP_MSG_COLLECTION", apps, #ns.COMPANION_APPEARANCES, orns, #ns.COMPANION_ORNAMENTS)
 end
 

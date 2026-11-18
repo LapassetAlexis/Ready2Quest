@@ -1,5 +1,5 @@
 -- Compagnon : ce qu'il gagne.
--- 1. Évolution par le bonheur (le niveau ouvre, quatre envies à 70 % font
+-- 1. Évolution par le bonheur (le niveau ouvre, une envie comblée depuis fait
 --    franchir), objectifs « action + récompense », coffres de zone (palier,
 --    choix d'un objet, zone dorée, /r2q coffre).
 -- 2. QC 1.2.0 : neuf créatures (coffres, carte d'auberge, missions) et deux
@@ -96,49 +96,54 @@ do
 	Mock:Fire("PLAYER_ENTERING_WORLD", true, false)
 	local data = NS:CompanionData()
 	S.ok("premier relevé : stade posé sans attente", data.stage == 1 and data.stageReady == nil, tostring(data.stage) .. "/" .. tostring(data.stageReady) .. " lvl " .. tostring(Mock.world.level))
-	H.SetNeeds(40)
+	H.SetNeeds(70)
 	Mock.world.level = 10
 	Mock:Fire("PLAYER_LEVEL_UP", 10)
-	S.ok("niveau 10 atteint, envies basses : prêt, pas encore évolué", data.stage == 1 and data.stageReady == 2,
+	S.ok("niveau 10 atteint, aucune envie comblée : prêt, pas encore évolué", data.stage == 1 and data.stageReady == 2,
 		tostring(data.stage) .. "/" .. tostring(data.stageReady))
-	S.ok("annoncé : prêt à devenir…, et comment", Mock:Output():find("est prêt à devenir", 1, true) ~= nil, Mock:Output())
-	S.ok("heureux = 4 envies à 70 %", NS.COMPANION_HAPPY_MIN == 70 and not NS:CompanionIsHappy())
+	S.ok("annoncé : prêt à devenir…, et comment", Mock:Output():find("est prêt à devenir", 1, true) ~= nil
+		and Mock:Output():find("Comble une de ses envies", 1, true) ~= nil, Mock:Output())
+	S.ok("heureux = une envie comblée depuis le palier (pas encore)", data.stageWish == nil and not NS:CompanionIsHappy())
 	local unlocks = NS:CompanionNextUnlocks()
 	local ready
 	for _, item in ipairs(unlocks) do if item.kind == "stage" then ready = item end end
-	S.ok("contrat : stade prêt, stat « happy »", ready and ready.stat == "happy" and ready.ready == true
-		and ready.need == 4 and ready.have < 4, ready and ready.stat)
+	S.ok("contrat : stade prêt, stat « wish », une envie à combler", ready and ready.stat == "wish" and ready.ready == true
+		and ready.need == 1 and ready.have == 0, ready and ready.stat)
 	local hints = table.concat(NS:CompanionHappyHints(), " | ")
-	S.ok("survol : chaque envie et comment la remplir", hints:find("Faim : 40 %", 1, true)
-		and hints:find("mange ou bois", 1, true) and hints:find("Curiosité", 1, true), hints)
+	S.ok("survol : chaque état et comment l'obtenir", hints:find("Repu : un repas", 1, true)
+		and hints:find("Reposé : deux minutes en ville", 1, true) and hints:find("Éveillé", 1, true), hints)
 	-- objectif : l'action, le stade en récompense
 	local goal = H.Find("comp:stage")
-	S.ok("objectif « Rends … heureux pour évoluer » en tête", goal and goal.label:find("heureux pour évoluer", 1, true)
+	S.ok("objectif « Comble une envie de … pour qu'il évolue » en tête", goal and goal.label:find("pour qu'il évolue", 1, true)
 		and goal.ratio > 1 and goal.rewards and goal.rewards[1]:find("devient", 1, true), goal and goal.label)
-	-- trois envies comblées : toujours prêt
-	local needs = data.needs
-	needs.hunger, needs.energy, needs.mood = 90, 90, 90
-	NS:CompanionAdd("mood", 1)
+	-- les trois états actifs, sans envie comblée : toujours prêt
+	H.SetNeeds(100)
+	NS:CompanionCheckStage(nil, true)
 	S.done()
-	S = Scenario("[EVO] évolue quand les quatre envies sont comblées ; jamais en arrière ; somnolent pas heureux")
-	S.ok("trois envies sur quatre : attend encore", data.stage == 1 and data.stageReady == 2)
-	-- la dernière : évolution
-	NS:CompanionAdd("curiosity", 40)
-	S.ok("quatrième envie comblée : évolution", data.stage == 2 and data.stageReady == nil)
+	S = Scenario("[EVO] évolue quand une envie est comblée ; jamais en arrière ; somnolent pas heureux")
+	S.ok("trois états actifs, aucune envie comblée : attend encore", data.stage == 1 and data.stageReady == 2)
+	-- son envie (Repu) comblée : évolution
+	data.needs.hunger = 70
+	data.wish = { key = "hunger" }
+	NS:CompanionGrant("hunger")
+	S.ok("envie comblée : évolution", data.stage == 2 and data.stageReady == nil and data.wish == nil,
+		tostring(data.stage) .. "/" .. tostring(data.stageReady))
 	S.ok("évolution annoncée", Mock:Output():find("devient", 1, true) ~= nil)
-	-- une envie qui baisse ne fait jamais régresser
+	-- un état qui s'éteint ne fait jamais régresser
 	NS:CompanionAdd("hunger", -80)
 	S.ok("jamais de retour en arrière", data.stage == 2)
-	-- heureux au moment du niveau : évolution directe
-	H.SetNeeds(85)
+	-- palier suivant : l'envie comblée avant ne compte pas, il attend la prochaine
+	H.SetNeeds(100)
 	Mock.world.level = 20
 	Mock:Fire("PLAYER_LEVEL_UP", 20)
-	S.ok("heureux au palier : évolue tout de suite", data.stage == 3 and data.stageReady == nil, data.stage)
+	S.ok("nouveau palier : prêt, attend une nouvelle envie", data.stage == 2 and data.stageReady == 3, data.stage)
+	NS:CompanionWishMet("energy")
+	S.ok("envie comblée au palier : évolue", data.stage == 3 and data.stageReady == nil, data.stage)
 	-- somnolent (longue absence) : pas heureux
-	H.SetNeeds(85)
+	data.stageWish = true
 	data.sleepy = true
 	S.ok("somnolent : pas heureux", not NS:CompanionIsHappy())
-	data.sleepy = nil
+	data.sleepy, data.stageWish = nil, nil
 	S.done()
 end
 

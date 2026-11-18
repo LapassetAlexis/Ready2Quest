@@ -176,6 +176,8 @@ function ns:CompanionWishTick(force)
 	if data.sleepy then return nil end
 	if self:CompanionWish() then return nil end
 	local now = Clock()
+	-- pas d'envie dans les 2 minutes après la connexion
+	if self.companionWishNext == nil and not force then self.companionWishNext = now + S().wishGrace end
 	if not force and (now < (tonumber(self.companionWishNext) or 0) or InCombat()) then return nil end
 	local key = self:CompanionWishPick()
 	if not key then self.companionWishNext = now + 60; return nil end

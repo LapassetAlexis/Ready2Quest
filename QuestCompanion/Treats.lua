@@ -117,8 +117,8 @@ local P = {
 		{ "Mon flair me dit : %s, il en reste par ici !", "My nose says: %s, there's more around here!" },
 		{ "Je sens quelque chose… %s !", "I can smell something… %s!" },
 	},
-	TREAT_RETRO = { -- %d = friandises trouvées, %d = mangées tout de suite
-		{ "J'ai fait des provisions : %d friandises… et j'en ai mangé %d !", "I've stocked up: %d treats… and I ate %d of them!" },
+	TREAT_RETRO = { -- %d = friandises trouvées, %d = en trop, changées en paillettes (3.5.0)
+		{ "J'ai fait des provisions : %d friandises… et %d en trop, changées en paillettes !", "I've stocked up: %d treats… and %d extra ones, turned into glitter!" },
 	},
 	TREAT_RETRO_KEPT = { -- %d = friandises trouvées
 		{ "Regarde ! J'ai trouvé %d friandises sur notre route.", "Look! I found %d treats along our way." },
@@ -309,7 +309,7 @@ function ns:TreatCatchUp()
 	for _, zone in ipairs(self:JournalKnownZones()) do
 		for _, gain in ipairs(self:TreatCheckZone(zone.id, { quiet = true })) do
 			found = found + 1
-			if gain.result == "eaten" then eaten = eaten + 1 end
+			if gain.result == "glitter" then eaten = eaten + 1 end   -- 3.5.0 : en trop, changées en paillettes
 		end
 	end
 	if found > 0 then

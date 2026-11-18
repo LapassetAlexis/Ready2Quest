@@ -688,7 +688,7 @@ P.TIP = {
 	{ "Astuce : garde une potion de soins pour les mauvaises surprises.", "Tip: keep a healing potion for nasty surprises." },
 	{ "Astuce : chaque nouveau lieu ajoute un tampon au carnet (/qc carnet).", "Tip: every new place adds a journal stamp (/qc carnet)." },
 	{ "Astuce : chaque zone finie à 100 %% ouvre un coffre, avec une apparence ou un ornement pour moi.", "Tip: every zone finished to 100%% opens a chest, with a look or an ornament for me." },
-	{ "Astuce : survole-moi pour voir ma faim, mon énergie, mon moral, ma curiosité.", "Tip: hover me to see my hunger, energy, mood and curiosity." },
+	{ "Astuce : survole-moi pour voir mes états : Repu, Reposé, Éveillé. Les trois, et je rayonne.", "Tip: hover me to see my states: Fed, Rested, Alert. All three and I'm radiant." },
 	{ "Astuce : tu peux me renommer avec /qc compagnon nom.", "Tip: you can rename me with /qc compagnon nom." },
 	{ "Astuce : parle à chaque maître de vol croisé, ça fait gagner un temps fou.", "Tip: talk to every flight master you pass, huge time saver." },
 	{ "Astuce : un ennemi bien plus fort que toi ? Mieux vaut le contourner.", "Tip: enemy far above you? Better go around." },
@@ -696,7 +696,7 @@ P.TIP = {
 	{ "Astuce : un métier de récolte rapporte de l'or en chemin.", "Tip: a gathering profession earns gold along the way." },
 	{ "Astuce : rends tes quêtes avant de partir, le check te le rappelle.", "Tip: turn in quests before leaving, the check reminds you." },
 	{ "Astuce : flèches, balles ou réactifs ? Fais le plein avant de partir.", "Tip: arrows, bullets or reagents? Stock up before leaving." },
-	{ "Astuce : l'auberge et la ville me redonnent de l'énergie.", "Tip: inns and towns restore my energy." },
+	{ "Astuce : deux minutes en ville ou à l'auberge, et me voilà Reposé.", "Tip: two minutes in town or at an inn and I'm Rested." },
 	{ "Astuce : je ne t'en veux jamais. Absent ? Je somnole et je t'attends.", "Tip: I never hold a grudge. Away? I just doze and wait." },
 	{ "Astuce : les ennemis jaunes n'attaquent pas tant que tu ne les frappes pas.", "Tip: yellow enemies won't attack unless you hit them first." },
 	{ "Astuce : vends tes objets gris avant de repartir, ils ne servent à rien d'autre.", "Tip: sell your grey items before heading out, they're good for nothing else." },
@@ -799,8 +799,8 @@ end
 -- ---------------------------------------------------------------------------
 P.TUTO = {
 	{ "Salut ! Moi c'est %s, ton compagnon de route. Je voyage avec toi.", "Hi! I'm %s, your road companion. I travel with you." },
-	{ "J'ai quatre besoins : faim, énergie, moral, curiosité. Survole-moi pour les voir.", "I have four needs: hunger, energy, mood, curiosity. Hover me to see them." },
-	{ "Mange, repose-toi à l'auberge, rends des quêtes, explore : ça me comble !", "Eat, rest at inns, turn in quests, explore: that fills me up!" },
+	{ "J'ai trois états : Repu, Reposé, Éveillé. Des bonus, jamais une perte. Survole-moi pour les voir.", "I have three states: Fed, Rested, Alert. Bonuses, never a loss. Hover me to see them." },
+	{ "Mange, repose-toi en ville, explore : chacun dure 45 minutes. Les trois, et je rayonne !", "Eat, rest in town, explore: each lasts 45 minutes. All three and I'm radiant!" },
 	{ "Je grandis avec tes niveaux : 10, 20, 40 et 60. Jamais de retour en arrière.", "I grow with your levels: 10, 20, 40 and 60. Never backwards." },
 	{ "Finis une zone à 100 %% (carnet, /qc) : un coffre s'ouvre, avec une apparence ou un ornement pour moi.", "Finish a zone to 100%% (journal, /qc): a chest opens, with a look or an ornament for me." },
 	{ "En route, je te préviens : sacs pleins, vivres, réparations, munitions, un élite dans le coin…", "On the road, I'll warn you: full bags, food, repairs, ammo, an elite nearby…" },

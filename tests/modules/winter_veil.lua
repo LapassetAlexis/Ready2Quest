@@ -657,15 +657,21 @@ do
 		NS:CompanionSetAppearance("winter:snowman")
 		W.Active()
 		local snow = NS:CompanionEffects()
+		-- 3.5.0 : les trois états (Repu, Reposé, Éveillé) ; au chaud, tous fondent ×1,5
+		local function Factors()
+			return { NS:CompanionDecayFactor("hunger"), NS:CompanionDecayFactor("energy"), NS:CompanionDecayFactor("curiosity") }
+		end
 		Mock.world.mapID = 1426
-		local cold = { NS:CompanionDecayFactor("hunger"), NS:CompanionDecayFactor("mood") }
+		local cold = Factors()
 		Mock.world.mapID = 1446
-		local hot = { NS:CompanionDecayFactor("hunger"), NS:CompanionDecayFactor("mood") }
+		local hot = Factors()
 		Mock.world.mapID = 1429
-		local mild = { NS:CompanionDecayFactor("hunger"), NS:CompanionDecayFactor("mood") }
-		Check("[NOEL] bonhomme de neige : caresse et froid ; envies plus lentes au froid, il fond au chaud, rien ailleurs",
+		local mild = Factors()
+		local function All(list, test) for _, v in ipairs(list) do if not test(v) then return false end end return true end
+		Check("[NOEL] bonhomme de neige : caresse et froid ; états plus lents au froid, les trois fondent ×1,5 au chaud, rien ailleurs",
 			snow.hunt.id == "winter_pet" and snow.comfort.id == "winter_cold" and NS.COMPANION_EFFECTS.winter_pet.kind == "pet"
-			and cold[1] < 1 and cold[2] < 1 and hot[1] == 1 and hot[2] == NS.WINTER_MELT and mild[1] == 1 and mild[2] == 1
+			and All(cold, function(v) return v < 1 end) and All(hot, function(v) return v == NS.WINTER_MELT end)
+			and NS.WINTER_MELT == 1.5 and All(mild, function(v) return v == 1 end)
 			and NS.WINTER_COLD_MAPS[1452] and NS.WINTER_COLD_MAPS[1416] and NS.WINTER_HOT_MAPS[1413]
 			and NS.WINTER_HOT_MAPS[1451] and not NS.WINTER_HOT_MAPS[1426])
 		s = Steps()
@@ -680,12 +686,16 @@ do
 		Mock.world.mapID = 1452
 		NS:CompanionOnZone(true)
 		s.ok("froid : il se réjouit", Starts(NS.companionBubbleLine, "COMP_SAY_WINTER_COLD"), NS.companionBubbleLine)
-		local mood = NS:CompanionData().needs.mood
-		NS:CompanionData().needs.mood = 50
+		-- caresse renforcée : l'état actif qui finit le premier s'allonge (part de 45 min)
+		local needs = NS:CompanionData().needs
+		local saved = { needs.hunger, needs.energy, needs.curiosity }
+		needs.hunger, needs.energy, needs.curiosity = 100, 85, 70
+		local add = NS:CompanionEffectValue("winter_pet") * 30
 		NS.companionLastPet = nil
 		NS:CompanionPet()
-		s.ok("caresse : le moral monte plus", NS:CompanionData().needs.mood > 58, NS:CompanionData().needs.mood)
-		NS:CompanionData().needs.mood = mood
+		s.ok("caresse : allonge l'état le plus court (Reposé), pas les autres", add > 0
+			and math.abs(needs.energy - (85 + add)) < 1e-6 and needs.hunger == 100 and needs.curiosity == 70, needs.energy)
+		needs.hunger, needs.energy, needs.curiosity = saved[1], saved[2], saved[3]
 		s.check("[NOEL] bonhomme de neige : répliques d'entrée au chaud / au froid (pas redites), caresse renforcée")
 		W.Done()
 	end

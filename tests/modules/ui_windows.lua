@@ -339,8 +339,10 @@ do
 	_, back = Scene("qc-companion-hover")
 	if back then
 		local hover = QNS.companionHover
-		Has("fiche au survol : bandeau du thème, valeurs des envies", hover.chrome == "toast"
-			and hover.bars.mood.value.text == "91 %")
+		-- 3.5.0 : trois états, leur durée (Repu à 82 : 18 min ; Éveillé éteint : un tiret)
+		Has("fiche au survol : bandeau du thème, durée des états", hover.chrome == "toast"
+			and hover.bars.mood == nil and hover.bars.hunger.value.text == "18 min"
+			and hover.bars.curiosity.value.text == "—", hover.bars.hunger.value.text)
 		Clean(hover, "fiche au survol")
 		Has("fiche au survol : l'aide finit dans le cadre", Bottom(hover.hint) <= Bottom(hover),
 			tostring(Bottom(hover.hint)) .. " / " .. tostring(Bottom(hover)))
@@ -634,6 +636,123 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 	local bottom = -(box.lastPoint and box.lastPoint.y or 0) + box:GetHeight()
 	local reserved = 18 + 16
 	if not (count == 10 and bottom <= navH - reserved) then navBad[#navBad + 1] = style .. " : " .. count .. " / " .. bottom .. " / " .. navH end
+	C.Done()
+end
+Check("[UI30] colonne de navigation : dix entrées, le tableau de bord tient au-dessus du bas (deux styles)", #navBad == 0,
+	table.concat(navBad, " | "))
+
+-- 8. QC 3.5 : page Compagnon, les trois plaques d'état, l'humeur et l'envie (deux styles) ------------------
+-- textes d'une carte tenus dedans, sans chevauchement (comme pour les pages du carnet)
+local function CardsClean(cards)
+	local bad = {}
+	for _, card in ipairs(cards) do
+		if Snap.Visible(card) then
+			local overlaps, outside = Snap.Layout(card, Snap.Texts(card), Snap.Rect(card, { memo = {} }))
+			for _, o in ipairs(overlaps) do bad[#bad + 1] = o end
+			for _, o in ipairs(outside) do bad[#bad + 1] = "hors carte : " .. o end
+		end
+	end
+	return bad
+end
+for _, style in ipairs({ "sobre", "azeroth" }) do
+	Say("-- qc35 page Compagnon : états, humeur, envie (" .. style .. ")")
+	C.Reset(style)
+	local data = NS:CompanionData()
+	-- deux états actifs (Joyeux), une envie en cours : toutes les encres posées
+	data.needs.hunger, data.needs.energy, data.needs.curiosity = 100, 90, 70
+	data.wish = { key = "curiosity" }
+	NS:ToggleJournal(true)
+	local f = NS.journalFrame
+	f.sections.evolution:Click()
+	local evo = f.evo
+	local UI = NS.JournalUI
+	local function R(region) return Snap.Rect(region, { memo = {} }) end
+	local function Right(r) return r.left + r.width end
+	local function Low(r) return r.top + r.height end
+	local function Apart(a, b) return Right(a) <= b.left or Right(b) <= a.left or Low(a) <= b.top or Low(b) <= a.top end
+	local title, mood, wish, eff = R(evo.needsTitle), R(evo.moodRow), R(evo.wishRow), R(evo.effTitle)
+	local colLeft, colRight = title.left, title.left + UI.HALF
+	-- les trois plaques côte à côte, sous le titre, dans la colonne de gauche
+	local plates, row = {}, true
+	for index, tile in ipairs(evo.needs) do
+		plates[index] = R(tile)
+		local r = plates[index]
+		row = row and r.top == plates[1].top and r.top >= Low(title) and r.left >= colLeft and Right(r) <= colRight
+		if index > 1 then row = row and r.left >= Right(plates[index - 1]) end
+	end
+	Want(style .. " : trois plaques côte à côte, sous le titre, dans la colonne de gauche (HALF)", #evo.needs == 3 and row,
+		plates[3] and (Right(plates[3]) .. " / " .. colRight))
+	-- humeur puis envie, sous les plaques, sur toute la colonne, au-dessus de « Ses effets »
+	Want(style .. " : ligne d'humeur sous les plaques, dans la colonne", mood.top >= Low(plates[1]) and mood.left >= colLeft
+		and Right(mood) <= colRight, mood.top .. " / " .. Low(plates[1]))
+	Want(style .. " : ligne d'envie sous l'humeur, dans la colonne", wish.top >= Low(mood) and wish.left >= colLeft
+		and Right(wish) <= colRight, wish.top .. " / " .. Low(mood))
+	Want(style .. " : « Ses effets » sous la ligne d'envie", eff.top >= Low(wish), eff.top .. " / " .. Low(wish))
+	local looks = R(evo.looksTitle)
+	Want(style .. " : rien ne déborde sur la colonne de droite", Right(mood) <= looks.left and Right(wish) <= looks.left
+		and Right(plates[3]) <= looks.left)
+	-- dans chaque plaque et chaque ligne : les textes tenus, sans chevauchement
+	local bad = CardsClean(evo.needs)
+	for _, o in ipairs(CardsClean({ evo.moodRow, evo.wishRow })) do bad[#bad + 1] = o end
+	Want(style .. " : plaques, humeur et envie : textes tenus, sans chevauchement", #bad == 0, table.concat(bad, " | "))
+	-- humeur : étiquette, puis les trois losanges, puis « Encore n pour rayonner » (glyphes mesurés)
+	local m = evo.moodRow
+	local tag, rightText = R(m.tag), R(m.right)
+	local tagEnd = tag.left + Snap.MeasureText(m.tag)
+	local pipL, pipR = math.huge, 0
+	for _, d in ipairs(m.pips) do local r = R(d); pipL = math.min(pipL, r.left); pipR = math.max(pipR, Right(r)) end
+	local rightStart = Right(rightText) - Snap.MeasureText(m.right)
+	Want(style .. " : humeur : étiquette, losanges puis la suite, sans se toucher", tagEnd <= pipL and pipR <= rightStart
+		and Low(rightText) <= Low(mood), string.format("%.0f/%.0f %.0f/%.0f", tagEnd, pipL, pipR, rightStart))
+	-- envie : son objet, puis « +1 lien » calé à droite
+	local w = evo.wishRow
+	local wishText, bond = R(w.text), R(w.bond)
+	local wishEnd = wishText.left + Snap.MeasureText(w.text)
+	local bondStart = Right(bond) - Snap.MeasureText(w.bond)
+	Want(style .. " : envie : l'objet puis « +1 lien », sans se toucher", w.text.text == NS.L.COMP_WISH_curiosity
+		and w.bond.text == NS.L.COMP_WISH_BOND and wishEnd <= bondStart, string.format("%.0f/%.0f", wishEnd, bondStart))
+	Verdict("[UI35] " .. style .. " : page Compagnon : trois plaques, humeur et envie côte à côte dans la colonne de gauche, au-dessus de « Ses effets », sans chevauchement")
+
+	-- contrastes mesurés (≥ 4,5) des nouvelles encres sur leur tuile : fond réel,
+	-- et en forgé les deux bouts du relief (reflet clair en haut, ombre en bas)
+	local function Worst(ink, tile)
+		local bg = tile.bg.vertex or Theme.ROW
+		local c = Theme.Contrast(ink, bg)
+		if tile.forgeRelief then
+			local K = Theme.FORGE_CARD
+			c = math.min(c, Theme.Contrast(ink, Theme.Over(bg, Theme.WHITE, K.light)),
+				Theme.Contrast(ink, Theme.Over(bg, Theme.SHADOW, K.dark)))
+		end
+		return c
+	end
+	local inks = {}
+	local on, off = evo.needs[1], evo.needs[3]
+	inks[#inks + 1] = { "plaque : durée d'un état actif", on.value.textColor, on }
+	inks[#inks + 1] = { "plaque : tiret d'un état éteint", off.value.textColor, off }
+	inks[#inks + 1] = { "plaque : nom de l'état", on.label.textColor, on }
+	inks[#inks + 1] = { "plaque : ce qui l'allume", on.how.textColor, on }
+	inks[#inks + 1] = { "envie : « +1 lien » (vert)", w.bond.textColor, w }
+	inks[#inks + 1] = { "envie : son objet", w.text.textColor, w }
+	inks[#inks + 1] = { "humeur : étiquette Joyeux (vert)", m.tag.textColor, m }
+	inks[#inks + 1] = { "humeur : « Encore 1 pour rayonner »", m.right.textColor, m }
+	Want(style .. " : encres de la plaque : durée PARCHMENT, tiret MUTED_LIGHT", SameColor(on.value.textColor, Theme.PARCHMENT)
+		and SameColor(off.value.textColor, Theme.MUTED_LIGHT) and SameColor(m.tag.textColor, Theme.GREEN)
+		and SameColor(w.bond.textColor, Theme.GREEN))
+	-- Rayonnant : étiquette et « Bonus actif » en or
+	data.needs.curiosity = 90
+	NS:RefreshJournal()
+	Want(style .. " : Rayonnant : étiquette et « Bonus actif » en or", SameColor(m.tag.textColor, Theme.GOLD)
+		and SameColor(m.right.textColor, Theme.GOLD) and m.right.text == NS.L.COMP_RADIANT_ACTIVE, m.right.text)
+	inks[#inks + 1] = { "humeur : étiquette Rayonnant (or)", m.tag.textColor, m }
+	inks[#inks + 1] = { "humeur : « Bonus actif » (or)", m.right.textColor, m }
+	local worst, at = math.huge, ""
+	for _, item in ipairs(inks) do
+		local c = Worst(item[2], item[3])
+		if c < worst then worst, at = c, string.format("%s %.2f", item[1], c) end
+	end
+	Want(style .. " : chaque encre ≥ 4,5:1 sur sa tuile", worst >= 4.5, at)
+	Verdict("[UI35] " .. style .. " : page Compagnon : contrastes mesurés des plaques, de « +1 lien » et de l'étiquette d'humeur (≥ 4,5)")
+	data.wish = nil
 	C.Done()
 end
 end

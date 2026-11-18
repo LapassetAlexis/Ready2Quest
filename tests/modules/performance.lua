@@ -566,9 +566,13 @@ do
 	Want("« module companion off » : plus écouté", not QNS.Listening("CHAT_MSG_LOOT"))
 	QNS:HandleCommand("module companion on")
 	Want("« module companion on » : écouté", QNS.Listening("CHAT_MSG_LOOT"))
-	local mood = QNS:CompanionData().needs.mood
-	Mock:Fire("QUEST_TURNED_IN", 1)
-	Want("rallumé : le compagnon réagit de nouveau", QNS:CompanionData().needs.mood > mood or mood >= 100)
+	-- 3.5.0 : une sous-zone jamais vue allume Éveillé (une quête rendue ne donne plus rien)
+	QNS:CompanionData().needs.curiosity = 70
+	local savedSub = Mock.world.subzone
+	Mock.world.subzone = "Clairière jamais vue (test)"
+	Mock:Fire("ZONE_CHANGED")
+	Mock.world.subzone = savedSub
+	Want("rallumé : le compagnon réagit de nouveau", QNS:CompanionStateOn("curiosity"))
 	db.companionEnabled = savedOn
 	QNS.EventsResync()
 	Verdict("[PERF2] compagnon coupé : butin, groupe et compagnon plus écoutés, rouverts au rallumage (réglage, commande ou relecture)")

@@ -1,5 +1,18 @@
 # Ready2Quest — notes techniques et historique
 
+## QuestCompanion 3.5.0 — les envies deviennent des états
+
+Spécification : `docs/design-envies-3.5/PLAN.md` (resimulation des règles finales : `docs/design-envies-3.5/sim/` ; montée de niveau Rayonnante 39 à 88 % du temps selon la session, chasse au niveau 60 : 11 % sans friandise, 36 % avec 4 par jour).
+
+- **`Companion.lua`** : `NEED_KEYS` = hunger, energy, curiosity (le moral sort). La valeur reste chiffrée, lue comme une durée (`ns.COMPANION_STATE` : `on` 70, `full` 100 = 45 min, `max` 110 = 60 min, baisse 30/45 par minute × `CompanionDecayFactor`). Migration `data.needsV` 2 : tout à 70. `CompanionGrant(key, value)` met à plein (jamais d'empilement), callback `COMPANION_STATE` ; `CompanionAdd` positif = Grant, négatif = baisse ; `CompanionStateOn`, `CompanionStateMinutes`, `CompanionStatesOn`, `CompanionMood` (calm, happy, joyful, radiant ; sleepy prime), `CompanionRadiant`. Repos : `rt.restSec` cumulé dans `CompanionTick` (120 s / `CompanionRestSpeed`). Déclencheurs réduits à ceux du plan (repas sans la boisson, Bien nourri, départ avec vivres ; camp, auberge ; zone, sous-zone, tampon nouveaux, donjon, élite, coffre). `SERENE_FLOOR`, `REST_GAIN`, `EAT_GAIN` et les gains de moral disparaissent. Stade : `data.stageWish` (posé par une envie comblée) remplace « les quatre à 70 ».
+- **`CompanionStates.lua`** (nouveau, après `ReserveBrowse.lua`) : Rayonnant (`COMPANION_RADIANT` : capture ×1,10 après les effets et avant `CAPTURE_MAX`, brillante ×1,20), l'envie (`data.wish`, `CompanionWishTick` toutes les 20 min après 2 min de grâce, `CompanionWishPick`, `CompanionWishMet` : +1 lien source `wish` hors plafond du jour, ou états actifs à plein sans lien), Éveillé en chasse (15 en 10 min, brillante tentée, espèce nouvelle), Curieux à la cueillette, `CompanionStateExtend` (caresse renforcée).
+- **`CompanionEffects.lua`** : `CompanionEffectNeeds` → 1 (force toujours entière) ; `decay_mood` sur les trois états au tiers, `trait_teasing` → Éveillé, `minus_cuddly` → Reposé ; « rest » → `CompanionRestSpeed` ; « pet » → `CompanionStateExtend`. Libellés en durée d'état.
+- **`Personality.lua`** : préférences remappées (Téméraire faim, Taquin et Espiègle et Perroquet curiosité, Câlin énergie) ; Gourmand : remarque quand il n'est pas Repu.
+- **`Treats.lua`** : friandise = état à 110 ; Festin les trois ; Bonbon les actifs à plein ; plein → 1 paillette (`"glitter"`).
+- **`SpecimenBond.lua`** : source `wish` (`outside = true`) hors de `BOND_DAILY`.
+- **Écrans** : page Compagnon (`JOURNAL_STATE_LAYOUT` : 3 plaques 109 × 62 pas de 117, ligne d'humeur, ligne d'envie, « Ses effets » dessous), fiche au survol (3 barres en minutes, `hover.wish`), tableau de bord (3 rangées + envie), bulle du héros = l'envie du moment ; `ForgeCompanion.lua` : teintes calm / happy / joyful / radiant.
+- **Textes** : Guide (`GUIDE_effects_3` avec les bonus de Rayonnant), visite, tutoriel, astuces, NEED_mood = répliques de Rayonnant ; FR, EN, ES.
+
 ## QuestCompanion 3.4.0 — Réserve, Créatures, Échoppe (« Compagnon de route »)
 
 Spécification : `docs/design-reserve-3.4/PLAN.md` (règle d'or : au lien 1, un spécimen vaut exactement ce qu'il valait en 3.3.1).

@@ -358,9 +358,9 @@ do
 	Wear(900)
 	local effects = NS:CompanionEffects()
 	local text = NS:CompanionEffectsText(effects)
-	Check("[T31] effets : un troisième, celui du caractère (10 %) : « Caractère : Curieux, la curiosité baisse 10 % moins vite »",
+	Check("[T31] effets : un troisième, celui du caractère (10 %) : « Caractère : Curieux, Éveillé s'use 10 % moins vite »",
 		effects and effects.trait and effects.trait.id == "trait_curious" and Near(effects.trait.value, 0.10)
-		and effects.trait.trait == "curious" and text[3] == "Caractère : Curieux, la curiosité baisse 10 % moins vite",
+		and effects.trait.trait == "curious" and text[3] == "Caractère : Curieux, Éveillé s'use 10 % moins vite",
 		tostring(text[3]))
 	Mock.now = Mock.now + NS.EFFECT_DELAY + 1
 	effects = NS:CompanionEffects()
@@ -369,7 +369,7 @@ do
 	NS:SpecimenGet(id).trait = "lazy"
 	Touch()
 	local without = NS:CompanionDecayFactor("curiosity")
-	Check("[T31] Curieux : curiosité ×0,9 (et ×0,7 de son caractère)", Near(withTrait / without, 0.9 * NS.PERSONALITY_DECAY),
+	Check("[T31] Curieux : Éveillé ×0,9 (et ×0,7 de son caractère)", Near(withTrait / without, 0.9 * NS.PERSONALITY_DECAY),
 		string.format("%.4f", withTrait / without))
 	-- sortes additionnées : un même effet de type et de caractère
 	NS:SpecimenGet(id).trait = "mischievous"
@@ -549,8 +549,8 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 	-- 3.4.0 : « Géant (12x) · Zen », puis l'atout à son lien (1 : la valeur d'avant)
 	local sizeText = p.lines[2] and p.lines[2]:GetText()
 	local traitText = p.lines[3] and p.lines[3]:GetText()
-	Check("[T31] " .. style .. " : fiche : « Géant (indice) · Zen », « Atout : les envies baissent 5 % moins vite »",
-		Has(sizeText, "Géant (") and Has(sizeText, "· Zen") and traitText == "Atout : les envies baissent 5 % moins vite",
+	Check("[T31] " .. style .. " : fiche : « Géant (indice) · Zen », « Atout : ses états s'usent 5 % moins vite »",
+		Has(sizeText, "Géant (") and Has(sizeText, "· Zen") and traitText == "Atout : ses états s'usent 5 % moins vite",
 		tostring(sizeText) .. " / " .. tostring(traitText))
 	if style == "sobre" then
 		local tc = p.lines[3].textColor or {}
@@ -591,7 +591,7 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 		and pane.sizeTag:IsShown() and pane.sizeTag.label:GetText() == NS.Theme.Upper("Grand"))
 	NS:CompanionEffectsRefreshPane(pane)
 	Check("[T31] " .. style .. " : « Ses effets » : la ligne du caractère, l'état en dessous",
-		pane.effTrait and pane.effTrait:GetText() == "Caractère : Curieux, la curiosité baisse 10 % moins vite"
+		pane.effTrait and pane.effTrait:GetText() == "Caractère : Curieux, Éveillé s'use 10 % moins vite"
 		and pane.effStateY < -58)
 	NS:CompanionData().appearance = nil
 	NS:RefreshJournal()

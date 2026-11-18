@@ -225,7 +225,17 @@ do
 	evo.bgStyle:Click()
 	S.ok("cadre puis fond : la liste du cadre se referme", evo.bgStyle:IsOpen() and not evo.frameStyle:IsOpen())
 	evo.bgStyle:Click()
-	S.ok("envies : quatre lignes", #evo.needs == 4 and evo.needs[1].value.text:find("%%") ~= nil)
+	-- 3.5.0 : trois plaques d'état (« 45 min » ou « — »), la ligne d'humeur, la ligne d'envie
+	local plates = #evo.needs == 3
+	for index, key in ipairs({ "hunger", "energy", "curiosity" }) do
+		local tile = evo.needs[index]
+		local v = tile and tile.value.text or ""
+		plates = plates and tile.key == key and (v == "—" or v:find("^%d+ min$") ~= nil)
+	end
+	S.ok("états : trois plaques (Repu, Reposé, Éveillé), durée ou tiret", plates, evo.needs[1] and evo.needs[1].value.text)
+	S.ok("humeur : étiquette, trois losanges, la suite à droite", evo.moodRow and (evo.moodRow.tag.text or "") ~= ""
+		and #evo.moodRow.pips == 3 and (evo.moodRow.right.text or "") ~= "")
+	S.ok("envie : une ligne (son objet ou rien)", evo.wishRow and (evo.wishRow.text.text or "") ~= "")
 	-- 2.14.0 : plus de carrousel ; « Choisir… » ouvre le panneau (CompanionAllure.lua)
 	evo.lookChoose:Click()
 	local captured

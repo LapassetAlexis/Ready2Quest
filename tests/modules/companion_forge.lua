@@ -57,7 +57,7 @@ local function Fresh(style, atlas)
 	NS:ApplyUIStyle()
 	local data = NS:CompanionData()
 	data.tutoDone, data.name = true, "Brindille"
-	data.needs = { hunger = 82, energy = 64, mood = 91, curiosity = 46 }
+	data.needs = { hunger = 82, energy = 64, curiosity = 46 }
 	NS:CompanionUpdateVisibility()
 	return NS:EnsureCompanionFrame()
 end
@@ -146,10 +146,12 @@ do
 	local tab = frame.forgeSkin.moodTab
 	local seen = {}
 	local data = NS:CompanionData()
+	-- 3.5.0 : l'humeur se lit au nombre d'états actifs (au-dessus de 70)
 	local cases = {
-		{ "radiant", { hunger = 95, energy = 95, mood = 95, curiosity = 95 } },
-		{ "happy", { hunger = 60, energy = 60, mood = 60, curiosity = 60 } },
-		{ "dreamy", { hunger = 20, energy = 20, mood = 20, curiosity = 20 } },
+		{ "radiant", { hunger = 95, energy = 95, curiosity = 95 } },
+		{ "joyful", { hunger = 95, energy = 95, curiosity = 70 } },
+		{ "happy", { hunger = 95, energy = 70, curiosity = 70 } },
+		{ "calm", { hunger = 70, energy = 70, curiosity = 70 } },
 	}
 	for _, case in ipairs(cases) do
 		data.sleepy = nil
@@ -167,19 +169,23 @@ do
 	for _, plate in pairs(seen) do distinct[plate] = true end
 	local n = 0
 	for _ in pairs(distinct) do n = n + 1 end
-	s.ok("quatre humeurs, quatre teintes", n == 4)
+	s.ok("quatre humeurs et la somnolence, cinq teintes", n == 5, n)
 	s.ok("largeur au mot", tab.width >= 2 * NS.FORGE_MOOD_TAB.pad)
-	-- encre sur chaque teinte, aux deux niveaux de la plaque sous un libellé
+	-- encre sur chaque teinte réellement posée, aux deux niveaux de la plaque
+	-- sous un libellé : ≥ 7:1 ; l'or (Rayonnant) porte l'encre sombre des
+	-- boutons principaux, mesurée ≥ 4,5:1 comme eux ([FORGE])
 	local worst, at = 99, ""
-	for mood, spec in pairs(NS.FORGE_MOOD_TINTS) do
+	for mood in pairs(seen) do
+		local spec = NS.FORGE_MOOD_TINTS[mood]
 		local tint = Theme.FORGE_PLATE[spec.plate]
+		local need = spec.plate == "gold" and 4.5 or 7
 		for _, level in ipairs({ Theme.FORGE.label.light, Theme.FORGE.label.dark }) do
 			local c = Theme.Contrast(spec.ink(), Theme.ForgeSurface(tint, level))
-			if c < worst then worst, at = c, mood end
+			if c - need < worst then worst, at = c - need, string.format("%s %.2f", mood, c) end
 		end
 	end
-	s.ok("encre ≥ 7:1 sur chaque teinte", worst >= 7, string.format("%.2f (%s)", worst, at))
-	s.check("[FCOMP] humeur : une teinte de plaque par humeur, largeur au mot, encre ≥ 7:1 (" .. string.format("%.2f", worst) .. ")")
+	s.ok("encre ≥ 7:1 sur chaque teinte (l'or ≥ 4,5:1)", worst >= 0, at)
+	s.check("[FCOMP] humeur : une teinte de plaque par humeur, largeur au mot, encre ≥ 7:1, l'or ≥ 4,5:1 (" .. at .. ")")
 end
 
 -- 3. Contrastes des nouveaux textes ------------------------------------------------------------------

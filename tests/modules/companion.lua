@@ -1,5 +1,5 @@
 -- Module « Compagnon de route » (v1.25.0) : réglages par défaut, chaînes
--- fr/en, besoins (hausse, plancher), somnolence après absence, évolution
+-- fr/en, états (3.5.0 : allumés, plancher 70), envie, somnolence après absence, évolution
 -- 10/20/40/60, réactions, bulles (écart minimal, sourdine, priorités),
 -- cosmétiques donnés par le coffre (jamais au compteur), choix d'apparence,
 -- repli sans modèle 3D, caresse et clic droit, renommage, module coupé ;
@@ -68,6 +68,7 @@ function C.Reset(level, withModel, tutorial)
 	NS.companionBubbleUntil, NS.companionAnimUntil, NS.companionLastPet = nil, nil, nil
 	NS.companionEating, NS.companionFed, NS.companionAtCamp = nil, nil, nil
 	NS.companionRT, NS.companionBubblePrio, NS.companionBubbleLine = nil, nil, nil
+	NS.companionWishNext = nil
 	Mock.world.level = level or 11
 	Mock.world.mapID, Mock.world.subzone = 20, "Clairière"
 	-- le tutoriel de première apparition a ses propres tests : ailleurs, il
@@ -97,6 +98,27 @@ function C.Play(minutes)
 	for _ = 1, minutes do Mock:Advance(60) end
 end
 function C.Model() return NS.companionFrame and NS.companionFrame.model end
+-- Les trois états d'un coup d'œil (une caresse, un clic n'y touchent pas)
+function C.Snap()
+	local n = NS:CompanionData().needs
+	return string.format("%.3f/%.3f/%.3f", n.hunger, n.energy, n.curiosity)
+end
+-- 3.5.0 : le niveau ouvre le stade, une envie comblée le franchit (Repu ici ;
+-- Reposé éteint : pas de Rayonnant, qui aurait sa propre bulle)
+function C.Evolve(level)
+	Mock.world.level = level
+	Mock:Fire("PLAYER_LEVEL_UP", level)
+	local data = NS:CompanionData()
+	data.wish = { key = "hunger" }
+	data.needs.hunger, data.needs.energy = NS.COMPANION_STATE.on, NS.COMPANION_STATE.on
+	NS:CompanionGrant("hunger")
+end
+-- /qc compagnon : une erreur Lua devient un échec nommé (le module continue)
+function C.Status()
+	local ok, err = pcall(NS.HandleCommand, NS, "compagnon")
+	if not ok then C.statusError = tostring(err) end
+	return ok, err
+end
 
 
 do
@@ -143,83 +165,89 @@ do
 end
 
 do
-	Say("-- besoins : baisse douce, jamais à zéro")
-	local S = Scenario("[COMP] besoins : baisse douce, jamais à zéro")
+	Say("-- états : baisse douce, jamais sous 70")
+	local S = Scenario("[COMP] états : baisse douce, jamais sous 70")
 	C.Reset(11)
 	C.Login()
+	NS:CompanionGrant("hunger")
 	local start = C.Needs().hunger
 	C.Play(30)
-	S.ok("la faim baisse en jouant", C.Needs().hunger < start, C.Needs().hunger)
+	S.ok("Repu s'use en jouant", C.Needs().hunger < start, C.Needs().hunger)
 	C.Play(600)    -- 10 h de jeu sans rien faire
 	local low = true
-	for _, key in ipairs({ "hunger", "energy", "mood", "curiosity" }) do
+	for _, key in ipairs(NS.COMPANION_NEED_KEYS) do
 		low = low and C.Needs()[key] >= NS.COMPANION_RULES.floor and C.Needs()[key] > 0
 	end
-	S.ok("après 10 h : aucun besoin sous le plancher", low, C.Needs().hunger .. "/" .. C.Needs().mood)
-	S.ok("plancher atteint (la baisse a bien eu lieu)", C.Needs().curiosity == NS.COMPANION_RULES.floor, C.Needs().curiosity)
+	S.ok("après 10 h : aucun état sous le plancher", low, C.Needs().hunger .. "/" .. C.Needs().curiosity)
+	S.ok("plancher atteint (la baisse a bien eu lieu) : éteint", C.Needs().hunger == NS.COMPANION_RULES.floor
+		and NS.COMPANION_RULES.floor == 70 and not NS:CompanionStateOn("hunger"), C.Needs().hunger)
 	-- une valeur corrompue de la sauvegarde est ramenée dans les bornes
-	NS:CompanionData().needs.mood = -40
-	S.ok("sauvegarde corrompue ramenée au plancher", NS:CompanionData().needs.mood == NS.COMPANION_RULES.floor)
-	NS:CompanionAdd("mood", 500)
-	S.ok("jamais plus de 100", C.Needs().mood == 100)
+	NS:CompanionData().needs.energy = -40
+	S.ok("sauvegarde corrompue ramenée au plancher", NS:CompanionData().needs.energy == NS.COMPANION_RULES.floor)
+	NS:CompanionGrant("energy", 500)
+	S.ok("jamais plus de 110", C.Needs().energy == NS.COMPANION_RULES.max and NS.COMPANION_RULES.max == 110)
+	S.ok("le moral n'est plus une envie", C.Needs().mood == nil)
 	S.done()
 end
 
 do
-	Say("-- besoins : ce qui les fait monter")
-	local S = Scenario("[COMP] besoins : ce qui les fait monter")
+	Say("-- états : ce qui les allume")
+	local S = Scenario("[COMP] états : repas, repos")
 	C.Reset(11)
 	C.Login()
-	for _, key in ipairs({ "hunger", "energy", "mood", "curiosity" }) do C.Needs()[key] = 40 end
+	for _, key in ipairs(NS.COMPANION_NEED_KEYS) do C.Needs()[key] = 70 end
 	-- repas : aura « Nourriture »
 	C.Quiet()
 	Mock.world.auraOrder = { 433 }
 	Mock.world.auras = { [433] = { name = "Nourriture", duration = 30 } }
 	Mock:Fire("UNIT_AURA", "player")
-	S.ok("manger : la faim remonte", C.Needs().hunger >= 75, C.Needs().hunger)
+	S.ok("manger : Repu (45 min)", C.Needs().hunger == 100, C.Needs().hunger)
 	S.ok("manger : « Miam ! »", C.Key() == "EAT", C.Key())
-	local h = C.Needs().hunger
+	C.Needs().hunger = 90
 	Mock:Fire("UNIT_AURA", "player")
-	S.ok("même repas : compté une fois", C.Needs().hunger == h)
+	S.ok("même repas : compté une fois", C.Needs().hunger == 90)
 	Mock.world.auraOrder, Mock.world.auras = {}, {}
 	Mock:Fire("UNIT_AURA", "player")
-	-- repos à l'auberge
+	-- repos à l'auberge : deux minutes
 	Mock.world.resting = true
-	local e = C.Needs().energy
-	C.Play(5)
-	S.ok("au repos : l'énergie remonte", C.Needs().energy > e, e .. " -> " .. C.Needs().energy)
+	C.Play(1)
+	S.ok("au repos, une minute : pas encore Reposé", not NS:CompanionStateOn("energy"), C.Needs().energy)
+	C.Play(2)
+	S.ok("au repos, deux minutes : Reposé", NS:CompanionStateOn("energy"), C.Needs().energy)
 	Mock.world.resting = false
 	-- quête rendue
 	C.Quiet()
-	local m = C.Needs().mood
+	local before = {}
+	for _, key in ipairs(NS.COMPANION_NEED_KEYS) do before[key] = C.Needs()[key] end
 	Mock:Fire("QUEST_TURNED_IN", 123, 500, 0)
 	S.done()
-	S = Scenario("[COMP] besoins : quête, zone, butin")
-	S.ok("quête rendue : le moral monte", C.Needs().mood > m and C.Key() == "QUEST", C.Key())
-	-- nouvelle zone
+	S = Scenario("[COMP] états : quête, zone, butin")
+	local same = true
+	for _, key in ipairs(NS.COMPANION_NEED_KEYS) do same = same and C.Needs()[key] == before[key] end
+	S.ok("quête rendue : « Bien joué », aucun état ne change", same and C.Key() == "QUEST", C.Key())
+	-- nouvelle zone (deux états au plus : Rayonnant aurait sa propre bulle)
 	C.Quiet()
-	local c = C.Needs().curiosity
+	C.Needs().hunger, C.Needs().curiosity = 70, 70
 	Mock.world.mapID = 30
 	Mock:Fire("ZONE_CHANGED_NEW_AREA")
-	S.ok("nouvelle zone : curiosité et « Quelle vue ! »", C.Needs().curiosity > c and C.Key() == "VIEW", C.Key())
+	S.ok("nouvelle zone : Éveillé et « Quelle vue ! »", C.Needs().curiosity == 100 and C.Key() == "VIEW", C.Key())
 	C.Quiet()
-	c = C.Needs().curiosity
+	C.Needs().curiosity = 80
 	Mock.world.mapID = 20
 	Mock:Fire("ZONE_CHANGED_NEW_AREA")
-	S.ok("zone de connexion déjà connue : rien", C.Needs().curiosity == c and NS.companionLastBubble == nil)
-	c = C.Needs().curiosity
+	S.ok("zone de connexion déjà connue : rien", C.Needs().curiosity == 80 and NS.companionLastBubble == nil)
 	Mock.world.subzone = "Vieux moulin"
 	Mock:Fire("ZONE_CHANGED")
-	S.ok("nouvelle sous-zone : un peu de curiosité", C.Needs().curiosity > c)
+	S.ok("nouvelle sous-zone : Éveillé", C.Needs().curiosity == 100, C.Needs().curiosity)
 	-- butin notable
 	C.Quiet()
-	m = C.Needs().mood
+	local count = NS:CompanionStatesOn()
 	Mock:Fire("CHAT_MSG_LOOT", "Vous recevez le butin : |cff0070dd|Hitem:4444::::::::|h[Épée bleue]|h|r.")
-	S.ok("butin rare : moral et cri doré (3.2.0, sinon « ça brille »)", C.Needs().mood > m and (C.Key() == "SHOUT_LOOT" or C.Key() == "LOOT"), C.Key())
+	S.ok("butin rare : cri doré (3.2.0, sinon « ça brille »), aucun état", NS:CompanionStatesOn() == count
+		and (C.Key() == "SHOUT_LOOT" or C.Key() == "LOOT"), C.Key())
 	C.Quiet()
-	m = C.Needs().mood
 	Mock:Fire("CHAT_MSG_LOOT", "Vous recevez le butin : |cff9d9d9d|Hitem:5555::::::::|h[Caillou]|h|r.")
-	S.ok("butin gris : rien", C.Needs().mood == m and NS.companionLastBubble == nil)
+	S.ok("butin gris : rien", NS:CompanionStatesOn() == count and NS.companionLastBubble == nil)
 	S.done()
 end
 
@@ -229,21 +257,25 @@ do
 	C.Reset(11)
 	C.Login()
 	local data = NS:CompanionData()
-	data.needs.hunger, data.needs.mood = 63, 71
+	data.needs.hunger, data.needs.curiosity = 95, 81
 	data.lastSeen = time() - 10 * 3600     -- 10 h d'absence
+	-- hors d'un lieu sûr, sans vivres : le conseil est déjà dit (Advice a ses
+	-- tests ; sinon il couvrirait le réveil)
+	NS:AdviceState().said.food = 2
 	C.Login()
 	S.ok("après 10 h : somnolent", data.sleepy == true)
 	S.ok("« Tu m'as manqué ! »", C.Key() == "MISSED", C.Key())
-	S.ok("aucune pénalité sur les besoins", data.needs.hunger == 63 and data.needs.mood == 71, data.needs.hunger)
+	S.ok("aucune pénalité sur les états", data.needs.hunger == 95 and data.needs.curiosity == 81, data.needs.hunger)
 	S.ok("humeur somnolente, animation de sommeil", NS:CompanionMood() == "sleepy" and NS.companionFrame.animation == "sleep")
 	S.ok("somnolence proportionnée (10 h -> 200 s)", data.sleepyLeft == 200, data.sleepyLeft)
 	C.Play(4)
 	S.ok("il se réveille en jouant", not data.sleepy and C.Key() == "AWAKE", C.Key())
 	-- 60 jours : plafond
+	local kept = data.needs.curiosity
 	data.lastSeen = time() - 60 * 86400
 	C.Login()
 	S.ok("longue absence : somnolence plafonnée", data.sleepyLeft == NS.COMPANION_RULES.sleepyMax, data.sleepyLeft)
-	S.ok("longue absence : besoins intacts", data.needs.mood >= 15)
+	S.ok("longue absence : états intacts (aucune baisse hors connexion)", data.needs.curiosity == kept, data.needs.curiosity)
 	-- 30 min : rien
 	NS:CompanionWake(false)
 	data.lastSeen = time() - 1800
@@ -264,17 +296,28 @@ do
 	local data = NS:CompanionData()
 	S.ok("niveau 5 : Nouveau-né", data.stage == 1)
 	local scales = { C.Model() and C.Model().modelScale }
-	local evolved = {}
+	local evolved, waited = {}, {}
 	for _, level in ipairs({ 10, 20, 40, 60 }) do
 		Mock.world.level = level
 		Mock:Reset()
 		C.Quiet()
 		Mock:Fire("PLAYER_LEVEL_UP", level)
+		-- 3.5.0 : le niveau ouvre le stade, une envie comblée le franchit
+		waited[#waited + 1] = data.stage .. ">" .. tostring(data.stageReady)
+		S.ok("niveau " .. level .. " : prêt, une envie à combler", data.stageReady ~= nil
+			and Mock:Output():find("Comble une de ses envies", 1, true) ~= nil, Mock:Output())
+		for _, key in ipairs(NS.COMPANION_NEED_KEYS) do C.Needs()[key] = 70 end
+		Mock:Reset()
+		C.Quiet()
+		NS:CompanionWishTick(true)
+		C.Quiet()
+		NS:CompanionGrant(NS:CompanionWish())
 		evolved[#evolved + 1] = data.stage
 		scales[#scales + 1] = C.Model() and C.Model().modelScale
-		S.ok("niveau " .. level .. " : fête (bulle + chat + danse)", C.Key() == "EVOLVE"
+		S.ok("niveau " .. level .. ", envie comblée : fête (bulle + chat + danse)", C.Key() == "EVOLVE"
 			and Mock:Output():find("devient", 1, true) ~= nil and NS.companionFrame.animation == "dance", C.Key())
 	end
+	S.ok("le niveau seul ne suffit pas", table.concat(waited, ",") == "1>2,2>3,3>4,4>5", table.concat(waited, ","))
 	S.ok("stades 2, 3, 4, 5", table.concat(evolved, ",") == "2,3,4,5", table.concat(evolved, ","))
 	local growing = true
 	for i = 2, #scales do growing = growing and scales[i] and scales[i] > scales[i - 1] end
@@ -306,9 +349,9 @@ do
 	C.Quiet()
 	Mock.world.itemInfo[117] = { classID = 0, subClassID = 5 }
 	Mock.world.bags[0].items[1] = { itemID = 117, stackCount = 5 }
-	local h = C.Needs().hunger
+	C.Needs().hunger = 70
 	NS:FireCallback("DEPARTURE", { name = "Comté-de-l'Or" })
-	S.ok("départ avec vivres : en route, la faim monte", C.Key() == "DEPART" and C.Needs().hunger > h, C.Key())
+	S.ok("départ avec vivres : en route, Repu", C.Key() == "DEPART" and C.Needs().hunger == 100, C.Key())
 	C.Quiet()
 	NS:FireCallback("RETURN", { name = "Comté-de-l'Or" })
 	S.ok("retour : « on est rentrés »", C.Key() == "RETURN", C.Key())
@@ -316,23 +359,24 @@ do
 	Mock:Fire("PLAYER_DEAD")
 	S.ok("mort : une ligne du réservoir DEAD", C.Key() == "DEAD" and C.InPool("DEAD"), C.Key())
 	C.Quiet()
-	local c = C.Needs().curiosity
+	C.Needs().hunger, C.Needs().curiosity = 70, 70
 	NS:FireCallback("STAMP", { id = "zone:1519", kind = "zone", name = "Hurlevent", new = true })
-	S.ok("tampon : curiosité et bulle avec le nom", C.Needs().curiosity > c and C.Key() == "STAMP"
+	S.ok("tampon : Éveillé et bulle avec le nom", C.Needs().curiosity == 100 and C.Key() == "STAMP"
 		and NS.companionBubbleText:find("Hurlevent", 1, true), NS.companionBubbleText)
 	C.Quiet()
-	c = C.Needs().curiosity
+	C.Needs().curiosity = 80
+	local c = C.Needs().curiosity
 	NS:FireCallback("STAMP", { id = "zone:1519", kind = "zone", name = "Hurlevent", new = false })
 	S.ok("tampon déjà vu : rien", C.Needs().curiosity == c and NS.companionLastBubble == nil)
-	-- feu de camp (Forever) : aura « Campfire Nearby »
+	-- feu de camp (Forever) : aura « Campfire Nearby » (deux états au plus :
+	-- Rayonnant aurait sa propre bulle)
 	C.Quiet()
+	C.Needs().energy = 70
 	Mock.world.auras = { [1283391] = { name = "Campfire Nearby", duration = 0 } }
 	Mock.world.auraOrder = { 1283391 }
 	Mock:Fire("UNIT_AURA", "player")
 	S.ok("feu de camp : « On se réchauffe ? »", C.Key() == "CAMP", C.Key())
-	local e = C.Needs().energy
-	C.Play(3)
-	S.ok("au camp : l'énergie remonte", C.Needs().energy > e)
+	S.ok("au camp : Reposé aussitôt", C.Needs().energy == 100, C.Needs().energy)
 	S.done()
 end
 
@@ -481,7 +525,8 @@ do
 	S.ok("sans API de modèle : pas de modèle", frame.model == nil)
 	S.ok("sans API de modèle : bulles et caresses marchent", C.Key() == "HELLO" and NS:CompanionPet() == true)
 	Mock:Reset()
-	NS:HandleCommand("compagnon")
+	local ran, err = C.Status()
+	S.ok("statut : la commande répond", ran, err)
 	S.ok("statut : repli signalé", Mock:Output():find("boussole", 1, true) ~= nil)
 	-- modèle présent mais affichage refusé : repli aussi
 	C.Reset(11, false)
@@ -506,21 +551,25 @@ do
 	C.Reset(11)
 	C.Login()
 	C.Quiet()
-	C.Needs().mood = 50
+	NS:CompanionGrant("hunger")
+	local snap = C.Snap()
 	NS.companionFrame.scripts.OnMouseDown(NS.companionFrame)
 	NS.companionFrame.scripts.OnMouseUp(NS.companionFrame, "LeftButton")
-	S.ok("clic : moral +8 et petite conversation", C.Needs().mood == 58 and (C.Key() or ""):find("^CONVO_"), C.Key())
+	local petAt = NS.companionLastPet
+	S.ok("clic : caresse et petite conversation", petAt == Mock.now and (C.Key() or ""):find("^CONVO_"), C.Key())
+	S.ok("clic : aucun état ne change (3.5.0 : plus de moral)", C.Snap() == snap, C.Snap())
 	S.ok("clic : animation de joie", NS.companionFrame.animation == "cheer")
-	S.ok("caresse trop tôt : sans effet", NS:CompanionPet() == false and C.Needs().mood == 58)
+	S.ok("caresse trop tôt : sans effet", NS:CompanionPet() == false and NS.companionLastPet == petAt)
 	Mock.now = Mock.now + NS.COMPANION_RULES.petCooldown + 1
-	S.ok("après la pause : de nouveau", NS:CompanionPet() == true and C.Needs().mood == 66)
+	S.ok("après la pause : de nouveau", NS:CompanionPet() == true and NS.companionLastPet == Mock.now and C.Snap() == snap)
+	petAt = NS.companionLastPet
 	-- glisser n'est pas caresser
 	Mock.now = Mock.now + 60
 	Mock.world.cursorX = 500
 	NS.companionFrame.scripts.OnMouseDown(NS.companionFrame)
 	Mock.world.cursorX = 560
 	NS.companionFrame.scripts.OnMouseUp(NS.companionFrame, "LeftButton")
-	S.ok("glisser le cadre : pas de caresse", C.Needs().mood == 66)
+	S.ok("glisser le cadre : pas de caresse", NS.companionLastPet == petAt)
 	Mock.world.cursorX = nil
 	-- clic droit : son carnet, sur son dernier onglet (pas une caresse)
 	Mock.now = Mock.now + 60
@@ -536,13 +585,13 @@ do
 	S.done()
 	S = Scenario("[COMP] clic droit : carnet ; Maj + clic droit : menu")
 	S.ok("clic droit : le carnet sur son dernier onglet, sans menu ni caresse", NS.journalFrame and NS.journalFrame:IsShown()
-		and NS.journalFrame.kind == "evolution" and not (NS.companionMenu and NS.companionMenu:IsShown()) and C.Needs().mood == 66)
+		and NS.journalFrame.kind == "evolution" and not (NS.companionMenu and NS.companionMenu:IsShown()) and NS.companionLastPet == petAt)
 	NS.companionFrame.scripts.OnMouseUp(NS.companionFrame, "RightButton")
 	S.ok("clic droit de nouveau : carnet refermé", not NS.journalFrame:IsShown())
 	_G.IsShiftKeyDown = function() return true end
 	NS.companionFrame.scripts.OnMouseUp(NS.companionFrame, "RightButton")
 	S.ok("Maj + clic droit : le menu (carnet, chasse), sans carnet ni caresse", NS.companionMenu and NS.companionMenu:IsShown()
-		and not NS.journalFrame:IsShown() and C.Needs().mood == 66)
+		and not NS.journalFrame:IsShown() and NS.companionLastPet == petAt)
 	NS.companionMenu.journal:Click()
 	S.ok("menu « Carnet de voyage » : carnet ouvert, menu fermé", NS.journalFrame:IsShown() and not NS.companionMenu:IsShown())
 	NS:CompanionMenuShow()
@@ -553,7 +602,7 @@ do
 	S.ok("second Maj + clic droit : le menu se ferme", not NS.companionMenu:IsShown())
 	_G.IsShiftKeyDown = shiftSaved
 	NS.companionFrame.scripts.OnMouseUp(NS.companionFrame, "MiddleButton")
-	S.ok("autre bouton : rien", not NS.journalFrame:IsShown() and C.Needs().mood == 66)
+	S.ok("autre bouton : rien", not NS.journalFrame:IsShown() and NS.companionLastPet == petAt)
 	NS.JournalCounts = nil
 	S.done()
 	S = Scenario("[COMP] survol : aide, barres ; caresse qui réveille")
@@ -568,9 +617,13 @@ do
 	S.ok("une caresse le réveille", not data.sleepy and C.Key() == "PET_sleepy", C.Key())
 	NS.companionFrame.scripts.OnEnter(NS.companionFrame)
 	local hover = NS.companionHover
-	S.ok("survol : quatre barres de besoins", hover and hover:IsShown() and hover.bars.hunger and hover.bars.energy
-		and hover.bars.mood and hover.bars.curiosity)
-	S.ok("survol : barre au bon niveau", math.abs(hover.bars.mood.ratio - C.Needs().mood / 100) < 0.001, hover.bars.mood.ratio)
+	S.ok("survol : trois états (le moral n'en est plus un)", hover and hover:IsShown() and hover.bars.hunger and hover.bars.energy
+		and hover.bars.curiosity and not hover.bars.mood)
+	local minutes = NS:CompanionStateMinutes("hunger")
+	S.ok("survol : barre au temps qui reste (sur 60 min)", minutes > 0 and math.abs(hover.bars.hunger.ratio - math.min(1, minutes / 60)) < 0.001,
+		hover.bars.hunger.ratio)
+	S.ok("survol : « n min », ou « — » éteint", hover.bars.hunger.value:GetText() == NS:F("COMP_STATE_MIN", math.ceil(minutes))
+		and hover.bars.energy.value:GetText() == NS.L.COMP_STATE_OFF, hover.bars.hunger.value:GetText())
 	NS.companionFrame.scripts.OnLeave(NS.companionFrame)
 	S.ok("fin du survol : masqué", not hover:IsShown())
 	S.done()
@@ -594,10 +647,11 @@ do
 	local name = NS:CompanionName()
 	S.ok("nom trop long coupé sans casser l'UTF-8", #name <= 24 and #name % 2 == 0 and name:sub(1, 2) == "é", #name)
 	Mock:Reset()
-	NS:HandleCommand("compagnon")
+	local ran, err = C.Status()
+	S.ok("statut : la commande répond", ran, err)
 	local out = Mock:Output()
-	S.ok("statut : nom, stade, besoins, collection", out:find(NS:CompanionName(), 1, true) and out:find("Jeune", 1, true)
-		and out:find("Faim", 1, true) and out:find("Apparences 1/" .. #NS.COMPANION_APPEARANCES, 1, true), out)
+	S.ok("statut : nom, stade, états, collection", out:find(NS:CompanionName(), 1, true) and out:find("Jeune", 1, true)
+		and out:find(NS.L.COMP_STATE_hunger, 1, true) and out:find("Apparences 1/" .. #NS.COMPANION_APPEARANCES, 1, true), out)
 	NS:HandleCommand("compagnon apparence")
 	S.ok("« apparence » : cycle et confirmation", Mock:Output():find("Apparence :", 1, true) ~= nil)
 	S.ok("aide : commande listée", (function()
@@ -630,7 +684,7 @@ do
 	C.Play(30)
 	local same = true
 	for k, v in pairs(C.Needs()) do same = same and before[k] == v end
-	S.ok("module coupé : aucun besoin ne bouge", same)
+	S.ok("module coupé : aucun état ne bouge", same)
 	S.ok("module coupé : aucune bulle", C.Key() == nil and not C.Shown())
 	S.ok("module coupé : pas d'évolution", NS:CompanionData().stage == 2)
 	S.ok("module coupé : pas de caresse", NS:CompanionPet() == false)
@@ -974,14 +1028,14 @@ do
 	local S = Scenario("[COMP] bavardage : repos prolongé, nuit")
 	D.Reset(11)
 	C.Login()
-	D.Calm()
 	C.Quiet()
+	D.Calm()     -- (3.5.0 : son envie, née après 2 min, se tait aussi)
 	Mock.world.resting = true
 	-- (les blagues tirées au hasard prendraient la place du mot : coupées ici)
 	local jokes = NS:DB().companionJokes
 	NS:DB().companionJokes = false
 	C.Play(4)
-	S.ok("4 min au repos : rien encore", NS.companionLastBubble == nil)
+	S.ok("4 min au repos : rien encore", NS.companionLastBubble == nil, C.Key())
 	C.Play(1)
 	S.ok("5 min au repos : un mot", C.Key() == "IDLE" and C.InPool("IDLE"), C.Key())
 	S.ok("puis le repos continue sans bavarder", D.Count("IDLE", 10) == 0)
@@ -1083,8 +1137,7 @@ do
 	S.done()
 	S = Scenario("[COMP] conversation : priorités et variété")
 	S.ok("réaction pendant la conversation : retenue", NS:CompanionSay("QUEST", { force = true }) == false and C.Key() == convo)
-	Mock.world.level = 20
-	Mock:Fire("PLAYER_LEVEL_UP", 20)
+	C.Evolve(20)
 	S.ok("évolution pendant la conversation : elle passe", C.Key() == "EVOLVE" and NS.companionRT.seq == nil, C.Key())
 	-- plusieurs conversations, jamais la même deux fois de suite
 	local previous, repeated, distinct = nil, false, {}
@@ -1103,44 +1156,52 @@ do
 end
 
 do
-	Say("-- besoins exprimés")
-	local S = Scenario("[COMP] besoins exprimés")
+	Say("-- envie exprimée")
+	local S = Scenario("[COMP] envie exprimée")
 	D.Reset(11)
 	C.Login()
 	D.Calm()
 	NS.companionRT.cool.need = nil
-	S.ok("besoins hauts : aucune envie", D.Count("NEED_hunger", 20) == 0 and NS.companionBubbleKey ~= "NEED_mood")
-	-- connexion avec un besoin bas : un répit, puis une envie
+	-- trois états actifs pour longtemps : aucune envie à dire
+	for _, key in ipairs(NS.COMPANION_NEED_KEYS) do C.Needs()[key] = NS.COMPANION_STATE.max end
+	S.ok("tous ses états pour longtemps : aucune envie", D.Count("NEED_hunger", 5) == 0 and NS:CompanionWish() == nil
+		and NS:CompanionTryNeed() == false)
+	-- connexion : un répit, puis une envie, dite à sa naissance
 	D.Reset(11)
 	C.Login()
 	D.Calm()
 	C.Quiet()
 	D.Calm()
-	NS.companionRT.cool.need = Mock.now + NS.COMPANION_RULES.needGrace
-	C.Needs().hunger = 25
+	NS.companionRT.cool.need = nil
+	C.Needs().hunger, C.Needs().energy, C.Needs().curiosity = 110, 110, 70
 	C.Play(1)
-	S.ok("répit après la connexion", NS.companionLastBubble == nil)
-	C.Play(2)
-	S.ok("faim basse : il le dit", C.Key() == "NEED_hunger" and C.InPool("NEED_hunger"), C.Key())
+	S.ok("répit après la connexion", NS.companionLastBubble == nil and NS:CompanionWish() == nil)
+	C.Play(3)
+	S.ok("l'envie naît : il la dit (l'état éteint)", NS:CompanionWish() == "curiosity" and C.Key() == "NEED_curiosity"
+		and C.InPool("NEED_curiosity"), C.Key())
 	S.ok("... sans reproche", not NS.companionBubbleText:find("abandon", 1, true) and not NS.companionBubbleText:find("oubli", 1, true))
-	C.Needs().hunger = 25
-	S.ok("envie : rare (au plus 1 toutes les 15 min)", D.Count("NEED_hunger", 30) <= 2)
-	-- le besoin le plus bas d'abord
+	S.ok("envie redite : rare (au plus 1 toutes les 15 min)", D.Count("NEED_curiosity", 30) <= 2)
+	S.ok("une seule envie à la fois", NS:CompanionWish() == "curiosity")
+	S.done()
+	S = Scenario("[COMP] envie : elle seule, jamais en combat ni somnolent")
+	-- ce qu'il redit, c'est son envie, pas un autre état éteint
 	D.Reset(11)
 	C.Login()
 	D.Calm()
 	NS.companionRT.cool.need = nil
-	C.Needs().hunger, C.Needs().curiosity = 30, 20
-	C.Play(1)
-	S.done()
-	S = Scenario("[COMP] envies : la plus basse, jamais en combat ni somnolent")
-	S.ok("plusieurs besoins bas : le plus bas", C.Key() == "NEED_curiosity", C.Key())
+	NS:CompanionData().wish = { key = "energy" }
+	C.Quiet()
+	S.ok("il redit son envie, pas un autre état éteint", NS:CompanionTryNeed() == true and C.Key() == "NEED_energy", C.Key())
+	NS:CompanionData().wish = nil
+	C.Quiet()
+	NS.companionRT.cool = {}
+	S.ok("sans envie : rien à redire", NS:CompanionTryNeed() == false)
 	-- jamais en combat, jamais en somnolant
 	D.Reset(11)
 	C.Login()
 	D.Calm()
 	NS.companionRT.cool.need = nil
-	C.Needs().energy = 20
+	NS:CompanionData().wish = { key = "energy" }
 	D.W.combat = true
 	S.ok("en combat : pas d'envie", D.Count("NEED_energy", 5) == 0 and NS:CompanionTryNeed() == false)
 	D.W.combat = false
@@ -1149,7 +1210,7 @@ do
 	NS:CompanionWake(false)
 	C.Quiet()
 	C.Play(1)
-	S.ok("réveillé, fatigué : il le dit", C.Key() == "NEED_energy", C.Key())
+	S.ok("réveillé : il redit son envie", C.Key() == "NEED_energy", C.Key())
 	S.done()
 end
 
@@ -1162,13 +1223,12 @@ do
 	C.Quiet()
 	NS:CompanionTryTip(true)
 	S.ok("une astuce affichée", C.Key() == "TIP")
-	Mock.world.level = 20
-	Mock:Fire("PLAYER_LEVEL_UP", 20)
+	C.Evolve(20)
 	S.ok("une évolution remplace l'astuce", C.Key() == "EVOLVE", C.Key())
 	NS.companionLastBubble = nil       -- l'écart global passé, la bulle encore affichée
 	S.ok("une astuce n'efface pas l'évolution", NS:CompanionTryTip(true) == false and C.Key() == "EVOLVE")
 	S.ok("une réaction forcée non plus", NS:CompanionSay("QUEST", { force = true }) == false and C.Key() == "EVOLVE")
-	C.Needs().hunger = 20
+	NS:CompanionData().wish = { key = "hunger" }
 	NS.companionRT.cool.need = nil
 	S.ok("une envie non plus", NS:CompanionTryNeed() == false and C.Key() == "EVOLVE")
 	Mock:Advance(NS.COMPANION_RULES.bubbleTime + 1)
@@ -1199,7 +1259,8 @@ do
 	S.ok("objectif de stade : Aguerri au niveau 20", list[1].kind == "stage" and list[1].label == "Aguerri"
 		and list[1].stat == "level" and list[1].have == 11 and list[1].need == 20, list[1].label)
 	Mock:Reset()
-	NS:HandleCommand("compagnon")
+	local ran, err = C.Status()
+	S.ok("statut : la commande répond", ran, err)
 	S.ok("statut : prochain stade", Mock:Output():find("Prochain : Aguerri (11/20)", 1, true) ~= nil, Mock:Output())
 	-- rien de proche : pas de rappel
 	D.Reset(5)
@@ -1218,6 +1279,12 @@ do
 	NS.companionRT.cool.goal = Mock.now + 10
 	S.ok("rappel : rare (pause)", NS:CompanionTryGoal() == false)
 	Mock.world.level = 60
+	NS:CompanionCheckStage(60, false)
+	local ready
+	for _, item in ipairs(NS:CompanionNextUnlocks()) do if item.kind == "stage" then ready = item end end
+	S.ok("niveau 60 atteint : il ne manque qu'une envie comblée", ready and ready.stat == "wish" and ready.have == 0
+		and ready.need == 1 and ready.ready == true, ready and ready.stat)
+	NS:CompanionData().stageWish = true
 	NS:CompanionCheckStage(60, false)
 	local stage = false
 	for _, item in ipairs(NS:CompanionNextUnlocks()) do if item.kind == "stage" then stage = true end end
@@ -1242,10 +1309,10 @@ do
 	S.ok("tutoriel : bulle 2 toute seule", NS.companionBubbleLine == tuto[2])
 	NS.companionBubble.nextButton:Click()
 	S.ok("« Suivant » : bulle 3", NS.companionBubbleLine == tuto[3])
-	local mood = C.Needs().mood
+	local petAt = NS.companionLastPet
 	NS.companionFrame.scripts.OnMouseDown(NS.companionFrame)
 	NS.companionFrame.scripts.OnMouseUp(NS.companionFrame, "LeftButton")
-	S.ok("clic sur le compagnon : bulle suivante (pas de câlin)", NS.companionBubbleLine == tuto[4] and C.Needs().mood == mood)
+	S.ok("clic sur le compagnon : bulle suivante (pas de câlin)", NS.companionBubbleLine == tuto[4] and NS.companionLastPet == petAt)
 	-- combat : la bulle s'efface, la même étape revient après
 	D.W.combat = true
 	Mock:Fire("PLAYER_REGEN_DISABLED")
@@ -1256,8 +1323,7 @@ do
 	Mock:Advance(1)
 	S.ok("fin du combat : la même étape revient", NS.companionBubbleLine == tuto[4] and C.Shown(), NS.companionBubbleLine)
 	-- une évolution passe devant, puis l'étape reprend
-	Mock.world.level = 20
-	Mock:Fire("PLAYER_LEVEL_UP", 20)
+	C.Evolve(20)
 	S.done()
 	S = Scenario("[COMP] tutoriel : évolution, fin, connexion suivante")
 	S.ok("évolution pendant le tutoriel : elle passe", C.Key() == "EVOLVE", C.Key())

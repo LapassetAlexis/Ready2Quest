@@ -587,14 +587,16 @@ do
 		Check("[JPAN] friandises dans l'en-tête : compteurs, vides grisées", f.pantry and f.pantry.biscuit and f.pantry.festin
 			and f.pantry.bonbon.count.text == "2" and f.pantry.biscuit.count.text == "0" and f.pantry.biscuit.alpha < 1
 			and f.pantry.bonbon.alpha == 1)
-		NS:CompanionData().needs.mood = 30
+		-- 3.5.0 : le Bonbon remet chaque état actif à 45 min (100), l'éteint reste éteint
+		local needs = NS:CompanionData().needs
+		needs.hunger, needs.energy, needs.curiosity = 90, 70, 70
 		f.pantry.bonbon:Click()
 		NS:TreatGrant("carte", { quiet = true })
 		f.pantry.carte.scripts.OnEnter(f.pantry.carte)
 		local tip = table.concat(_G.GameTooltip.lines or {}, " | ")
 		f.pantry.carte.scripts.OnLeave(f.pantry.carte)
 		Check("[JPAN] clic : donnée ; friandise gagnée : l'en-tête suit ; survol : nom, effet, nombre", NS:TreatCount("bonbon") == 1
-			and NS:CompanionData().needs.mood == 100 and f.pantry.bonbon.count.text == "1" and f.pantry.carte.count.text == "1"
+			and needs.hunger == 100 and needs.energy == 70 and f.pantry.bonbon.count.text == "1" and f.pantry.carte.count.text == "1"
 			and tip:find("Carte au trésor", 1, true) and tip:find("1 / 3", 1, true), tip)
 		f:Hide()
 	end

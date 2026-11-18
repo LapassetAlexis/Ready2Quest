@@ -219,10 +219,11 @@ do
 			if block.kind == "p" and block.text:find("rang normal", 1, true) then strength = block.text end
 			if block.kind == "p" and block.text:find("confirmation", 1, true) then delay = block.text end
 		end
-		Check("[GUIDE] la force (×1 → ×2,5, +0,5 brillante, +0,25 par étoile et par palier), le délai de 2 minutes, le seuil de 50 %",
+		-- 3.5.0 : plus de seuil d'envies ; les effets valent toujours en entier, Rayonnant +10 % / +20 %
+		Check("[GUIDE] la force (×1 → ×2,5, +0,5 brillante, +0,25 par étoile et par palier), le délai de 2 minutes, Rayonnant",
 			strength and strength:find("×1,5", 1, true) and strength:find("×2,5", 1, true) and strength:find("+0,5", 1, true)
 			and strength:find("+0,25 par étoile", 1, true) and strength:find("+0,25 par palier", 1, true)
-			and delay and delay:find("2 minutes", 1, true) and blocks[#blocks - 1].text:find(NS.EFFECT_NEED_OK .. " %", 1, true), strength)
+			and delay and delay:find("2 minutes", 1, true) and blocks[#blocks - 1].text:find("capture +10 %, brillantes +20 %", 1, true), strength)
 		-- pagination
 		local first = pane.shown
 		local paged = pane.blocks > pane.shown and pane.pager.position.text ~= "" and pane.hint.text == NS.L.GUIDE_MORE

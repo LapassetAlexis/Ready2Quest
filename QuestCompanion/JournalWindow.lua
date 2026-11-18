@@ -72,7 +72,7 @@ local FR = {
 	JRN_ITEM_NAMED         = "%s, %s",
 	JRN_EVO_STAGE          = "%s — %s (étape %d/%d)",
 	JRN_EVO_NEXT_LEVEL     = "Prochaine étape : %s au niveau %d (tu es niveau %d).",
-	JRN_EVO_NEXT_READY     = "Prêt à devenir %s : rends-le heureux, il évoluera aussitôt.",
+	JRN_EVO_NEXT_READY     = "Prêt à devenir %s : comble une de ses envies, il évoluera aussitôt.",
 	JRN_EVO_MAX            = "Dernière étape atteinte. Bravo !",
 	JRN_EVO_NEEDS          = "Ses envies (des bonus, jamais une perte)",
 	JRN_MOOD_LABEL         = "Humeur",
@@ -111,7 +111,7 @@ local FR = {
 	JRN_NEED_TIP_SERENE    = "Toutes ses évolutions faites : il ne descend plus sous %d %%.",
 	JRN_EVO_HOW            = "Comment ça marche",
 	JRN_EVO_HOW_1          = "Ton niveau ouvre chaque étape : 10, 20, 40 et 60.",
-	JRN_EVO_HOW_2          = "Pour la franchir, il doit être heureux : ses quatre envies à %d %% ou plus. Mange, repose-toi, rends des quêtes, explore.",
+	JRN_EVO_HOW_2          = "Pour la franchir, comble une de ses envies (manger, se reposer, découvrir) une fois le niveau atteint.",
 	JRN_EVO_HOW_3          = "Finis une zone à 100 %% (page Exploration) : un coffre s'ouvre, tu y choisis une apparence, un ornement, un cadre ou un fond.",
 }
 local EN = {
@@ -146,7 +146,7 @@ local EN = {
 	JRN_ITEM_NAMED         = "%s, %s",
 	JRN_EVO_STAGE          = "%s — %s (stage %d/%d)",
 	JRN_EVO_NEXT_LEVEL     = "Next stage: %s at level %d (you are level %d).",
-	JRN_EVO_NEXT_READY     = "Ready to become %s: make it happy and it grows at once.",
+	JRN_EVO_NEXT_READY     = "Ready to become %s: grant one of its wishes and it grows at once.",
 	JRN_EVO_MAX            = "Final stage reached. Well done!",
 	JRN_EVO_NEEDS          = "Its needs (bonuses, never a loss)",
 	JRN_MOOD_LABEL         = "Mood",
@@ -184,7 +184,7 @@ local EN = {
 	JRN_NEED_TIP_SERENE    = "All its evolutions done: it never goes below %d %%.",
 	JRN_EVO_HOW            = "How it works",
 	JRN_EVO_HOW_1          = "Your level opens each stage: 10, 20, 40 and 60.",
-	JRN_EVO_HOW_2          = "To go through, it must be happy: all four needs at %d %% or more. Eat, rest, turn in quests, explore.",
+	JRN_EVO_HOW_2          = "To go through, grant one of its wishes (eat, rest, explore) once the level is reached.",
 	JRN_EVO_HOW_3          = "Complete a zone to 100 %% (Exploration page): a chest opens and you pick a look, an ornament, a frame or a background.",
 }
 ns.RegisterStrings(FR, EN)
@@ -1032,7 +1032,7 @@ local function BuildEvolution(self, frame, content)
 	pane.stepsHover:SetSize(#pane.steps * 17 + 4, 22)
 	pane.stepsHover:SetScript("OnEnter", function(owner)
 		local happy = ns.COMPANION_HAPPY_MIN or 70
-		Tip(owner, L.JRN_EVO_HOW, { L.JRN_EVO_HOW_1, ns:F("JRN_EVO_HOW_2", happy), ns:F("JRN_EVO_HOW_3") })
+		Tip(owner, L.JRN_EVO_HOW, { L.JRN_EVO_HOW_1, L.JRN_EVO_HOW_2, ns:F("JRN_EVO_HOW_3") })
 	end)
 	pane.stepsHover:SetScript("OnLeave", HideTip)
 	local nextX = textX + #pane.steps * 17 + 10
@@ -1123,7 +1123,7 @@ local function BuildEvolution(self, frame, content)
 	pane.wishRow.label = Text(pane.wishRow, Theme.F_SMALL, Theme.MUTED_LIGHT, 70)
 	pane.wishRow.label:SetPoint("LEFT", pane.wishRow, "LEFT", 8, 0)
 	pane.wishRow.label:SetText(L.JRN_WISH_LABEL)
-	pane.wishRow.text = Text(pane.wishRow, Theme.F_LABEL, Theme.LABEL, 180)
+	pane.wishRow.text = Text(pane.wishRow, Theme.F_LABEL, Theme.LABEL, HALF - 78 - 96)
 	pane.wishRow.text:SetPoint("LEFT", pane.wishRow, "LEFT", 78, 0)
 	if pane.wishRow.text.SetWordWrap then pane.wishRow.text:SetWordWrap(false) end
 	pane.wishRow.bond = Text(pane.wishRow, Theme.F_SMALL, Theme.GREEN, 80)
@@ -2444,6 +2444,17 @@ local function RefreshEvolution(self, frame)
 	-- sa dernière bulle ; à défaut, un mot de repos de son réservoir
 	-- (tirée une seule fois : chaque tirage remplit la mémoire anti-répétition)
 	local said = self.companionBubbleText
+	-- 3.5.0 : son envie du moment d'abord (une réplique de son réservoir, tirée une fois par envie)
+	local wish = self.CompanionWish and self:CompanionWish()
+	if wish and self.CompanionPick then
+		if pane.bubbleWish ~= wish then
+			local key = self:CompanionPick("NEED_" .. wish)
+			pane.bubbleWish, pane.wishLine = wish, key and L[key] or nil
+		end
+		said = pane.wishLine or said
+	else
+		pane.bubbleWish, pane.wishLine = nil, nil
+	end
 	if not said and not pane.bubbleLine and self.CompanionPick then
 		local key = self:CompanionPick("IDLE")
 		said = key and L[key] or nil
@@ -2484,7 +2495,7 @@ local function RefreshEvolution(self, frame)
 	end
 	local count = self.CompanionStatesOn and self:CompanionStatesOn() or 0
 	local mood = self.CompanionMood and self:CompanionMood() or "calm"
-	pane.moodRow.tag:SetText(Theme.Upper and tostring(L["COMP_MOOD_" .. mood]) or tostring(L["COMP_MOOD_" .. mood]))
+	pane.moodRow.tag:SetText(tostring(L["COMP_MOOD_" .. mood]))
 	local mc = (mood == "radiant" and Theme.GOLD) or (mood == "joyful" and Theme.GREEN) or (mood == "sleepy" and Theme.MUTED_LIGHT) or Theme.LABEL
 	pane.moodRow.tag:SetTextColor(mc[1], mc[2], mc[3])
 	for i, d in ipairs(pane.moodRow.pips) do
@@ -3059,7 +3070,7 @@ end
 -- jour et de la semaine (losanges pleins = faites). Chaque bloc mène à sa
 -- page. Construit une fois ; rafraîchi avec le carnet (pas à la molette).
 -- ---------------------------------------------------------------------------
-local NAVSUM = { w = NAV_W - 36, x = 18, gap = 16, row = 14, labelW = 66, bar = 2, block = 10 }
+local NAVSUM = { w = NAV_W - 36, x = 18, gap = 16, row = 14, labelW = 66, bar = 2, block = 10, timeW = 44 }
 ns.JOURNAL_NAVSUM = NAVSUM
 local NEED_KEYS = { "hunger", "energy", "curiosity" }
 local function NavBlock(box, height, onClick, tipKey)
@@ -3095,8 +3106,12 @@ function ns:JournalNavSummaryBuild(frame)
 		row.label = Text(pet, Theme.F_SMALL, Theme.MUTED_LIGHT, NAVSUM.labelW)
 		row.label:SetPoint("TOPLEFT", pet, "TOPLEFT", 0, y)
 		row.label:SetText(L["COMP_STATE_" .. key] or key)
-		row.bar = Theme.CreateBar(pet, W - NAVSUM.labelW, NAVSUM.bar)
+		row.bar = Theme.CreateBar(pet, W - NAVSUM.labelW - NAVSUM.timeW, NAVSUM.bar)
 		row.bar:SetPoint("TOPLEFT", pet, "TOPLEFT", NAVSUM.labelW, y - 5)
+		-- 3.5.0 : le temps qui reste, à droite de la barre
+		row.time = Text(pet, Theme.F_SMALL, Theme.MUTED_LIGHT, NAVSUM.timeW - 4)
+		row.time:SetPoint("TOPRIGHT", pet, "TOPRIGHT", 0, y)
+		row.time:SetJustifyH("RIGHT")
 		pet.needs[index] = row
 	end
 	-- 3.5.0 : son envie, sous les trois états
@@ -3154,12 +3169,13 @@ function ns.JournalNavSummaryFit(box, w)
 	w = math.floor(tonumber(w) or NAVSUM.w)
 	box.fitW = w
 	box:SetWidth(w)
-	local barW = math.max(20, w - NAVSUM.labelW)
+	local barW = math.max(20, w - NAVSUM.labelW - NAVSUM.timeW)
 	for _, block in ipairs({ box.pet, box.zone, box.missions }) do
 		block:SetWidth(w)
 		if block.rule then block.rule:SetWidth(w) end
 	end
 	box.pet.name:SetWidth(w)
+	if box.pet.wish then box.pet.wish:SetWidth(w) end
 	for _, row in ipairs(box.pet.needs) do
 		row.bar:SetWidth(barW)
 		if row.bar.ratio then row.bar:SetValue(row.bar.ratio) end
@@ -3193,6 +3209,7 @@ function ns:JournalNavSummaryRefresh(frame)
 			row.bar:SetValue(math.max(0, math.min(1, minutes / 60)))
 			local c = minutes > 0 and Theme.GREEN or Theme.MUTED_LIGHT
 			row.bar:SetColor(c[1], c[2], c[3], 1)
+			if row.time then row.time:SetText(minutes > 0 and self:F("COMP_STATE_MIN", math.ceil(minutes)) or L.COMP_STATE_OFF) end
 			row.value = minutes
 		end
 		if box.pet.wish then box.pet.wish:SetText(self.CompanionWishLine and self:CompanionWishLine() or "") end

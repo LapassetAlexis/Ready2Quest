@@ -123,12 +123,13 @@ do
 			ok = ok and block:GetWidth() == box.fitW and block.rule:GetWidth() == box.fitW
 		end
 		for _, r in ipairs(box.pet.needs) do ok = ok and NS.JOURNAL_NAVSUM.labelW + r.bar:GetWidth() <= box.fitW end
+		ok = ok and box.pet.wish and box.pet.wish:GetWidth() <= box.fitW
 		ok = ok and box.zone.bar:GetWidth() <= box.fitW
 		for _, r in ipairs(box.missions.rows) do ok = ok and NS.JOURNAL_NAVSUM.labelW + 3 * 14 + r.left:GetWidth() <= box.fitW end
 		if not ok then fitted[#fitted + 1] = style .. " " .. tostring(box.fitW) .. "/" .. tostring(inner) end
 	end
 	Check("[CZ] plaques de chiffres : chiffre et libellé groupés au centre (deux styles)", #centred == 0, table.concat(centred, ", "))
-	Check("[CZ] colonne : barres, % et jours dans la largeur intérieure (deux styles)", #fitted == 0, table.concat(fitted, ", "))
+	Check("[CZ] colonne : barres, envie, % et jours dans la largeur intérieure (deux styles)", #fitted == 0, table.concat(fitted, ", "))
 	-- B1 : libellés courts ; en Azeroth, à leur rôle
 	CZ.Reset("sobre")
 	local f = Open("evolution")
@@ -137,8 +138,9 @@ do
 	local box = f.navSummary
 	local before = #Mock.frames
 	NS:RefreshJournal(); NS:RefreshJournal()
-	Check("[CZ] colonne : trois blocs, rafraîchis sans rien créer, nom du compagnon", box and box.pet and box.zone and box.missions
-		and #box.pet.needs == 4 and #Mock.frames == before and box.pet.name.text:find(NS:CompanionName(), 1, true) ~= nil,
+	-- 3.5.0 : trois états (Repu, Reposé, Éveillé) et la ligne de son envie
+	Check("[CZ] colonne : trois blocs, rafraîchis sans rien créer, nom du compagnon, trois états et son envie", box and box.pet and box.zone and box.missions
+		and #box.pet.needs == 3 and box.pet.needs[1].key == "hunger" and box.pet.needs[3].key == "curiosity" and box.pet.wish ~= nil and #Mock.frames == before and box.pet.name.text:find(NS:CompanionName(), 1, true) ~= nil,
 		#Mock.frames .. " / " .. before)
 	box.missions:GetScript("OnClick")(box.missions)
 	local toDay = f.kind == "day"
