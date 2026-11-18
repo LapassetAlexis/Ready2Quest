@@ -12,6 +12,7 @@
 -- MissionsMenagerie.lua).
 -- Chaque mission faite : un Lasso tressé et une friandise ; les trois : un
 -- Sifflet du dompteur et un Festin (ns.MISSION_REWARDS, Daily.lua).
+-- 3.6.0 : « Livre une commande de la semaine » (capture allumée).
 local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L
@@ -27,8 +28,12 @@ local WEEKLY = {
 	{ kind = "turnins",      need = 15 },
 	{ kind = "shinyKill",    need = 1 },
 	{ kind = "shinyCapture", need = 1 },
+	-- 3.6.0 : une commande de la semaine (ShopWeek.lua) ; capture allumée
+	{ kind = "orders",       need = 1 },
 }
 local CAPTURE_KINDS = { captures = true, captureNamed = true, shinyCapture = true }
+-- 3.6.0 : tirées avec les autres, seulement si la capture est allumée
+local NEEDS_CAPTURE = { orders = true }
 -- une chasse au brillant par semaine (1.6.0)
 local SHINY_KINDS = { shinyKill = true, shinyCapture = true }
 ns.WEEKLY_SHINY_KINDS = SHINY_KINDS
@@ -44,6 +49,7 @@ local FR = {
 	WK_turnins      = "Rends %d quêtes",
 	WK_shinyKill    = "Abats une créature brillante",
 	WK_shinyCapture = "Capture une créature brillante",
+	WK_orders       = "Livre une commande de la semaine",
 	WK_SOURCE       = "mission de la semaine",
 	WK_ENDS         = "Nouvelles missions dans %s.",
 	WK_ALL_BONUS    = "Les 3 missions de la semaine : un Sifflet du dompteur et un Festin en plus.",
@@ -61,6 +67,7 @@ local EN = {
 	WK_turnins      = "Turn in %d quests",
 	WK_shinyKill    = "Defeat a shiny creature",
 	WK_shinyCapture = "Capture a shiny creature",
+	WK_orders       = "Deliver one of this week's orders",
 	WK_SOURCE       = "mission of the week",
 	WK_ENDS         = "New missions in %s.",
 	WK_ALL_BONUS    = "All 3 weekly missions: a Tamer's whistle and a Feast on top.",
@@ -139,6 +146,8 @@ function ns:WeeklyDraw(later)
 			if not CAPTURE_KINDS[def.kind] or CaptureOn(self) then shinies[#shinies + 1] = def end
 		elseif CAPTURE_KINDS[def.kind] then
 			if CaptureOn(self) then captures[#captures + 1] = def end
+		elseif NEEDS_CAPTURE[def.kind] then
+			if CaptureOn(self) and self.ShopOrders then pool[#pool + 1] = def end
 		else
 			pool[#pool + 1] = def
 		end

@@ -125,7 +125,8 @@ do
 	NS:DB().companionCapture = true
 	NS:MissionDraw(9800)
 	Check("[MIS] zone toute faite : gens à qui parler et ennemis ; capture allumée : une capture, partout faisable",
-		off == "talks,kills,pets" and DY.Kinds() == "captures,talks,pets" and NS:MissionFeasible("captures", nil) == true,
+		-- 3.6.0 : capture allumée, « sois Rayonnant » (partout) passe avant le repli « parle à… »
+		off == "talks,kills,pets" and DY.Kinds() == "captures,radiant,pets" and NS:MissionFeasible("captures", nil) == true,
 		off .. " / " .. DY.Kinds())
 
 	DY.Reset()
