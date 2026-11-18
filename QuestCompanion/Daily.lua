@@ -2,7 +2,7 @@
 --
 -- Fidélité : une seule carte pour toutes les auberges. Au plus un tampon par
 -- jour (date de l'ordinateur), chez n'importe quel aubergiste à qui tu
--- parles : +INN_ENERGY d'énergie et sa joie. Tous les INN_CARD tampons, un
+-- parles : Reposé (3.5.0) et sa joie. Tous les INN_CARD tampons, un
 -- Festin. Pas besoin de jours d'affilée : rien ne se perd.
 --
 -- Missions : chaque jour, à la première zone où tu entres, la créature
@@ -18,9 +18,7 @@ if ns.blocked then return end
 local L = ns.L
 
 ns.DAILY_AUTO = ns.DAILY_AUTO ~= false      -- tirage automatique (coupé dans le banc de test)
-ns.INN_ENERGY = 20
 ns.INN_CARD = 7
-ns.MISSION_CURIOSITY = 10
 ns.MISSION_POLL = 2
 -- Apparences gagnées au jour le jour (QuestCompanion 1.2.0, CompanionData.lua)
 ns.INN_APPEARANCE, ns.INN_APPEARANCE_CARDS = "chicken", 3
@@ -97,7 +95,7 @@ local FR = {
 	MIS_OFF          = "Missions du jour coupées (réglages, page Au jour le jour).",
 	MIS_GOAL_HINT    = "Mission du jour : clic pour l'onglet Missions du carnet.",
 	INN_TITLE        = "Carte de fidélité des auberges",
-	INN_HINT         = "Un tampon par jour chez n'importe quel aubergiste (+%d d'énergie). Au %de : un Festin. Pas besoin de jours d'affilée.",
+	INN_HINT         = "Un tampon par jour chez n'importe quel aubergiste. Au %de : un Festin. Pas besoin de jours d'affilée.",
 	INN_TOTAL        = "Tampons : %d en tout · cartes pleines : %d",
 	INN_GIFT         = "À %d cartes pleines : %s.",
 	MIS_PERFECT      = "Jours aux trois missions : %d · à %d : %s.",
@@ -161,7 +159,7 @@ local EN = {
 	MIS_OFF          = "Daily missions turned off (settings, Day by day page).",
 	MIS_GOAL_HINT    = "Mission of the day: click for the journal's Missions tab.",
 	INN_TITLE        = "Inn loyalty card",
-	INN_HINT         = "One stamp a day at any innkeeper (+%d energy). On the %dth: a Feast. No need for days in a row.",
+	INN_HINT         = "One stamp a day at any innkeeper. On the %dth: a Feast. No need for days in a row.",
 	INN_TOTAL        = "Stamps: %d in all · full cards: %d",
 	INN_GIFT         = "At %d full cards: %s.",
 	MIS_PERFECT      = "Days with all three missions: %d · at %d: %s.",

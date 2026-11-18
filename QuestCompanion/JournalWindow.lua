@@ -92,23 +92,6 @@ local FR = {
 	JRN_STATE_curiosity_2  = "un donjon, un élite ou un rare vaincu, un coffre de zone",
 	JRN_STATE_curiosity_3  = "en mode chasse : 15 créatures en 10 minutes, une brillante, une espèce nouvelle",
 	-- infobulle d'une envie : quoi faire pour la remplir
-	JRN_NEED_TIP_TITLE     = "%s : %d %%",
-	JRN_NEED_TIP_HAPPY     = "Comblée : à partir de %d %%, elle compte pour son bonheur.",
-	JRN_NEED_TIP_LOW       = "Encore %d %% pour qu'elle compte (heureux à %d %%).",
-	JRN_NEED_TIP_HOW       = "Pour la remplir :",
-	JRN_NEED_TIP_DECAY     = "Elle baisse doucement pendant que tu joues, jamais hors connexion.",
-	JRN_NEED_hunger_1      = "mange ou bois : un repas la remplit vite",
-	JRN_NEED_hunger_2      = "garde des vivres dans ton sac quand tu pars",
-	JRN_NEED_energy_1      = "repose-toi dans une auberge ou une capitale",
-	JRN_NEED_energy_2      = "installe-toi près d'un feu de camp",
-	JRN_NEED_energy_3      = "rentre en ville après une sortie (avec Ready2Quest)",
-	JRN_NEED_mood_1        = "caresse-le : un clic sur lui",
-	JRN_NEED_mood_2        = "rends des quêtes, prends des niveaux",
-	JRN_NEED_mood_3        = "un butin rare lui plaît, chaque ennemi vaincu un peu",
-	JRN_NEED_curiosity_1   = "découvre de nouvelles zones et sous-zones",
-	JRN_NEED_curiosity_2   = "gagne des tampons : villages, capitales, donjons, rares",
-	JRN_NEED_curiosity_3   = "même tout exploré : reviens dans une zone pas vue depuis 2 h, entre en donjon, vaincs un élite ou un rare, prends un griffon, ouvre un coffre, récolte",
-	JRN_NEED_TIP_SERENE    = "Toutes ses évolutions faites : il ne descend plus sous %d %%.",
 	JRN_EVO_HOW            = "Comment ça marche",
 	JRN_EVO_HOW_1          = "Ton niveau ouvre chaque étape : 10, 20, 40 et 60.",
 	JRN_EVO_HOW_2          = "Pour la franchir, comble une de ses envies (manger, se reposer, découvrir) une fois le niveau atteint.",
@@ -165,23 +148,6 @@ local EN = {
 	JRN_STATE_curiosity_1  = "a new zone, place or stamp",
 	JRN_STATE_curiosity_2  = "a dungeon, an elite or rare defeated, a zone chest",
 	JRN_STATE_curiosity_3  = "in hunt mode: 15 creatures in 10 minutes, a shiny, a new species",
-	JRN_NEED_TIP_TITLE     = "%s: %d %%",
-	JRN_NEED_TIP_HAPPY     = "Met: from %d %%, it counts towards its happiness.",
-	JRN_NEED_TIP_LOW       = "%d %% more until it counts (happy at %d %%).",
-	JRN_NEED_TIP_HOW       = "To fill it:",
-	JRN_NEED_TIP_DECAY     = "It slowly goes down while you play, never while offline.",
-	JRN_NEED_hunger_1      = "eat or drink: a meal fills it fast",
-	JRN_NEED_hunger_2      = "keep food in your bags when you set out",
-	JRN_NEED_energy_1      = "rest in an inn or a capital",
-	JRN_NEED_energy_2      = "settle by a campfire",
-	JRN_NEED_energy_3      = "come back to town after a trip (with Ready2Quest)",
-	JRN_NEED_mood_1        = "pet it: click on it",
-	JRN_NEED_mood_2        = "turn in quests, gain levels",
-	JRN_NEED_mood_3        = "rare loot pleases it, every foe defeated a little",
-	JRN_NEED_curiosity_1   = "discover new zones and subzones",
-	JRN_NEED_curiosity_2   = "earn stamps: villages, capitals, dungeons, rares",
-	JRN_NEED_curiosity_3   = "even with everything explored: come back to a zone unseen for 2 h, enter a dungeon, defeat an elite or a rare, take a flight, open a chest, gather",
-	JRN_NEED_TIP_SERENE    = "All its evolutions done: it never goes below %d %%.",
 	JRN_EVO_HOW            = "How it works",
 	JRN_EVO_HOW_1          = "Your level opens each stage: 10, 20, 40 and 60.",
 	JRN_EVO_HOW_2          = "To go through, grant one of its wishes (eat, rest, explore) once the level is reached.",
@@ -756,7 +722,6 @@ function ns:NeedTooltipLines(key)
 end
 
 -- 3.1.0 (thème forgé) : un état en deux teintes : actif en vert, éteint en gris
-ns.NEED_LOW = 30
 function ns.NeedTier(value)
 	value = tonumber(value) or 0
 	if value > ((ns.COMPANION_STATE or {}).on or 70) then return Theme.GREEN, Theme.GREEN, "happy" end
@@ -1031,7 +996,6 @@ local function BuildEvolution(self, frame, content)
 	pane.stepsHover:SetPoint("TOPLEFT", hero, "TOPLEFT", textX - 2, -60)
 	pane.stepsHover:SetSize(#pane.steps * 17 + 4, 22)
 	pane.stepsHover:SetScript("OnEnter", function(owner)
-		local happy = ns.COMPANION_HAPPY_MIN or 70
 		Tip(owner, L.JRN_EVO_HOW, { L.JRN_EVO_HOW_1, L.JRN_EVO_HOW_2, ns:F("JRN_EVO_HOW_3") })
 	end)
 	pane.stepsHover:SetScript("OnLeave", HideTip)
@@ -3028,7 +2992,7 @@ local function RefreshDay(self, frame)
 	pane.innGift:SetText(chicken and self:F("INN_GIFT", ns.INN_APPEARANCE_CARDS, L[chicken.label]) or "")
 	local squirrel = self.CompanionAppearanceDef and self:CompanionAppearanceDef(ns.MISSION_APPEARANCE or "")
 	pane.perfect:SetText(squirrel and self:F("MIS_PERFECT", daily.perfect or 0, ns.MISSION_APPEARANCE_DAYS, L[squirrel.label]) or "")
-	pane.innHint:SetText(self:F("INN_HINT", ns.INN_ENERGY, ns.INN_CARD))
+	pane.innHint:SetText(self:F("INN_HINT", ns.INN_CARD))
 	pane.pantryHint:SetText(L.DAY_PANTRY_HINT)
 	for _, slot in ipairs(pane.slots) do
 		local count = self:TreatCount(slot.kind)

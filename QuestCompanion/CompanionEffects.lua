@@ -31,7 +31,6 @@ local function InCombat()
 end
 
 ns.EFFECT_DELAY = 120             -- s (temps réel) avant que les effets d'un nouveau compagnon s'activent
-ns.EFFECT_NEED_OK = 50            -- une envie à ce niveau ou plus : comblée pour les effets
 ns.EFFECT_TICK = 1                -- s entre deux relevés (activation, compte à rebours)
 ns.EFFECT_RANK_STRENGTH = { trivial = 1, minus = 1, normal = 1, elite = 1.5, rare = 2, rareelite = 2, worldboss = 2.5 }
 ns.EFFECT_SHINY_STRENGTH = 0.5

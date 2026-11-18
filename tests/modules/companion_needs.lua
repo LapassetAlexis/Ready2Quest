@@ -357,7 +357,7 @@ do
 	NS:CompanionOnLevel(21)
 	S.ok("niveau : aucun état", NS:CompanionStatesOn() == 0)
 	S.ok("moral : aucune trace", NE.Needs().mood == nil)
-	S.ok("plus de remontée continue au repos", NS.COMPANION_RULES.restGain == 0)
+	S.ok("plus de remontée continue au repos", NS.COMPANION_RULES.restGain == nil)
 	S.done()
 end
 

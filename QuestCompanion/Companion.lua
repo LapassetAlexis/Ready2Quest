@@ -65,24 +65,12 @@ ns.COMPANION_STATE = { on = NEED_ON, full = NEED_FULL, max = NEED_MAX, minutes =
 	wishSoon = 15,         -- tous actifs : l'envie vise celui qui a moins de 15 minutes
 	wishBond = 1, wishBondDaily = 3,
 	schema = 2 }
--- Chaque envie doit rester simple à remonter, même tout exploré, même au
--- niveau maximum. La curiosité se nourrit aussi de nouveauté relative :
--- revenir dans une zone pas vue depuis un moment, bouger, les donjons, les
--- élites et rares, les vols, les coffres, la récolte.
-local CURIOSITY = {
-	newZone = 15, newSub = 4,              -- premières fois
-	revisit = 8, revisitAfter = 2 * 3600,  -- zone pas vue depuis 2 h (temps réel)
-	subzone = 1, subzoneGap = 30,          -- changer de sous-zone, au plus toutes les 30 s
-	dungeon = 10, dungeonGap = 600,        -- chaque entrée en donjon (pas deux fois en 10 min)
-	elite = 8,                             -- chaque élite ou rare vaincu
-	flight = 5,                            -- chaque arrivée en griffon
-	chest = 20,                            -- chaque coffre de zone ouvert
-	gather = 1,                            -- chaque ressource récoltée
-}
+-- 3.5.0 : Éveillé ne compte plus de points ; reste l'écart entre deux
+-- entrées en donjon (les allers-retours de la porte ne comptent pas)
+local CURIOSITY = { dungeonGap = 600 }
 ns.COMPANION_CURIOSITY = CURIOSITY
 -- 3.5.0 : plus de plancher « serein » ni de remontée au fil du repas ou du
 -- repos : un repas, deux minutes de repos remplissent l'état d'un coup
-local REST_GAIN   = 0
 local TICK        = 10       -- s entre deux mises à jour des besoins
 local MAX_STEP    = 60       -- s comptées au plus par image (écran de chargement)
 local BUBBLE_GAP  = 20       -- s minimum entre deux bulles ordinaires
@@ -139,8 +127,6 @@ local COOLDOWNS = {
 }
 local TIP_GAP, TIP_JITTER = 600, 300   -- astuces : toutes les 10 à 15 min de jeu
 local GOAL_FIRST = 900                 -- premier rappel d'objectif après 15 min
-local NEED_LOW   = 35                  -- en dessous, il peut exprimer une envie
-local HAPPY_MIN  = 70                  -- (3.4 et avant) ; 3.5.0 : la porte d'un stade est une envie comblée
 local NEED_GRACE = 120                 -- pas d'envie dans les 2 min après la connexion
 local NIGHT_GRACE = 600
 local IDLE_REST  = 300                 -- 5 min au repos sans rien dire : un mot
@@ -154,9 +140,9 @@ local SAME_NPC   = 120                 -- même PNJ (bavardage puis vendeur) : u
 local SAME_HUB   = 600                 -- même village ré-entré : pas de nouveau mot
 
 ns.COMPANION_RULES = {
-	floor = NEED_FLOOR, max = NEED_MAX, full = NEED_FULL, on = NEED_ON, decay = DECAY, restGain = REST_GAIN, bubbleGap = BUBBLE_GAP,
+	floor = NEED_FLOOR, max = NEED_MAX, full = NEED_FULL, on = NEED_ON, decay = DECAY, bubbleGap = BUBBLE_GAP,
 	petCooldown = PET_COOLDOWN, sleepyAfter = SLEEPY_AFTER, sleepyMin = SLEEPY_MIN, sleepyMax = SLEEPY_MAX,
-	priority = PRIORITY, cooldowns = COOLDOWNS, tipGap = TIP_GAP, tipJitter = TIP_JITTER, needLow = NEED_LOW,
+	priority = PRIORITY, cooldowns = COOLDOWNS, tipGap = TIP_GAP, tipJitter = TIP_JITTER,
 	needGrace = NEED_GRACE, idleRest = IDLE_REST, convoStep = CONVO_STEP, tutoStep = TUTO_STEP,
 	goalFirst = GOAL_FIRST, bubbleTime = BUBBLE_TIME,
 	-- part des PNJ non humanoïdes jugés sur leur nature plutôt que leur rôle
@@ -205,16 +191,9 @@ local FR = {
 	COMP_CHATTER_TIP       = "Bavardage : ce que ton compagnon te dit",
 	COMP_CHATTER_TIP_HINT  = "Molette ou boutons - / + pour changer. /qc compagnon muet le fait taire d'un coup.",
 	COMP_DEFAULT_NAME      = "Brindille",
-	COMP_NEED_hunger       = "Faim",
-	COMP_NEED_energy       = "Énergie",
-	COMP_NEED_mood         = "Moral",
-	COMP_NEED_curiosity    = "Curiosité",
 	COMP_MSG_READY         = "Compagnon : %s est prêt à devenir %s. Comble une de ses envies pour qu'il évolue.",
-	COMP_HAPPY_LINE        = "  %s : %d %% — %s",
-	COMP_HAPPY_OK          = "  %s : %d %% (comblée)",
 	COMP_HOW_hunger        = "un repas, « Bien nourri », partir avec de quoi manger",
 	COMP_HOW_energy        = "deux minutes en ville, à l'auberge ou au camp",
-	COMP_HOW_mood          = "caresse-le, rends des quêtes",
 	COMP_HOW_curiosity     = "une zone ou un lieu nouveau, un donjon, un élite, un coffre",
 	COMP_MOOD_radiant      = "radieux",
 	COMP_MOOD_happy        = "content",
@@ -404,16 +383,9 @@ local EN = {
 	COMP_CHATTER_TIP       = "Chattiness: what your companion tells you",
 	COMP_CHATTER_TIP_HINT  = "Mouse wheel or - / + buttons to change. /qc compagnon muet silences it at once.",
 	COMP_DEFAULT_NAME      = "Sprig",
-	COMP_NEED_hunger       = "Hunger",
-	COMP_NEED_energy       = "Energy",
-	COMP_NEED_mood         = "Mood",
-	COMP_NEED_curiosity    = "Curiosity",
 	COMP_MSG_READY         = "Companion: %s is ready to become %s. Grant one of its wishes so it can grow.",
-	COMP_HAPPY_LINE        = "  %s: %d %% — %s",
-	COMP_HAPPY_OK          = "  %s: %d %% (filled)",
 	COMP_HOW_hunger        = "a meal, \"Well Fed\", setting out with food",
 	COMP_HOW_energy        = "two minutes in town, at the inn or at a camp",
-	COMP_HOW_mood          = "pet it, turn in quests",
 	COMP_HOW_curiosity     = "a new zone or place, a dungeon, an elite, a chest",
 	COMP_MOOD_radiant      = "radiant",
 	COMP_MOOD_happy        = "happy",
@@ -883,7 +855,6 @@ function ns:CompanionHappyHints()
 	end
 	return lines
 end
-ns.COMPANION_HAPPY_MIN = HAPPY_MIN
 
 -- Le niveau ouvre l'étape, le bonheur la franchit : palier atteint, la
 -- créature est « prête » (data.stageReady) et évolue dès que ses quatre

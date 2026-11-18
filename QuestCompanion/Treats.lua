@@ -14,7 +14,6 @@
 --     friandises au hasard, au lieu de rien ;
 --   * à la mise à jour, les paliers déjà franchis sont rattrapés une fois,
 --     avec une seule bulle de résumé ;
---   * Gourmand : chaque friandise remonte aussi le moral (double plaisir).
 -- 3.5.0 (docs/design-envies-3.5) : une friandise donne son ÉTAT pour 60
 -- minutes (Biscuit : Repu, Infusion : Reposé, Carte : Éveillé ; Festin : les
 -- trois ; Bonbon : chaque état actif repart à plein) ; à 25 et 50 %, celle de
@@ -27,7 +26,6 @@ local Theme = ns.Theme
 
 local TREAT_CAP, FESTIN_CAP = 3, 2
 local MILESTONES = { 25, 50, 75 }
-local GLUTTON_MOOD = 15
 local KINDS = { "biscuit", "infusion", "bonbon", "carte", "festin" }
 local BASIC = { "biscuit", "infusion", "bonbon", "carte" }
 -- friandise -> envie qu'elle comble (le Festin : toutes)
@@ -41,7 +39,7 @@ local ICONS = {
 	carte    = "Interface\\Icons\\INV_Misc_Map_01",
 	festin   = "Interface\\Icons\\INV_Misc_Food_15",
 }
-ns.TREAT_RULES = { cap = TREAT_CAP, festinCap = FESTIN_CAP, milestones = MILESTONES, gluttonMood = GLUTTON_MOOD }
+ns.TREAT_RULES = { cap = TREAT_CAP, festinCap = FESTIN_CAP, milestones = MILESTONES }
 ns.TREAT_KINDS = KINDS
 ns.TREAT_ICONS = ICONS
 
@@ -88,10 +86,6 @@ local P = {
 		{ "Hop, au garde-manger : %s !", "Into the pantry: %s!" },
 		{ "Ooh, %s ! Je garde ça pour plus tard.", "Ooh, %s! I'm saving it for later." },
 		{ "%s ! Merci, je range ça.", "%s! Thanks, I'll put it away." },
-	},
-	TREAT_FULL = {  -- %s = la friandise
-		{ "Plus de place pour : %s… tant pis, je mange ça !", "No room left for: %s… oh well, I'll eat it!" },
-		{ "Garde-manger plein ! %s ? Hop, dans le ventre.", "Pantry's full! %s? Straight into my tummy." },
 	},
 	TREAT_EAT_biscuit = {
 		{ "Croc ! Ça cale bien.", "Crunch! That hits the spot." },

@@ -142,7 +142,6 @@ ns.PERSONALITY_BY_APPEARANCE = BY_APPEARANCE
 
 ns.PERSONALITY_FORM_AFTER = 3 * 3600     -- s de jeu observées avant d'annoncer son caractère
 ns.PERSONALITY_VARIANT_CHANCE = 0.75     -- part de ses propres répliques quand il en a
-ns.PERSONALITY_GAIN = 1.5                -- envie préférée : gains
 ns.PERSONALITY_DECAY = 0.7               -- envie préférée : baisse
 ns.PERSONALITY_NOTICE_GAP = 900          -- s entre deux remarques de caractère
 -- ce que chaque façon de jouer pèse
@@ -242,16 +241,6 @@ Wrap("CompanionPick", function(original, self, pool, args, list)
 	return original(self, pool, args, list)
 end)
 
--- l'envie préférée monte plus vite ; et ce qui remplit ses envies forme son caractère
-Wrap("CompanionAdd", function(original, self, key, amount)
-	amount = tonumber(amount) or 0
-	if amount > 0 then
-		local trait = self:CompanionTrait()
-		if trait and TRAITS[trait].need == key then amount = amount * ns.PERSONALITY_GAIN end
-		if key == "curiosity" then self:PersonaScore("curious", amount * ns.PERSONALITY_SCORES.curiosity) end
-	end
-	return original(self, key, amount)
-end)
 -- 3.5.0 : un état obtenu forme aussi son caractère (Éveillé : curieux)
 Wrap("CompanionGrant", function(original, self, key, value)
 	local done = original(self, key, value)
