@@ -377,7 +377,8 @@ local function Ask(fn, ...)
 	if type(fn) ~= "function" then return nil end
 	local ok, a = pcall(fn, ...)
 	if not ok then return nil end
-	return ns.Plain and ns.Plain(a) or a
+	if ns.Plain then return ns.Plain(a) end
+	return a
 end
 
 -- Les réglages de placement des DoT suivent ceux de la portée

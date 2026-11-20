@@ -279,7 +279,10 @@ local TALENT_ROLES = {
 ns.BUFF_ROLES = { "auto", "TANK", "HEALER", "DAMAGER" }
 local GROUP_ROLES = { TANK = true, HEALER = true, DAMAGER = true }
 
-local function Plain0(v) return ns.Plain and ns.Plain(v) or v end
+local function Plain0(v)
+	if ns.Plain then return ns.Plain(v) end
+	return v
+end
 
 -- Points d'un onglet de talents. Classique : nom, icône, points, fichier ;
 -- clients récents : id, nom, description, icône, points…
@@ -538,7 +541,10 @@ end
 -- guerrier reçu en groupe) n'est réclamé que si sa classe est là. Un buff que
 -- tu poses toi-même (sort, nourriture, parchemin, élixir) l'est toujours.
 -- ---------------------------------------------------------------------------
-local function Plain(v) return ns.Plain and ns.Plain(v) or v end
+local function Plain(v)
+	if ns.Plain then return ns.Plain(v) end
+	return v
+end
 
 -- Note le lanceur d'une aura sur la fiche du buff : self, ou sa classe
 local function NoteCaster(entry, aura)

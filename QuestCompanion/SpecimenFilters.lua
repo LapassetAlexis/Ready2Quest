@@ -356,7 +356,10 @@ function ns:ReserveZoneName(zone)
 	local api = rawget(_G, "C_Map")
 	if type(api) == "table" and type(api.GetMapInfo) == "function" then
 		local ok, info = pcall(api.GetMapInfo, zone)
-		if ok and type(info) == "table" then name = ns.Plain and ns.Plain(info.name) or info.name end
+		if ok and type(info) == "table" then
+			name = info.name
+			if ns.Plain then name = ns.Plain(name) end
+		end
 	end
 	zoneNames[zone] = type(name) == "string" and name or tostring(zone)
 	return zoneNames[zone]
