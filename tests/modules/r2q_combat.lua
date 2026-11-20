@@ -363,10 +363,10 @@ do
 	known = {}
 	local notPriest = ns:ShadowDeathTick()
 	for k, v in pairs(saved) do _G[k] = v end
-	Check("[COMBAT] Mot de l'ombre : Mort : à la place du crâne au-dessus de la cible, par-dessus lui (vie en max, dégâts sûrs en valeur) ; en recharge (pas le temps global), hors de portée, sans barre de nom, coupée ou sans le sort : cachée",
+	Check("[COMBAT] Mot de l'ombre : Mort : à la place du crâne au-dessus de la cible, deux strates au-dessus de la barre, 4 px de plus pour couvrir crâne et coche (vie en max, dégâts sûrs en valeur) ; en recharge (pas le temps global), hors de portée, sans barre de nom, coupée ou sans le sort : cachée",
 		shown == "shown" and window and statusBar and statusBar.max == 300 and math.abs(statusBar.value - lethal) < 0.01
 		and window.points[1] and window.points[1][1] == "BOTTOM" and window.points[1][3] == "TOP" and window.points[1][5] == 56
-		and window.w == 28 and window.strata == "MEDIUM" and window.level == 40 and statusBar.icon.texture == 136149
+		and window.w == 32 and window.strata == "HIGH" and window.level == 50 and statusBar.icon.texture == 136149
 		and cooling == "cooling" and hiddenCooling == false and gcd == "shown" and out == "hidden" and noPlate == "hidden" and hiddenNoPlate == false
 		and off == "hidden" and notPriest == "hidden",
 		tostring(shown) .. " " .. tostring(cooling) .. " " .. tostring(gcd) .. " " .. tostring(noPlate))

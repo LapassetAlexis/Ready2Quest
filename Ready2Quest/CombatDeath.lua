@@ -28,7 +28,7 @@ ns.SHADOW_DEATH_RANKS = {
 	{ id = 1309595, base = 32, max = 37, points = 295, perLevel = 1.5 },
 }
 ns.SHADOW_DEATH = { variance = 0.0605, coefficient = 0.429, icon = 136149, school = 6, cooldown = 18,
-	backlash = 30, size = 28, length = 10000 }
+	backlash = 30, size = 28, cover = 4, length = 10000 }
 
 local function Plain(value)
 	if ns.Plain then return ns.Plain(value) end
@@ -112,6 +112,8 @@ local function Build()
 	local icon = bar:CreateTexture(nil, "OVERLAY")
 	icon:SetPoint("RIGHT", bar:GetStatusBarTexture(), "RIGHT")
 	icon:SetTexture(ns.SHADOW_DEATH.icon)
+	-- sans le liseré gris des icônes de sort : un carré plein
+	if type(icon.SetTexCoord) == "function" then icon:SetTexCoord(0.07, 0.93, 0.07, 0.93) end
 	widget = { window = window, bar = bar, icon = icon }
 	return widget
 end
@@ -153,7 +155,9 @@ function ns:ShadowDeathTick()
 	-- au-dessus de lui) ; seul le crâne reste quand le sort ne tue pas encore
 	local dots = rawget(_G, "Ready2QuestCombat_DoTInfoDB")
 	dots = type(dots) == "table" and dots or {}
-	local size = tonumber(dots.nameplateIconSize) or ns.SHADOW_DEATH.size
+	-- 2.1.0 bêta 4 : un peu plus grande que le crâne et la coche de portée,
+	-- pour les couvrir en entier (elle les remplace, rien ne dépasse)
+	local size = (tonumber(dots.nameplateIconSize) or ns.SHADOW_DEATH.size) + ns.SHADOW_DEATH.cover
 	w.window:SetSize(size, size)
 	w.bar:SetSize(ns.SHADOW_DEATH.length, size)
 	w.icon:SetSize(size, size)
@@ -173,12 +177,15 @@ function ns:ShadowDeathTick()
 			w.window:SetPoint("BOTTOM", healthBar, "TOP", x, 4 + y)
 		end
 	end
+	-- deux strates au-dessus de la barre : la coche de portée est dans la
+	-- strate de la barre, le crâne une au-dessus ; strate illisible (Forever) :
+	-- HIGH, au-dessus du repli des deux (LOW, MEDIUM)
 	local strata = Ask(healthBar.GetFrameStrata, healthBar)
-	w.window:SetFrameStrata(type(strata) == "string" and NEXT_STRATA[strata] or "MEDIUM")
-	local level = Ask(healthBar.GetFrameLevel, healthBar)
-	if type(level) == "number" and type(w.window.SetFrameLevel) == "function" then
-		w.window:SetFrameLevel(level + 30)
-		w.bar:SetFrameLevel(level + 31)
+	strata = type(strata) == "string" and NEXT_STRATA[NEXT_STRATA[strata]] or "HIGH"
+	w.window:SetFrameStrata(strata)
+	if type(w.window.SetFrameLevel) == "function" then
+		w.window:SetFrameLevel(50)
+		w.bar:SetFrameLevel(51)
 	end
 	-- la vie (secrète) en maximum, les dégâts sûrs en valeur : le client compare
 	local ok = pcall(function()
