@@ -249,6 +249,98 @@ do
 		and not ns:CombatPartOn(ns.COMBAT_PARTS[1]), first)
 end
 
+-- 3b. 2.1.0 : Mot de l'ombre : Mort sans retour (CombatDeath.lua)
+do
+	Say("-- combat : Mot de l'ombre : Mort")
+	local db = { combatDots = true }
+	local plate, bar = {}, nil
+	local engine = { Plate = { HealthBar = function() return { GetFrameStrata = function() return "LOW" end } end } }
+	local ns = { combat = engine, RegisterDefaults = function(d) for k, v in pairs(d) do if db[k] == nil then db[k] = v end end end }
+	function ns:DB() return db end
+	load5(ReadFile("Ready2Quest/CombatDeath.lua"), "CombatDeath.lua")("Ready2Quest", ns)
+	local saved = {}
+	for _, k in ipairs({ "IsPlayerSpell", "UnitLevel", "GetSpellBonusDamage", "UnitExists", "UnitIsDead", "UnitCanAttack",
+		"C_NamePlate", "UnitHealth", "C_Spell", "Ready2QuestCombat_DoTInfoDB", "CreateFrame" }) do saved[k] = rawget(_G, k) end
+	local known = {}
+	_G.IsPlayerSpell = function(id) return known[id] == true end
+	_G.UnitLevel = function() return 44 end
+	_G.GetSpellBonusDamage = function(school) return school == 6 and 100 or 0 end
+	-- le rang : aucun, puis le plus haut appris
+	local none = ns:ShadowDeathRank()
+	known[1309595], known[1309633] = true, true
+	local rank = ns:ShadowDeathRank()
+	-- rang 2 au niveau 44 : (370 + 1,9 × 4) × (1 - 0,0605) + 0,429 × 100 ; puis plafonné au niveau 45
+	local want = (370 + 1.9 * 4) * (1 - 0.0605) + 42.9
+	local damage = ns:ShadowDeathDamage(rank, 44, 100)
+	local capped = ns:ShadowDeathDamage(rank, 60, 0)
+	_G.Ready2QuestCombat_DoTInfoDB = { killMargin = 80 }
+	local lethal = ns:ShadowDeathLethal()
+	Check("[COMBAT] Mot de l'ombre : Mort : rang appris le plus haut, dégâts au bas de la fourchette (niveau plafonné), marge des DoT",
+		none == nil and rank and rank.id == 1309633 and math.abs(damage - want) < 0.01
+		and math.abs(capped - (370 + 1.9 * 5) * (1 - 0.0605)) < 0.01 and math.abs(lethal - want * 0.8) < 0.01,
+		tostring(damage) .. " / " .. tostring(lethal))
+
+	-- le passage : une barre invisible reçoit max = vie (secrète), valeur = dégâts sûrs
+	local frames = {}
+	_G.CreateFrame = function(kind)
+		local f = { kind = kind, shown = false, points = {} }
+		function f:SetClipsChildren() end
+		function f:Hide() self.shown = false end
+		function f:Show() self.shown = true end
+		function f:SetPoint(...) self.points[#self.points + 1] = { ... } end
+		function f:ClearAllPoints() self.points = {} end
+		function f:SetSize(w, h) self.w, self.h = w, h end
+		function f:SetFrameStrata(s) self.strata = s end
+		function f:SetStatusBarTexture() end
+		function f:SetStatusBarColor() end
+		function f:GetStatusBarTexture() return {} end
+		function f:SetMinMaxValues(a, b) self.min, self.max = a, b end
+		function f:SetValue(v) self.value = v end
+		function f:CreateTexture()
+			local t = {}
+			function t:SetPoint() end
+			function t:SetTexture(x) self.texture = x end
+			function t:SetSize() end
+			function t:SetDesaturated(d) self.desaturated = d end
+			function t:SetAlpha(a) self.alpha = a end
+			f.icon = t
+			return t
+		end
+		frames[#frames + 1] = f
+		return f
+	end
+	_G.UnitExists = function() return true end
+	_G.UnitIsDead = function() return false end
+	_G.UnitCanAttack = function() return true end
+	_G.UnitHealth = function() return 300 end
+	_G.C_NamePlate = { GetNamePlateForUnit = function() return plate end }
+	_G.C_Spell = { GetSpellCooldown = function() return { startTime = 0, duration = 0 } end }
+	local shown = ns:ShadowDeathTick()
+	local window, statusBar = frames[1], frames[2]
+	_G.C_Spell = { GetSpellCooldown = function() return { startTime = 10, duration = 18 } end }
+	local cooling = ns:ShadowDeathTick()
+	local faded = statusBar and statusBar.icon and statusBar.icon.alpha
+	_G.C_Spell = { GetSpellCooldown = function() return { startTime = 10, duration = 1.5 } end }
+	local gcd = ns:ShadowDeathTick()
+	_G.C_NamePlate = { GetNamePlateForUnit = function() return nil end }
+	local noPlate = ns:ShadowDeathTick()
+	local hiddenNoPlate = window and window.shown
+	_G.C_NamePlate = { GetNamePlateForUnit = function() return plate end }
+	db.combatDeath = false
+	local off = ns:ShadowDeathTick()
+	db.combatDeath = true
+	known = {}
+	local notPriest = ns:ShadowDeathTick()
+	for k, v in pairs(saved) do _G[k] = v end
+	Check("[COMBAT] Mot de l'ombre : Mort : icône à gauche de la barre de nom (vie en max, dégâts sûrs en valeur), pâle en recharge (pas pour le temps global) ; sans barre de nom, coupée ou sans le sort : cachée",
+		shown == "shown" and window and statusBar and statusBar.max == 300 and math.abs(statusBar.value - lethal) < 0.01
+		and window.points[1] and window.points[1][1] == "RIGHT" and window.points[1][3] == "LEFT"
+		and window.strata == "MEDIUM" and statusBar.icon.texture == 136149
+		and cooling == "cooling" and faded == 0.45 and gcd == "shown" and noPlate == "hidden" and hiddenNoPlate == false
+		and off == "hidden" and notPriest == "hidden",
+		tostring(shown) .. " " .. tostring(cooling) .. " " .. tostring(gcd) .. " " .. tostring(noPlate))
+end
+
 -- 4. Dans le vrai Ready2Quest : les pages et la commande sont là
 do
 	local ids = {}

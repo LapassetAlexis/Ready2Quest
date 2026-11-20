@@ -567,6 +567,8 @@ ns.RegisterLocaleStrings("es", {
 	["OPT_COMBAT_NUM_SIZE"] = "Tamaño del número",
 	["OPT_COMBAT_ONE_ICON"] = "Un icono sobre el monstruo",
 	["OPT_COMBAT_ONE_ICON_DESC"] = "La calavera (o el arma) ocupa el lugar del indicador de alcance; fuera de alcance, vuelve la cruz roja.",
+	["OPT_COMBAT_DEATH"] = "Sacerdote: Palabra de las Sombras: Muerte sin rebote",
+	["OPT_COMBAT_DEATH_DESC"] = "Su icono se enciende a la izquierda de la placa de nombre del objetivo cuando lo mata seguro (si no, te devuelve el 30 por ciento de tu salud). Pálido: en reutilización.",
 	["OPT_COMBAT_PLATES"] = "En placas de nombre",
 	["OPT_COMBAT_POSITION"] = "Posición del número",
 	["OPT_COMBAT_POWER"] = "Contar mi poder con hechizos",

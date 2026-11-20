@@ -1,5 +1,13 @@
 # Journal des modifications
 
+## 2.1.0 — Mot de l'ombre : Mort sans retour
+
+- **Prêtre** : l'icône de **Mot de l'ombre : Mort** s'allume à gauche de la barre de nom de la cible quand le sort la tue à coup sûr. S'il ne la tue pas, il te renvoie 30 % de ta vie : l'icône dit quand ce risque n'existe pas. Pâle pendant la recharge (18 s).
+- Le calcul suit les rangs de Forever (niveaux 32, 40, 48, 56), ton niveau et ta puissance des sorts d'Ombre, au bas de la fourchette, avec la marge des DoT mortels (90 % par défaut) pour les résistances. Talents et Forme d'Ombre ne sont pas comptés : l'icône vient un peu tard plutôt que trop tôt.
+- Réglage : Combat › DoT mortels › « Prêtre : Mot de l'ombre : Mort sans retour » (actif par défaut). Il demande les barres de nom.
+
+*English:* Priests: the **Shadow Word: Death** icon lights up left of the target's nameplate when the spell surely kills (otherwise it hits you back for 30% of your health). Faded while on cooldown. Uses Forever's ranks, your level and Shadow spell power, the low end of the range and the lethal DoT margin. Setting under Combat › Lethal DoTs (on by default); needs nameplates.
+
 ## 2.0.0 — Aide au combat et nouveau menu des réglages
 
 ### En espagnol
