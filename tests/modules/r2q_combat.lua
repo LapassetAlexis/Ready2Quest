@@ -249,6 +249,30 @@ do
 		and not ns:CombatPartOn(ns.COMBAT_PARTS[1]), first)
 end
 
+-- 3a. 2.1.0 bêta 3 : plus de grandes icônes sur le cadre de la cible (par défaut)
+do
+	Say("-- combat : grandes icônes du cadre de la cible")
+	local parents = {}
+	local function Icon(name)
+		local f = { name = name }
+		function f:SetParent(p) parents[name] = p end
+		_G[name] = f
+	end
+	Icon("Ready2QuestCombat_DoTInfoSkull"); Icon("Ready2QuestCombat_CastPredictionKill")
+	local engine = { state = {}, ShouldRun = function() return true end }
+	local ns, db = Glue(engine)
+	local skull, kill = parents.Ready2QuestCombat_DoTInfoSkull, parents.Ready2QuestCombat_CastPredictionKill
+	local hidden = skull ~= nil and skull == kill and skull ~= UIParent and not skull:IsShown()
+	local row
+	for _, r in ipairs(ns.COMBAT_ROWS.combatDots) do if r.key == "combatFrameIcons" then row = r end end
+	db.combatFrameIcons = true
+	row.onChange(true)
+	local back = parents.Ready2QuestCombat_DoTInfoSkull == UIParent and parents.Ready2QuestCombat_CastPredictionKill == UIParent
+	_G.Ready2QuestCombat_DoTInfoSkull, _G.Ready2QuestCombat_CastPredictionKill = nil, nil
+	Check("[COMBAT] cadre de la cible : crâne et icône du sort qui tue rangés sous un cadre caché par défaut ; le réglage les rend",
+		db.combatFrameIcons == true and hidden and back)
+end
+
 -- 3b. 2.1.0 : Mot de l'ombre : Mort sans retour (CombatDeath.lua)
 do
 	Say("-- combat : Mot de l'ombre : Mort")
