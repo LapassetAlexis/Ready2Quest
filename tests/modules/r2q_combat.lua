@@ -254,7 +254,9 @@ do
 	Say("-- combat : Mot de l'ombre : Mort")
 	local db = { combatDots = true }
 	local plate, bar = {}, nil
-	local engine = { Plate = { HealthBar = function() return { GetFrameStrata = function() return "LOW" end } end } }
+	local rangeState = "in"
+	local engine = { Plate = { HealthBar = function() return { GetFrameStrata = function() return "LOW" end,
+		GetFrameLevel = function() return 10 end } end }, modules = { Range = { Check = function() return rangeState end } } }
 	local ns = { combat = engine, RegisterDefaults = function(d) for k, v in pairs(d) do if db[k] == nil then db[k] = v end end end }
 	function ns:DB() return db end
 	load5(ReadFile("Ready2Quest/CombatDeath.lua"), "CombatDeath.lua")("Ready2Quest", ns)
@@ -273,7 +275,8 @@ do
 	local want = (370 + 1.9 * 4) * (1 - 0.0605) + 42.9
 	local damage = ns:ShadowDeathDamage(rank, 44, 100)
 	local capped = ns:ShadowDeathDamage(rank, 60, 0)
-	_G.Ready2QuestCombat_DoTInfoDB = { killMargin = 80 }
+	_G.Ready2QuestCombat_DoTInfoDB = { killMargin = 80, nameplateIconPosition = "above", plateIconOffsetX = 0, plateIconOffsetY = 52,
+		nameplateIconSize = 28 }
 	local lethal = ns:ShadowDeathLethal()
 	Check("[COMBAT] Mot de l'ombre : Mort : rang appris le plus haut, dégâts au bas de la fourchette (niveau plafonné), marge des DoT",
 		none == nil and rank and rank.id == 1309633 and math.abs(damage - want) < 0.01
@@ -291,6 +294,7 @@ do
 		function f:ClearAllPoints() self.points = {} end
 		function f:SetSize(w, h) self.w, self.h = w, h end
 		function f:SetFrameStrata(s) self.strata = s end
+		function f:SetFrameLevel(l) self.level = l end
 		function f:SetStatusBarTexture() end
 		function f:SetStatusBarColor() end
 		function f:GetStatusBarTexture() return {} end
@@ -319,9 +323,12 @@ do
 	local window, statusBar = frames[1], frames[2]
 	_G.C_Spell = { GetSpellCooldown = function() return { startTime = 10, duration = 18 } end }
 	local cooling = ns:ShadowDeathTick()
-	local faded = statusBar and statusBar.icon and statusBar.icon.alpha
+	local hiddenCooling = window and window.shown
 	_G.C_Spell = { GetSpellCooldown = function() return { startTime = 10, duration = 1.5 } end }
 	local gcd = ns:ShadowDeathTick()
+	rangeState = "out"
+	local out = ns:ShadowDeathTick()
+	rangeState = "in"
 	_G.C_NamePlate = { GetNamePlateForUnit = function() return nil end }
 	local noPlate = ns:ShadowDeathTick()
 	local hiddenNoPlate = window and window.shown
@@ -332,11 +339,11 @@ do
 	known = {}
 	local notPriest = ns:ShadowDeathTick()
 	for k, v in pairs(saved) do _G[k] = v end
-	Check("[COMBAT] Mot de l'ombre : Mort : icône à gauche de la barre de nom (vie en max, dégâts sûrs en valeur), pâle en recharge (pas pour le temps global) ; sans barre de nom, coupée ou sans le sort : cachée",
+	Check("[COMBAT] Mot de l'ombre : Mort : à la place du crâne au-dessus de la cible, par-dessus lui (vie en max, dégâts sûrs en valeur) ; en recharge (pas le temps global), hors de portée, sans barre de nom, coupée ou sans le sort : cachée",
 		shown == "shown" and window and statusBar and statusBar.max == 300 and math.abs(statusBar.value - lethal) < 0.01
-		and window.points[1] and window.points[1][1] == "RIGHT" and window.points[1][3] == "LEFT"
-		and window.strata == "MEDIUM" and statusBar.icon.texture == 136149
-		and cooling == "cooling" and faded == 0.45 and gcd == "shown" and noPlate == "hidden" and hiddenNoPlate == false
+		and window.points[1] and window.points[1][1] == "BOTTOM" and window.points[1][3] == "TOP" and window.points[1][5] == 56
+		and window.w == 28 and window.strata == "MEDIUM" and window.level == 40 and statusBar.icon.texture == 136149
+		and cooling == "cooling" and hiddenCooling == false and gcd == "shown" and out == "hidden" and noPlate == "hidden" and hiddenNoPlate == false
 		and off == "hidden" and notPriest == "hidden",
 		tostring(shown) .. " " .. tostring(cooling) .. " " .. tostring(gcd) .. " " .. tostring(noPlate))
 end

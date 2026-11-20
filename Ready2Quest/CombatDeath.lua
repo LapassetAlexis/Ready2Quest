@@ -1,7 +1,7 @@
 -- CombatDeath.lua -- Ready2Quest 2.1.0 : Mot de l'ombre : Mort sans retour
 --
--- Prêtre : l'icône de Mot de l'ombre : Mort s'allume à gauche de la barre de
--- vie de la cible (sa barre de nom) quand le sort, au plus bas de sa
+-- Prêtre : l'icône de Mot de l'ombre : Mort s'allume au-dessus de la cible
+-- (sa barre de nom), à la place du crâne des DoT, quand le sort, au plus bas de sa
 -- fourchette, la tue. S'il ne la tue pas, le prêtre prend 30 % de sa vie
 -- maximale en retour : l'icône dit quand ce risque n'existe pas.
 --
@@ -78,7 +78,7 @@ function ns:ShadowDeathLethal()
 	return self:ShadowDeathDamage(rank, level, power) * self:ShadowDeathMargin(), rank
 end
 
--- En recharge (lisible) : l'icône pâlit ; illisible : pleine
+-- En recharge (lisible) : l'icône se retire ; illisible : elle reste
 function ns:ShadowDeathCooling(rank)
 	local api = rawget(_G, "C_Spell")
 	local start, duration
@@ -142,29 +142,52 @@ function ns:ShadowDeathTick()
 	if not healthBar then return Hide() end
 	local w = Build()
 	if not w then return "hidden" end
+	-- hors de portée (lisible), le sort ne part pas : rien
+	local range = e.modules and e.modules.Range
+	if range and type(range.Check) == "function" and Ask(range.Check) == "out" then return Hide() end
+	-- en recharge (lisible) : rien, le crâne des DoT reprend sa place
+	if self:ShadowDeathCooling(rank) then Hide(); return "cooling" end
+	local w = Build()
+	if not w then return "hidden" end
+	-- 2.1.0 bêta 2 : à la place du crâne des DoT (même endroit, même taille,
+	-- au-dessus de lui) ; seul le crâne reste quand le sort ne tue pas encore
 	local dots = rawget(_G, "Ready2QuestCombat_DoTInfoDB")
-	local size = type(dots) == "table" and tonumber(dots.nameplateIconSize) or ns.SHADOW_DEATH.size
+	dots = type(dots) == "table" and dots or {}
+	local size = tonumber(dots.nameplateIconSize) or ns.SHADOW_DEATH.size
 	w.window:SetSize(size, size)
 	w.bar:SetSize(ns.SHADOW_DEATH.length, size)
 	w.icon:SetSize(size, size)
-	if w.anchor ~= healthBar then
-		w.anchor = healthBar
+	local where, x, y = dots.nameplateIconPosition or "above", tonumber(dots.plateIconOffsetX) or 0,
+		tonumber(dots.plateIconOffsetY) or 0
+	local signature = tostring(healthBar) .. where .. x .. "," .. y
+	if w.anchor ~= signature then
+		w.anchor = signature
 		w.window:ClearAllPoints()
-		w.window:SetPoint("RIGHT", healthBar, "LEFT", -4, 0)
+		if where == "left" then
+			w.window:SetPoint("RIGHT", healthBar, "LEFT", -4 + x, y)
+		elseif where == "below" then
+			w.window:SetPoint("TOP", healthBar, "BOTTOM", x, -4 + y)
+		elseif where == "right" then
+			w.window:SetPoint("LEFT", healthBar, "RIGHT", 4 + x, y)
+		else
+			w.window:SetPoint("BOTTOM", healthBar, "TOP", x, 4 + y)
+		end
 	end
 	local strata = Ask(healthBar.GetFrameStrata, healthBar)
 	w.window:SetFrameStrata(type(strata) == "string" and NEXT_STRATA[strata] or "MEDIUM")
+	local level = Ask(healthBar.GetFrameLevel, healthBar)
+	if type(level) == "number" and type(w.window.SetFrameLevel) == "function" then
+		w.window:SetFrameLevel(level + 30)
+		w.bar:SetFrameLevel(level + 31)
+	end
 	-- la vie (secrète) en maximum, les dégâts sûrs en valeur : le client compare
 	local ok = pcall(function()
 		w.bar:SetMinMaxValues(0, UnitHealth("target"))
 		w.bar:SetValue(damage)
 	end)
 	if not ok then return Hide() end
-	local cooling = self:ShadowDeathCooling(rank)
-	w.icon:SetDesaturated(cooling)
-	w.icon:SetAlpha(cooling and 0.45 or 1)
 	w.window:Show()
-	return cooling and "cooling" or "shown"
+	return "shown"
 end
 
 if ns.combat and ns.Every then
