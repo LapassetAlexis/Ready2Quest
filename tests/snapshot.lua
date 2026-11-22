@@ -1502,19 +1502,12 @@ local function FeatsWorld(ns)
 	end
 	data.count = 37
 	ns.menagerieStatic = nil
-	local L = ns.L
-	rawset(L, "FEAT_snap_secret_a", "Mon double"); rawset(L, "FEATD_flag_snapA", "Donner ton propre nom à un spécimen")
-	rawset(L, "FEAT_snap_secret_b", "Promeneur"); rawset(L, "FEATH_snap_secret_b", "Il paraît que Lardeur aime les promenades.")
-	rawset(L, "FEAT_snap_secret_c", "Caché"); rawset(L, "FEAT_snap_fos", "Pionnier")
-	rawset(L, "FEATD_flag_snapF", "Avoir fait ta première capture avant le 1er janvier 2027")
-	ns.FeatAdd({ "snap_secret_a", 991, "fun", 5, "account", crit = { "flag", "snapA" }, hidden = true })
-	ns.FeatAdd({ "snap_secret_b", 992, "fun", 5, "account", crit = { "flag", "snapB" }, hidden = true })
-	ns.FeatAdd({ "snap_secret_c", 993, "fun", 5, "account", crit = { "flag", "snapC" }, hidden = true })
-	ns.FeatAdd({ "snap_fos", 994, "fos", 0, "account", crit = { "flag", "snapF" }, reward = { title = 2 } })
-	ns:FeatStore("account").hints = { snap_secret_b = 1793000000 }
+	-- secrets et tour de force du catalogue (deuxième édition) : un secret découvert,
+	-- un indice lâché, « Pionnier » obtenu
+	ns:FeatStore("account").hints = { fun_hogger_partner = 1793000000 }
 	local at = 1793500000
 	for index, id in ipairs({ "men_first", "men_species_10", "men_species_25", "char_level_10", "char_level_20", "zone_visit_10",
-		"day_mission_1", "shiny_found_5", "men_rare_1", "snap_secret_a", "snap_fos" }) do
+		"day_mission_1", "shiny_found_5", "men_rare_1", "fun_namesake", "fos_pioneer" }) do
 		ns:FeatAward(id, { silent = true, at = at + index * 86400 })
 	end
 	ns:FeatStore("account").catchup = { v = 1, ids = { "men_first", "men_species_10", "men_species_25", "char_level_10",

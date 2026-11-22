@@ -164,7 +164,16 @@ do
 		and view.near[1].count:GetText() == NS:FeatCountText(near[1].cur, near[1].max) and view.near[1].follow:IsShown()
 		and not view.near[1].unfollow:IsShown())
 	s.ok("pas de rattrapage : pas de bloc", not view.catch:IsShown() and not view.catchSec:IsShown())
-	s.ok("pas de page Communauté : pas de ligne", not view.community:IsShown())
+	-- (la page Communauté existe : sans elle, la ligne ne s'affiche pas)
+	s.ok("page Communauté : la ligne est là", view.community:IsShown())
+	do
+		local real = NS.CommunityOpen
+		NS.CommunityOpen = nil
+		NS:RefreshJournal()
+		s.ok("pas de page Communauté : pas de ligne", not view.community:IsShown())
+		NS.CommunityOpen = real
+		NS:RefreshJournal()
+	end
 	s.ok("derniers obtenus : le plus récent d'abord, date courte", view.recent[1].name:GetText() == NS:FeatName("char_level_10")
 		and view.recent[1].date:GetText() == "07/11" and view.recent[2].name:GetText() == NS:FeatName("men_first")
 		and view.recent[3].name:GetText() == "")
@@ -198,13 +207,14 @@ do
 	NS:JournalFeatsTab("overview")
 	-- la ligne vers la page Communauté, si elle existe
 	local opened
-	NS.JournalCommunityOpen = function(_, tab) opened = tab end
+	local realOpen = NS.CommunityOpen
+	NS.CommunityOpen = function(_, tab) opened = tab end
 	NS:RefreshJournal()
 	s.ok("page Communauté présente : la ligne, mots dorés, au-dessous du bloc", view.community:IsShown()
 		and view.community.text:GetText():find("Une minute ? ", 1, true) and view.community.text:GetText():find(Theme.Hex(Theme.GOLD_LIGHT), 1, true))
 	view.community:Click()
 	s.ok("clic : la page Communauté, onglet Ton avis", opened == "avis")
-	NS.JournalCommunityOpen = nil
+	NS.CommunityOpen = realOpen
 	-- suivre depuis l'Aperçu
 	view.near[1].follow:Click()
 	s.ok("Suivre : suivi, le bouton devient « Suivi »", FP.Followed(NS, near[1].def.id) and view.near[1].unfollow:IsShown()

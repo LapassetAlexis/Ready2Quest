@@ -789,9 +789,9 @@ local function Diamond(row, pts, got)
 end
 FP.Diamond = Diamond
 
--- l'ouverture de la page Communauté (après fusion du chantier Communauté)
+-- l'ouverture de la page Communauté (JournalCommunity.lua : ns:CommunityOpen(onglet))
 local function CommunityOpener()
-	return ns.JournalCommunityOpen or ns.OpenJournalCommunity
+	return ns.CommunityOpen or ns.JournalCommunityOpen
 end
 function ns:JournalFeatsCommunity()
 	local open = CommunityOpener()
