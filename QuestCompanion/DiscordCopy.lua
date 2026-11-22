@@ -33,7 +33,7 @@ local Theme = ns.Theme
 ns.DISCORD_MAX = 1900                 -- strictement moins (octets, donc caractères)
 ns.DISCORD_URL = "https://www.curseforge.com/wow/addons/quest-companion"
 ns.DISCORD_LINE_MAX = 400             -- une ligne trop longue est coupée (octets)
-ns.DISCORD_COPY = { w = 460, h = 232, pad = 20, areaY = 50, areaH = 128, maxLetters = 2000 }
+ns.DISCORD_COPY = { w = 540, h = 232, pad = 20, areaY = 50, areaH = 128, maxLetters = 2000 }
 -- caractères échappés dans ce qui vient du joueur ou du jeu (surnom, nom,
 -- zone) : la mise en forme de Discord et les mentions (« \@everyone »)
 ns.DISCORD_ESCAPE = "([\\%*_~`@])"

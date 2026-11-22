@@ -36,10 +36,17 @@ ns.SOUVENIR = {
 	kickY = 17, nameY = 31, nameSize = 22, subY = 63, rowsY = 89, rowStep = 20, labelW = 84,
 	oddsGap = 15, oddsH = 20, oddsPad = 8,
 	ruleY = 243, ruleW = 330, whoY = 253, footY = 269, sigY = 253, sigRight = -4,
-	model = 206, icon = 72, glow = 300, glowY = -10,
+	model = 206, icon = 72, glow = 360, glowY = -10,
 	buttonsGap = 24, buttonGap = 8, shotW = 138, copyW = 150, closeW = 80, hintGap = 12,
-	shotDelay = 0.5, starSize = 12,
+	shotDelay = 0.5, starSize = 12, starGap = 2, starText = 4,
 }
+-- les étoiles de la ligne « Qualité » : l'étoile dorée du client (pleine,
+-- vide), celle des étoiles de capture (CaptureQueue.lua) ; repli : l'étoile
+-- des marqueurs de raid
+ns.SOUVENIR_STAR_FULL = { atlases = { ns.CAPTURE_STAR_ATLAS and ns.CAPTURE_STAR_ATLAS.full or "auctionhouse-icon-favorite" },
+	fallback = ns.CAPTURE_STAR_ICON or "Interface\\TargetingFrame\\UI-RaidTargetingIcon_1" }
+ns.SOUVENIR_STAR_EMPTY = { atlases = { ns.CAPTURE_STAR_ATLAS and ns.CAPTURE_STAR_ATLAS.empty or "auctionhouse-icon-favorite-off" },
+	fallback = ns.CAPTURE_STAR_ICON or "Interface\\TargetingFrame\\UI-RaidTargetingIcon_1" }
 -- le bouton de la fiche d'un spécimen (Réserve) : une icône du client
 ns.SOUVENIR_ICON = "Interface\\Icons\\INV_Misc_Note_01"
 
@@ -158,8 +165,19 @@ function VIEWS.specimen(self, subject)
 	local view = { discord = "capture", subject = subject, kind = "specimen" }
 	view.kicker = spec.shiny and L.SOUVENIR_KICK_SHINY or L.SOUVENIR_KICK_SPEC
 	local species = self:DiscordSpecies(spec)
-	view.name = (spec.nick and spec.nick ~= "") and spec.nick or species
-	view.sub = level and (species .. L.DISCORD_SEP .. self:F("SOUVENIR_LEVEL", level)) or species
+	local nick = spec.nick and spec.nick ~= "" and spec.nick or nil
+	view.name = nick or species
+	-- sous le nom : l'espèce (s'il a un surnom), le niveau (s'il est connu),
+	-- sinon le type de la créature (jamais le nom répété)
+	local sub = {}
+	if nick then sub[#sub + 1] = species end
+	if level then sub[#sub + 1] = self:F("SOUVENIR_LEVEL", level) end
+	if #sub == 0 then
+		local typeKey = self.SpecimenTypeKey and Call(self.SpecimenTypeKey, self, spec)
+		local label = typeKey and self.CreatureTypeLabel and Call(self.CreatureTypeLabel, self, typeKey)
+		if label and label ~= "" then sub[1] = label end
+	end
+	view.sub = table.concat(sub, L.DISCORD_SEP)
 	local rows = {}
 	local stars = tonumber(spec.stars)
 	if stars then rows[#rows + 1] = { L.SOUVENIR_L_QUALITY, ns.DiscordCount(stars, "DISCORD_STARS", nil, true), stars = stars } end
@@ -213,7 +231,7 @@ function VIEWS.trainer(self)
 	local comp = fig.companion
 	view.sub = (comp and comp.name) and self:F("SOUVENIR_CARD_SUB", comp.name) or ""
 	local points = Count(fig.points, "DISCORD_POINTS")
-	local rows = { { L.SOUVENIR_L_RANK, fig.rank and (fig.rank .. L.DISCORD_SEP .. points) or points } }
+	local rows = { fig.rank and { L.SOUVENIR_L_RANK, fig.rank .. L.DISCORD_SEP .. points } or { L.SOUVENIR_L_POINTS, points } }
 	local species = Number(fig.species or 0)
 	if fig.total and fig.total > 0 then species = self:F("SOUVENIR_SPECIES_OF", species, Number(fig.total)) end
 	rows[#rows + 1] = { L.SOUVENIR_L_SPECIES, species }
@@ -280,7 +298,7 @@ local function BuildCard(veil)
 	panel.glow:SetSize(S.glow, S.glow)
 	panel.glow:SetPoint("CENTER", panel, "CENTER", 0, S.glowY)
 	if panel.glow.SetBlendMode then pcall(panel.glow.SetBlendMode, panel.glow, "ADD") end
-	panel.glow:SetVertexColor(Theme.GOLD_SOFT[1], Theme.GOLD_SOFT[2], Theme.GOLD_SOFT[3], Theme.SHADE.mid)
+	panel.glow:SetVertexColor(Theme.GOLD_SOFT[1], Theme.GOLD_SOFT[2], Theme.GOLD_SOFT[3], Theme.SHADE.veil)
 	if panel.SetClipsChildren then panel:SetClipsChildren(true) end
 	panel.edge = Theme.Solid(card, "ARTWORK", Theme.GOLD_SOFT, Theme.SHADE.mid)
 	panel.edge:SetPoint("TOPLEFT", panel, "TOPRIGHT", 0, 0)
@@ -315,6 +333,15 @@ local function BuildCard(veil)
 		local row = {}
 		row.label = At(Line(card, Theme.F_SMALL, Theme.MUTED_LIGHT, S.labelW - 8), card, S.x, y + 1)
 		row.value = At(Line(card, Theme.F_BODY, Theme.TEXT, width - S.labelW), card, S.x + S.labelW, y)
+		-- les étoiles : des textures du client (jamais un glyphe)
+		row.stars = {}
+		for star = 1, (ns.CAPTURE_STAR_MAX or 3) do
+			local tex = card:CreateTexture(nil, "OVERLAY")
+			tex:SetSize(S.starSize, S.starSize)
+			tex:SetPoint("TOPLEFT", card, "TOPLEFT", S.x + S.labelW + (star - 1) * (S.starSize + S.starGap), -(y + 1))
+			tex:Hide()
+			row.stars[star] = tex
+		end
 		card.rows[index] = row
 	end
 	-- la cote : une étiquette dorée
@@ -416,13 +443,25 @@ function ns:SouvenirPaint(view)
 		local item = rows[index]
 		if item then
 			row.label:SetText(item[1] or "")
-			local value = tostring(item[2] or "")
-			if item.stars and self.CaptureStarsText then value = self:CaptureStarsText(item.stars, S.starSize) .. "  " .. value end
-			row.value:SetText(value)
+			row.value:SetText(tostring(item[2] or ""))
+			local shift = 0
+			for star, tex in ipairs(row.stars) do
+				if item.stars then
+					local full = star <= item.stars
+					Theme.PaintClient(tex, full and ns.SOUVENIR_STAR_FULL or ns.SOUVENIR_STAR_EMPTY)
+					if tex.SetDesaturated then pcall(tex.SetDesaturated, tex, not full) end
+					tex:Show()
+					shift = star * (S.starSize + S.starGap) + S.starText
+				else
+					tex:Hide()
+				end
+			end
+			At(row.value, card, S.x + S.labelW + shift, S.rowsY + (index - 1) * S.rowStep)
 			row.label:Show(); row.value:Show()
 		else
 			row.label:SetText(""); row.value:SetText("")
 			row.label:Hide(); row.value:Hide()
+			for _, tex in ipairs(row.stars) do tex:Hide() end
 		end
 	end
 	if view.odds then

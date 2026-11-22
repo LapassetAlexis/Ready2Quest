@@ -2287,6 +2287,78 @@ Snap.scenes["qc-options-quiet"] = function(T)
 	return Options(T, T.QNS, "companionQuiet"), "QuestCompanion : réglages, Compagnon de route > Discrétion (mode discret, 3.7)"
 end
 
+-- 3.7.0, étape 3 : la carte souvenir (maquette autres-c1). L'écran est
+-- ramené à la taille de la scène de la maquette (760 x 470) : le voile le
+-- couvre, la carte et ses boutons au centre. Le modèle 3D est une zone vide.
+local function SouvenirWorld(T)
+	local ns = QCBannerWorld(T)
+	if rawget(_G, "date") == nil then _G.date = os.date end
+	-- (chaque aperçu est un processus à lui : l'écran réduit n'y survit pas)
+	Snap.SCREEN = { width = 760, height = 470 }
+	UIParent.width, UIParent.height = 760, 470
+	_G.Screenshot = rawget(_G, "Screenshot") or function() end
+	if ns.souvenirFrame then ns.souvenirFrame:Hide() end
+	ns.souvenirFrame = nil
+	ns.SHINY_CHANCE = 1 / 150
+	local creatures = ns:CaptureData().creatures
+	for index = 1, 312 do creatures[93000 + index] = { name = "Bête " .. index, normal = true, stars = 2, class = "normal", type = "Bête" } end
+	return ns
+end
+local function SouvenirFrame(veil)
+	local model = veil and veil.card and veil.card.panel and veil.card.panel.model
+	if model then model:Hide() end
+	return veil
+end
+
+Snap.scenes["qc-souvenir-specimen"] = function(T) return OwnDraws(T, function(T)
+	local ns = SouvenirWorld(T)
+	local id = ns:SpecimenAdd({ npc = 3398, stars = 3, name = "Raptor de Strangleronce", origin = "capture", zone = 1413, by = "Testeur",
+		size = "giant", shiny = true, trait = "curious", at = os.time({ year = 2026, month = 11, day = 22, hour = 12 }) })
+	ns:SpecimenGet(id).nick = "Croc"
+	local veil = ns:SouvenirShow({ kind = "capture", result = { specimen = id, shiny = true, level = 38 } })
+	return SouvenirFrame(veil), "QuestCompanion : carte souvenir d'une prise brillante (3.7)"
+end) end
+
+Snap.scenes["qc-souvenir-feat"] = function(T) return OwnDraws(T, function(T)
+	local ns = SouvenirWorld(T)
+	ns:FeatAward("char_level_60", { silent = true, at = os.time({ year = 2026, month = 11, day = 21, hour = 12 }) })
+	local veil = ns:SouvenirShow({ kind = "feat", id = "char_level_60" })
+	return SouvenirFrame(veil), "QuestCompanion : carte souvenir d'un haut fait obtenu (3.7)"
+end) end
+
+Snap.scenes["qc-souvenir-trainer"] = function(T) return OwnDraws(T, function(T)
+	local ns = SouvenirWorld(T)
+	ns:FeatAward("char_level_60", { silent = true, at = 1700000000 })
+	local veil = ns:SouvenirShow({ kind = "trainer" })
+	return SouvenirFrame(veil), "QuestCompanion : carte souvenir de la fiche de dresseur (3.7)"
+end) end
+
+Snap.scenes["qc-souvenir-noshot"] = function(T) return OwnDraws(T, function(T)
+	local ns = SouvenirWorld(T)
+	local saved = rawget(_G, "Screenshot")
+	_G.Screenshot = nil
+	local id = ns:SpecimenAdd({ npc = 3236, stars = 2, name = "Kodo des Tarides", origin = "capture", zone = 1413, by = "Testeur",
+		size = "large", trait = "lazy", at = os.time({ year = 2026, month = 11, day = 20, hour = 12 }) })
+	local veil = ns:SouvenirShow({ kind = "specimen", id = id })
+	_G.Screenshot = saved
+	return SouvenirFrame(veil), "QuestCompanion : carte souvenir, client sans Screenshot (3.7)"
+end) end
+
+-- la fenêtre « Copier pour Discord », avec le texte d'une prise
+Snap.scenes["qc-discord-copy"] = function(T) return OwnDraws(T, function(T)
+	return WithMultiLine(function()
+		local ns = SouvenirWorld(T)
+		Snap.SCREEN = { width = 1600, height = 1000 }
+		UIParent.width, UIParent.height = Snap.SCREEN.width, Snap.SCREEN.height
+		if ns.discordCopy then ns.discordCopy:Hide() end
+		ns.discordCopy = nil
+		local id = ns:SpecimenAdd({ npc = 3398, stars = 3, name = "Raptor de Strangleronce", origin = "capture", zone = 1413, by = "Testeur",
+			size = "giant", shiny = true, trait = "curious", at = os.time({ year = 2026, month = 11, day = 22, hour = 12 }) })
+		local frame = ns.DiscordCopyShow(ns:DiscordText("capture", id))
+		return Centered(frame), "QuestCompanion : fenêtre « Copier pour Discord » (3.7)"
+	end)
+end) end
+
 Snap.scenes["qc-guild-forge"] = function(T)
 	local ns = QCBannerWorld(T)
 	ns:GuildFeatsShowToast({ key = "x", sender = "Xan-Royaume", feat = { kind = "h" }, score = 1000, at = Mock.now,

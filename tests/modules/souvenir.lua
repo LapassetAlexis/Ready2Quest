@@ -247,15 +247,18 @@ do
 	s.ok("prise : voile sur tout l'écran, carte au-dessus", Shown(veil) and veil.allPoints == UIParent and veil.strata == "FULLSCREEN"
 		and card and card:GetParent() == veil and Shown(UIParent ~= nil and veil))
 	s.ok("prise : petit titre, nom, espèce et niveau", card.kicker:GetText() == L.SOUVENIR_KICK_SHINY
-		and card.name:GetText() == "Raptor de Strangleronce" and card.sub:GetText() == "Raptor de Strangleronce · niveau 38", card.sub:GetText())
+		and card.name:GetText() == "Raptor de Strangleronce" and card.sub:GetText() == "niveau 38", card.sub:GetText())
 	local labels, values = {}, {}
 	for index, row in ipairs(card.rows) do
 		if Shown(row.label) then labels[#labels + 1] = row.label:GetText(); values[#values + 1] = row.value:GetText() end
 	end
 	s.ok("prise : qualité, taille, caractère, lien, capture", table.concat(labels, "|") == "Qualité|Taille|Caractère|Lien|Capture",
 		table.concat(labels, "|"))
-	s.ok("prise : étoiles en textures du client, jamais en glyphe", values[1] and values[1]:find("|A:", 1, true) == 1
-		and values[1]:find("3 étoiles", 1, true) ~= nil and not values[1]:find("★", 1, true))
+	local starRow = card.rows[1]
+	local textures = 0
+	for _, tex in ipairs(starRow.stars) do if Shown(tex) and (tex.atlas or tex.texture) then textures = textures + 1 end end
+	s.ok("prise : trois étoiles en textures du client, jamais en glyphe", textures == 3 and values[1] == "3 étoiles"
+		and not values[1]:find("★", 1, true) and not Shown(card.rows[2].stars[1]))
 	s.ok("prise : taille et indice", values[2] and values[2]:find("^Géant %(indice %d+%)$") ~= nil, values[2])
 	s.ok("prise : lieu et date", values[5] and Has(values[5], "22/11/2026"), values[5])
 	s.ok("prise : la cote", Shown(card.odds) and card.odds.text:GetText() == "1 chance sur 107 143")
@@ -289,7 +292,7 @@ do
 	veil = NS:SouvenirShow()
 	card = veil and veil.card
 	s.ok("fiche : rang, espèces, brillantes, sceaux, hauts faits", card and card.kicker:GetText() == L.SOUVENIR_KICK_CARD
-		and card.name:GetText() == "Testeur" and card.rows[1].label:GetText() == L.SOUVENIR_L_RANK
+		and card.name:GetText() == "Testeur" and (card.rows[1].label:GetText() == L.SOUVENIR_L_RANK or card.rows[1].label:GetText() == L.SOUVENIR_L_POINTS)
 		and card.rows[5].label:GetText() == L.SOUVENIR_L_FEATS)
 	veil:Hide()
 	s.ok("fiche : aussi par { kind = \"trainer\" } et par point", NS.SouvenirShow({ kind = "trainer" }) == NS.souvenirFrame)

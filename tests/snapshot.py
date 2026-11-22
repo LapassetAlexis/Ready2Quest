@@ -52,7 +52,9 @@ Scènes (Snap.scenes dans tests/snapshot.lua ; « list » les donne toutes) :
   qc-feat-pill, qc-feat-medium, qc-feat-big-sig, qc-result-rare-odds, qc-options-quiet ; divers
   qc-chest, qc-notify, qc-tracker, qc-tracker-feat, qc-tooltip ; 3.7 (médailles de zone, série
   de chasse, suspense) : qc-journal-menagerie-medals0, -medals1, -medals3,
-  qc-tracker-37, qc-tooltip-37, qc-capture-express-suspense.
+  qc-tracker-37, qc-tooltip-37, qc-capture-express-suspense ; 3.7 « Ça se montre » (carte
+  souvenir, écran réduit à la scène de la maquette) : qc-souvenir-specimen, qc-souvenir-feat,
+  qc-souvenir-trainer, qc-souvenir-noshot, qc-discord-copy.
 Ne pas versionner les HTML produits.
 """
 import base64
