@@ -36,7 +36,7 @@ Scènes (Snap.scenes dans tests/snapshot.lua ; « list » les donne toutes) :
   r2q-settings-canvas ; QuestCompanion (3.1.0 : tout au thème forgé) : carnet
   qc-journal-creature, qc-journal-progress, qc-journal-day, qc-journal-menagerie,
   qc-journal-guide, qc-journal-feats, qc-journal-feats-list, qc-journal-feats-secrets,
-  qc-journal-feats-fos, qc-journal-reserve, qc-journal-juke,
+  qc-journal-feats-fos, qc-journal-feats-titles (3.7.0 : onglet Titres), qc-journal-reserve, qc-journal-juke,
   qc-journal-confirm, qc-journal-winter, qc-journal-community-discord,
   qc-journal-community-avis (3.7.0 : page Communauté), qc-trainer, qc-trainer-style, qc-trainer-rank,
   qc-trainer-compare, qc-trainer-card_<id> (3.7.0 : rang, comparaison, les neuf habillages neufs), qc-allure ; compagnon

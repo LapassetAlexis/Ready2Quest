@@ -96,6 +96,7 @@ Feats.lua
 FeatsCosmetics.lua
 JournalFeats.lua
 JournalFeatsList.lua
+JournalFeatsTitles.lua
 FeatsTitles.lua
 JournalAzeroth.lua
 WinterVeil.lua

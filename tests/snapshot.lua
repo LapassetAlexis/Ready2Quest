@@ -1543,6 +1543,22 @@ Snap.scenes["qc-journal-feats-fos"] = function(T) return OwnDraws(T, function(T)
 	return frame, "QuestCompanion : carnet, Hauts faits › Tours de force"
 end) end
 
+-- 3.7.0 (C1b) : onglet Titres (maquette carnet-j4) : des titres gagnés (un
+-- tour de force), un titre choisi, la liste à gagner
+Snap.scenes["qc-journal-feats-titles"] = function(T) return OwnDraws(T, function(T)
+	local frame, ns = QCJournal(T, "feats", function(ns)
+		FeatsWorld(ns)
+		local at = 1794500000
+		for index, id in ipairs({ "men_rare_10", "shiny_found_50", "shiny_cap_25", "zone_all_biomes", "char_level_60",
+			"men_bad_luck", "men_species_50", "men_species_100", "men_species_250" }) do
+			ns:FeatAward(id, { silent = true, at = at + index * 3600 })
+		end
+		ns:FeatSetTitle(13)
+	end)
+	ns:JournalFeatsTab("titles")
+	return frame, "QuestCompanion : carnet, Hauts faits › Titres"
+end) end
+
 -- le suivi à l'écran avec un haut fait suivi
 Snap.scenes["qc-tracker-feat"] = function(T)
 	local ns = QCWorld(T)
