@@ -8,7 +8,7 @@ local ADDON, ns = ...
 
 ns.APP = {
 	id = "QuestCompanion",
-	version = "3.6.0",
+	version = "3.7.0",
 	-- nom dans l'en-tête des réglages
 	brand = "Quest|cff5b8fd6Companion|r",
 	-- couleur d'identité dans le thème forgé (socle 3.3, Theme.IDENTITY_TOKENS) :
