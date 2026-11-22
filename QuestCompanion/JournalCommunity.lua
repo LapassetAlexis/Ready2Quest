@@ -7,8 +7,9 @@
 --   * Pastille dorée à droite de « Communauté » dans la colonne tant que la
 --     page n'a jamais été ouverte (au compte : db.community.seen).
 --   * Onglets (une rangée de puces, comme la Réserve) : « Discord » (par
---     défaut) et « Ton avis ». L'onglet « Dresseurs » (3.7, étape suivante)
---     viendra en tête de COMMUNITY_TABS : la rangée se recalcule seule.
+--     défaut) et « Ton avis ». L'onglet « Dresseurs » (3.7, étape 3) se pose
+--     en tête de COMMUNITY_TABS depuis TrainerKnown.lua, qui le construit et
+--     le peint (ns.CommunityKit : les briques de la page).
 --   * Discord : l'invitation à copier, les salons qui existent
 --     (COMMUNITY_SALONS : un salon pas encore ouvert n'est pas listé), le mot
 --     de la version, la tuile « Cette semaine », la note du bas.
@@ -843,6 +844,9 @@ local function BuildAvis(self, pane, view)
 	view.note:SetText(L.COM_AVIS_NOTE)
 end
 
+-- 3.7 (étape 3) : les briques de la page, pour l'onglet Dresseurs (TrainerKnown.lua)
+ns.CommunityKit = { Label = Label, Recolor = Recolor, Place = Place, Section = Section, Area = Area, Tighten = Tighten }
+
 local function Build(self, frame, content, ui)
 	local pane = CreateFrame("Frame", nil, content)
 	pane:SetAllPoints()
@@ -879,6 +883,7 @@ local function Build(self, frame, content, ui)
 	end
 	BuildDiscord(self, pane, pane.views.discord)
 	BuildAvis(self, pane, pane.views.avis)
+	if pane.views.dresseurs and self.CommunityBuildTrainers then self:CommunityBuildTrainers(pane, pane.views.dresseurs) end
 	pane.tab = ns.COMMUNITY_TAB_DEFAULT
 
 	-- page quittée (autre page, carnet fermé) : le clavier rendu au jeu
@@ -1028,6 +1033,8 @@ function ns:CommunitySelectTab(id)
 		-- l'astuce « Ton avis » n'a plus lieu d'être
 		if self.DiscoveryUse then pcall(self.DiscoveryUse, self, "community_avis") end
 		self:CommunityAvisPaint()
+	elseif id == "dresseurs" then
+		if self.CommunityTrainersPaint then self:CommunityTrainersPaint() end
 	else
 		self:CommunityWordPaint()
 		self:CommunityWeekPaint()

@@ -491,6 +491,8 @@ function Snap.Render(root, opts)
 				local wrap = (region.widthSet and region.kind == "FontString" and region.wordWrap ~= false) and "normal" or "nowrap"
 				-- 3.7.0 : champ sur plusieurs lignes (SetMultiLine, posé par la scène) : le texte revient à la ligne
 				if region.kind == "EditBox" and region.multiLine then wrap = "pre-wrap" end
+				-- 3.7.0 (S2) : un champ d'une ligne coupe son texte à sa largeur, comme en jeu
+				if region.kind == "EditBox" and not region.multiLine then inset = inset .. ";overflow:hidden" end
 				local clip = region.widthSet and region.kind == "FontString" and region.wordWrap == false
 				out[#out + 1] = string.format('<div class="txt" style="%s;font-size:%dpx;font-weight:%d;color:%s;justify-content:%s;'
 					.. 'align-items:%s;text-align:%s;white-space:%s%s%s"><span%s>%s</span></div>',
@@ -1685,6 +1687,46 @@ Snap.scenes["qc-journal-community-avis"] = function(T) return OwnDraws(T, functi
 		ns:CommunityAvisPaint()
 		_G.UnitLevel = saved
 		return frame, "QuestCompanion : carnet, page Communauté (onglet Ton avis)"
+	end)
+end) end
+
+-- 3.7.0 (étape 3, S2) : onglet Dresseurs (TrainerKnown.lua), comme la
+-- maquette carnet-c1 : quatre dresseurs connus (un croisé en guilde, trois
+-- reçus par code dont un d'un autre royaume et un de l'autre faction),
+-- l'encadré du parrainage ouvert. « -empty » : aucun dresseur connu.
+local function TrainersWorld(ns, filled)
+	ns:DB().trainerKnown, ns:DB().trainerMentor = nil, nil
+	ns:CaptureData().firstAt = time()
+	if rawget(_G, "UnitFactionGroup") == nil then _G.UnitFactionGroup = function() return "Alliance" end end
+	if not filled then return end
+	local day = 1795219200 + 12 * 3600   -- 21/11/2026, midi
+	local specs = {
+		{ "Xan-Royaume", "Maîtresse des brillantes", 1000, 105, 287, 9, "guild", nil, day, "AB" },
+		{ "Deklatis-Royaume", "Dresseur confirmé", 600, 20, 96, 2, "code", "A", day - 86400, "A" },
+		{ "Brakmar-Hyjal", nil, 2000, 40, 512, 31, "code", "A", day - 3 * 86400, nil },
+		{ "Zugzug-Royaume", "le Traqueur", 1300, 80, 301, 12, "code", "H", day - 6 * 86400, "AB" },
+	}
+	for _, spec in ipairs(specs) do
+		local card = { name = spec[1], title = spec[2], feats = { account = spec[3], char = spec[4], count = 100 },
+			species = spec[5], shinies = spec[6], showcase = {}, badges = {}, featBits = spec[10] }
+		ns:TrainerKnownAdd(card, spec[7], { faction = spec[8] })
+		local list = ns:TrainerKnownData().list
+		list[#list].at = spec[9]
+	end
+	ns:TrainerKnownResetSession()
+end
+
+Snap.scenes["qc-journal-community-dresseurs"] = function(T) return OwnDraws(T, function(T)
+	return WithMultiLine(function()
+		local frame = QCCommunity(T, "dresseurs", function(ns) TrainersWorld(ns, true) end)
+		return frame, "QuestCompanion : carnet, page Communauté (onglet Dresseurs)"
+	end)
+end) end
+
+Snap.scenes["qc-journal-community-dresseurs-empty"] = function(T) return OwnDraws(T, function(T)
+	return WithMultiLine(function()
+		local frame = QCCommunity(T, "dresseurs", function(ns) TrainersWorld(ns, false) end)
+		return frame, "QuestCompanion : carnet, page Communauté (onglet Dresseurs, aucun dresseur connu)"
 	end)
 end) end
 

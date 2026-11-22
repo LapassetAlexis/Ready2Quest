@@ -118,21 +118,23 @@ do
 	local pane = f.community
 	local ids = {}
 	for _, chip in ipairs(pane.tabs.chips) do ids[#ids + 1] = chip.id end
-	s.ok("deux onglets : Discord, Ton avis", table.concat(ids, ",") == "discord,avis"
-		and pane.tabs.chips[1].text:GetText() == "Discord" and pane.tabs.chips[2].text:GetText() == "Ton avis")
+	-- 3.7 (étape 3) : l'onglet Dresseurs (TrainerKnown.lua) en tête ; Discord reste ouvert par défaut
+	s.ok("trois onglets : Dresseurs, Discord, Ton avis", table.concat(ids, ",") == "dresseurs,discord,avis"
+		and pane.tabs.chips[1].text:GetText() == "Dresseurs" and pane.tabs.chips[2].text:GetText() == "Discord"
+		and pane.tabs.chips[3].text:GetText() == "Ton avis")
 	s.ok("Discord ouvert par défaut", pane.tab == "discord" and pane.tabs.selected == "discord" and Shown(pane.views.discord)
 		and not Shown(pane.views.avis))
 	s.ok("phrase de l'onglet Discord", pane.tabNote:GetText() == "Rien ne part d'ici : le lien se copie, c'est tout"
 		and pane.tabNote.lastPoint.point == "RIGHT")
-	pane.tabs.chips[2]:Click()
+	pane.tabs.chips[3]:Click()
 	s.ok("clic : Ton avis", pane.tab == "avis" and Shown(pane.views.avis) and not Shown(pane.views.discord)
 		and pane.tabNote:GetText() == "Rien n'est envoyé d'ici : tu composes, tu copies, tu colles")
 	-- la rangée accueille un onglet de plus en tête (étape suivante) sans refonte
-	s.ok("onglets décrits par une table (un de plus en tête possible)", NS.COMMUNITY_TABS[1] == "discord" and NS.COMMUNITY_TAB_DEFAULT == "discord")
+	s.ok("onglets décrits par une table (Dresseurs posé en tête)", NS.COMMUNITY_TABS[1] == "dresseurs" and NS.COMMUNITY_TAB_DEFAULT == "discord")
 	local right = pane.tabs.used
 	s.ok("onglets et phrase sur la même rangée sans se toucher", right + 8 + pane.tabNote:GetStringWidth() <= NS.JournalUI.INNER, right)
 	C.Done()
-	s.check("[COM] deux onglets (Discord par défaut, Ton avis), la phrase de chaque onglet à droite")
+	s.check("[COM] trois onglets (Dresseurs en tête, Discord par défaut, Ton avis), la phrase de chaque onglet à droite")
 end
 
 -- 4. Onglet Discord : invitation, salons ---------------------------------------------------------
@@ -375,7 +377,8 @@ do
 		auto = auto and edit.autoFocus == false
 		focused = focused or edit:HasFocus()
 	end
-	s.ok("aucun champ ne prend le clavier d'office", auto and not focused and #pane.edits == 4)
+	-- quatre champs, plus les deux de l'onglet Dresseurs (3.7, étape 3)
+	s.ok("aucun champ ne prend le clavier d'office", auto and not focused and #pane.edits == 6)
 	NS:CommunitySelectTab("avis")
 	local free = pane.views.avis.free
 	free.scripts.OnMouseDown(free)

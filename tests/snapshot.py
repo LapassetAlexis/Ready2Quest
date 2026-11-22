@@ -38,7 +38,8 @@ Scènes (Snap.scenes dans tests/snapshot.lua ; « list » les donne toutes) :
   qc-journal-guide, qc-journal-feats, qc-journal-feats-list, qc-journal-feats-secrets,
   qc-journal-feats-fos, qc-journal-feats-titles, qc-journal-feats-stats (3.7.0 : onglets Titres et Statistiques), qc-journal-reserve, qc-journal-juke,
   qc-journal-confirm, qc-journal-winter, qc-journal-community-discord,
-  qc-journal-community-avis (3.7.0 : page Communauté), qc-trainer, qc-trainer-style, qc-trainer-rank,
+  qc-journal-community-avis, qc-journal-community-dresseurs, qc-journal-community-dresseurs-empty
+  (3.7.0 : page Communauté), qc-trainer, qc-trainer-style, qc-trainer-rank,
   qc-trainer-compare, qc-trainer-card_<id> (3.7.0 : rang, comparaison, les neuf habillages neufs), qc-allure ; compagnon
   qc-companion, qc-companion-hover, qc-companion-frame-tint, qc-companion-talk,
   qc-companion-sad, qc-companion-winter, qc-tutorial, qc-pantry ; cosmétiques

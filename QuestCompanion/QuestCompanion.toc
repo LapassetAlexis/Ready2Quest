@@ -83,6 +83,8 @@ TrainerCard.lua
 TrainerCardStyle.lua
 GuildFeats.lua
 TrainerCompare.lua
+TrainerCode.lua
+TrainerKnown.lua
 AzerothStyle.lua
 ForgeCompanion.lua
 ForgeBanners.lua
