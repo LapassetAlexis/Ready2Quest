@@ -548,6 +548,9 @@ do
 	local s = Steps()
 	SH.Reset({ guild = true })
 	NS.SpecimenRollSize = function() return "large" end
+	-- (caractère fixé : avec 3 étoiles, un caractère rare ajouterait une cote au texte, et le tirage
+	-- dépend de la machine : même graine, autre suite sous Linux)
+	NS.SpecimenRollTrait = function() return "curious" end
 	NS.captureStage = nil
 	NS:CaptureResolve({ success = true, stars = 3, target = { npcID = 7301, name = "Raptor", class = "elite", zoneID = 1413 } })
 	local pending = NS.captureResultPending
