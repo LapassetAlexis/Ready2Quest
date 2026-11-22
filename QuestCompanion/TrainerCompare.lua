@@ -47,7 +47,7 @@ if ns.KEEP_STRINGS then ns.TRAINER_CMP_STRINGS = { fr = FR, en = EN } end
 
 -- Mise en page (px) : fenêtre, marge, liste de SLOTS emplacements de STEP px,
 -- colonnes de COL px au bord droit de la liste, écart GAP
-ns.TRAINER_CMP = { width = 620, height = 400, footer = 52, pad = 30, listY = -80, slots = 7, step = 36, rowH = 34,
+ns.TRAINER_CMP = { width = 620, height = 412, footer = 52, pad = 30, listY = -80, slots = 7, step = 36, rowH = 34,
 	col = 74, gap = 8, check = 12 }
 local K = ns.TRAINER_CMP
 
@@ -292,7 +292,7 @@ function ns:EnsureTrainerCompareWindow()
 	frame.same:SetWidth(listW)
 	frame.same:SetJustifyH("LEFT")
 	frame.summary = Theme.Text(content, Theme.F_SMALL, Theme.MUTED_LIGHT)
-	frame.summary:SetPoint("TOPLEFT", list, "BOTTOMLEFT", 0, -4)
+	frame.summary:SetPoint("TOPLEFT", list, "BOTTOMLEFT", 0, -(K.step - K.rowH) - 6)
 	frame.summary:SetWidth(listW)
 	frame.summary:SetJustifyH("LEFT")
 	local foot = frame.footer

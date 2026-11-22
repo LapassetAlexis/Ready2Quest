@@ -11,6 +11,11 @@
 -- opaques : le texte de la fiche y garde un contraste ≥ 4,5 (point le plus
 -- clair de chaque fond mesuré, tests/modules/lot36_b.lua).
 --
+-- 3.7.0 : six cadres (rang de bronze, d'argent, d'or, de lumière ; huit
+-- spécialités ; prisme) et trois fonds (planche de naturaliste, carte dorée,
+-- carnet d'adresses) de plus, sous les identifiants que promettent les
+-- hauts faits de la 3.7 (reward.soon résolu au chargement de FeatsCosmetics).
+--
 -- Déblocage : comme les cosmétiques du compagnon, ns:FeatGrant pose
 -- CompanionData().unlocked["cardbg:<id>"] (ou "cardframe:<id>") ; un haut
 -- fait de compte suit sur chaque personnage (ns:FeatSyncAccountRewards).
@@ -107,7 +112,7 @@ local FR = {
 	CARD_BG_zoology       = "Fond de fiche : Planche de naturaliste",
 	CARD_BG_gold_zones    = "Fond de fiche : Carte dorée",
 	CARD_BG_directory     = "Fond de fiche : Carnet d'adresses",
-	CARD_BGN_zoology      = "Planche de naturaliste",
+	CARD_BGN_zoology      = "Naturaliste",
 	CARD_BGN_gold_zones   = "Carte dorée",
 	CARD_BGN_directory    = "Carnet d'adresses",
 	CARD_FRAME_rank_bronze = "Cadre de fiche : Rang de bronze",
@@ -148,7 +153,7 @@ local EN = {
 	CARD_BG_zoology       = "Card background: Naturalist's Plate",
 	CARD_BG_gold_zones    = "Card background: Golden Map",
 	CARD_BG_directory     = "Card background: Address Book",
-	CARD_BGN_zoology      = "Naturalist's Plate",
+	CARD_BGN_zoology      = "Naturalist",
 	CARD_BGN_gold_zones   = "Golden Map",
 	CARD_BGN_directory    = "Address Book",
 	CARD_FRAME_rank_bronze = "Card frame: Bronze Rank",

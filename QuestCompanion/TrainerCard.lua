@@ -116,6 +116,7 @@ local FR = {
 	HELP_TRAINER           = "/qc fiche [nom] — ta fiche de dresseur, ou celle d'un autre joueur",
 	-- 3.7.0 : rang, signature, Pionnier, pied, comparaison
 	TRAINER_RANK_LINE      = "%s · %s points · %s hauts faits",
+	TRAINER_FEATS_COUNT    = "%s obtenus · %s points",
 	TRAINER_POINTS_LINE    = "%s points · %s hauts faits",
 	TRAINER_THOUSANDS      = " ",
 	TRAINER_SINCE          = "Dresseur depuis le %s",
@@ -182,6 +183,7 @@ local EN = {
 	OPT_DAILY_TRAINER      = "Share my trainer card",
 	HELP_TRAINER           = "/qc fiche [name] — your trainer card, or another player's",
 	TRAINER_RANK_LINE      = "%s · %s points · %s achievements",
+	TRAINER_FEATS_COUNT    = "%s earned · %s points",
 	TRAINER_POINTS_LINE    = "%s points · %s achievements",
 	TRAINER_THOUSANDS      = ",",
 	TRAINER_SINCE          = "Trainer since %s",
@@ -1942,8 +1944,9 @@ end
 local function PaintFeats(self, frame, card, own)
 	local feats = type(card.feats) == "table" and card.feats or nil
 	local account, char = feats and tonumber(feats.account) or 0, feats and tonumber(feats.char) or 0
+	-- 3.7.0 : « (142 obtenus · 1 240 points) » (maquette validée : sans le détail compte / perso)
 	local detail = (feats and account + char > 0)
-		and self:F("TRAINER_FEATS_DETAIL", tonumber(feats.count) or 0, account + char, account, char) or nil
+		and self:F("TRAINER_FEATS_COUNT", ns.TrainerThousands(tonumber(feats.count) or 0), ns.TrainerThousands(account + char)) or nil
 	frame.featsSection:SetText(L.TRAINER_FEATS_HEAD, detail)
 	for index, tile in ipairs(frame.featCards) do
 		local item = card.featShowcase and card.featShowcase[index]

@@ -92,6 +92,8 @@ do
 	local f = NS:TrainerOpen(nil)
 	s.ok("ma fiche : points sans rang sous le nom", (f.header.subtitle.text or ""):find("points · 1 hauts faits", 1, true) ~= nil,
 		f.header.subtitle.text)
+	s.ok("en-tête des hauts faits : « (1 obtenus · N points) » (maquette)",
+		(f.featsSection.detail.text or ""):find("^%(1 obtenus · %d+ points%)$") ~= nil, f.featsSection.detail.text)
 	s.check("[T37] rang : « <rang> · <points> points · <n> hauts faits », sans rang sous 100, calculé des points reçus")
 	f:Hide()
 end

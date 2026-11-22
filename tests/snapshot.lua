@@ -1759,6 +1759,83 @@ Snap.scenes["qc-trainer-style"] = function(T) return OwnDraws(T, function(T)
 	return Centered(frame), "QuestCompanion : fiche de dresseur, fond et cadre (3.6)"
 end) end
 
+-- 3.7.0 : la fiche de dresseur, rang sous le nom, signature, Pionnier, boutons
+-- de l'étape 3 (fonctions simulées), habillage `bg` / `frame` (ids du catalogue)
+local function TrainerStyled(T, bg, frame)
+	local ns = QCWorld(T)
+	ns:FeatAward("men_first", { silent = true, at = 1700000000 })
+	ns:CaptureData().creatures[3098] = ns:CaptureData().creatures[3098]
+		or { name = "Sanglier", class = "normal", normal = true, stars = 2, type = "Bête", at = 1793700000, firstAt = 1793700000 }
+	local pioneer = ns:FeatDef("fos_pioneer")
+	if not pioneer then
+		local n = 980
+		while ns:FeatDefByCode(n) do n = n + 1 end
+		pioneer = ns.FeatAdd({ "fos_pioneer", n, "fos", 0, "account", crit = { "flag", "snap_pioneer" } })
+	end
+	ns:FeatAward(pioneer, { silent = true, at = 1700000000 })
+	-- assez de hauts faits pour un rang (1 000 points et plus)
+	for _, def in ipairs(ns:FeatDefs()) do
+		if (ns:FeatPoints(nil)) >= 1240 then break end
+		if ns:FeatCountable(def) and not def.hidden and not ns:FeatGot(def) then ns:FeatAward(def, { silent = true, at = 1700300000 }) end
+	end
+	local data = ns:CompanionData()
+	data.cardStyle = {}
+	if bg then data.unlocked["cardbg:" .. bg] = true; data.cardStyle.bg = bg end
+	if frame then data.unlocked["cardframe:" .. frame] = true; data.cardStyle.frame = frame end
+	ns.TrainerCodeShow = ns.TrainerCodeShow or function() end
+	ns.SouvenirShow = ns.SouvenirShow or function() end
+	if ns.journalFrame then ns.journalFrame:Hide() end
+	ns.trainerFrame = nil
+	local f = ns:TrainerOpen()
+	if f and f.model then f.model:Hide() end
+	return Centered(f)
+end
+
+Snap.scenes["qc-trainer-rank"] = function(T) return OwnDraws(T, function(T)
+	return TrainerStyled(T, nil, "card_rank_silver"), "QuestCompanion : fiche de dresseur, rang, signature, Pionnier (3.7)"
+end) end
+
+-- 3.7.0 : chacun des neuf habillages neufs, sur la fiche
+Snap.scenes["qc-trainer-card_rank_bronze"] = function(T) return OwnDraws(T, function(T)
+	return TrainerStyled(T, nil, "card_rank_bronze"), "QuestCompanion : cadre de fiche « Rang de bronze » (3.7)" end) end
+Snap.scenes["qc-trainer-card_rank_silver"] = function(T) return OwnDraws(T, function(T)
+	return TrainerStyled(T, nil, "card_rank_silver"), "QuestCompanion : cadre de fiche « Rang d'argent » (3.7)" end) end
+Snap.scenes["qc-trainer-card_rank_gold"] = function(T) return OwnDraws(T, function(T)
+	return TrainerStyled(T, nil, "card_rank_gold"), "QuestCompanion : cadre de fiche « Rang d'or » (3.7)" end) end
+Snap.scenes["qc-trainer-card_rank_glow"] = function(T) return OwnDraws(T, function(T)
+	return TrainerStyled(T, nil, "card_rank_glow"), "QuestCompanion : cadre de fiche « Rang de lumière » (3.7)" end) end
+Snap.scenes["qc-trainer-card_eight"] = function(T) return OwnDraws(T, function(T)
+	return TrainerStyled(T, nil, "card_eight"), "QuestCompanion : cadre de fiche « Huit spécialités » (3.7)" end) end
+Snap.scenes["qc-trainer-card_prism"] = function(T) return OwnDraws(T, function(T)
+	return TrainerStyled(T, nil, "card_prism"), "QuestCompanion : cadre de fiche « Prisme » (3.7)" end) end
+Snap.scenes["qc-trainer-card_zoology"] = function(T) return OwnDraws(T, function(T)
+	return TrainerStyled(T, "card_zoology", nil), "QuestCompanion : fond de fiche « Planche de naturaliste » (3.7)" end) end
+Snap.scenes["qc-trainer-card_gold_zones"] = function(T) return OwnDraws(T, function(T)
+	return TrainerStyled(T, "card_gold_zones", nil), "QuestCompanion : fond de fiche « Carte dorée » (3.7)" end) end
+Snap.scenes["qc-trainer-card_directory"] = function(T) return OwnDraws(T, function(T)
+	return TrainerStyled(T, "card_directory", nil), "QuestCompanion : fond de fiche « Carnet d'adresses » (3.7)" end) end
+
+-- 3.7.0 : comparer les hauts faits avec la fiche reçue d'un autre dresseur
+Snap.scenes["qc-trainer-compare"] = function(T) return OwnDraws(T, function(T)
+	local ns = QCWorld(T)
+	-- mes hauts faits : un sur deux des premiers ; les siens : un sur trois
+	local mine, theirs, count = {}, {}, 0
+	for _, def in ipairs(ns:FeatDefs()) do
+		if ns:FeatCountable(def) and not def.hidden and def.cat ~= "fos" then
+			count = count + 1
+			if count % 2 == 0 and count < 60 then mine[#mine + 1] = def end
+			if count % 3 == 0 and count < 60 then theirs[tonumber(def.n)] = true end
+		end
+	end
+	for _, def in ipairs(mine) do ns:FeatAward(def, { silent = true, at = 1700000000 }) end
+	local text = "p=1;n=Xan;ti=19;tg=f;ap=1310;aq=0;ac=131;fb=" .. ns:FeatBits(theirs)
+	for _, chunk in ipairs(ns:TrainerChunks(text, 3)) do ns:TrainerOnAddonMessage("QCTrainer", chunk, "WHISPER", "Xan-Royaume") end
+	if ns.journalFrame then ns.journalFrame:Hide() end
+	_G.time = function() return 1795219200 end   -- la fiche « reçue » le 21/11 (date du sous-titre)
+	local w = ns:TrainerCompareOpen("Xan-Royaume")
+	return Centered(w), "QuestCompanion : comparer les hauts faits (3.7)"
+end) end
+
 -- 3.1.0 : le panneau « Choisir son allure » au-dessus du carnet
 Snap.scenes["qc-allure"] = function(T) return OwnDraws(T, function(T)
 	local _, ns = QCJournal(T, "evolution")
