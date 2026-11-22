@@ -807,7 +807,13 @@ local function Build(self, frame, content, ui)
 		end
 	end)
 	rv.nick:SetPoint("TOPRIGHT", rv.locate, "TOPLEFT", -4, 0)
-	for _, button in ipairs({ rv.locate, rv.nick }) do
+	-- 3.7.0 : la carte souvenir du spécimen (Souvenir.lua), si elle existe
+	rv.souvenir = Theme.CreateIconButton(p, 22, ns.SOUVENIR_ICON or icons.nick, function()
+		if frame.resPick and type(ns.SouvenirShow) == "function" then ns:SouvenirShow({ kind = "specimen", id = frame.resPick }) end
+	end)
+	rv.souvenir:SetPoint("TOPRIGHT", rv.nick, "TOPLEFT", -4, 0)
+	rv.souvenir.tipTitle = L.SOUVENIR_BUTTON
+	for _, button in ipairs({ rv.locate, rv.nick, rv.souvenir }) do
 		if button.HookScript then
 			button:HookScript("OnEnter", function(b)
 				Tip(b, b.tipTitle or "", { b.disabledTip or b.tipText })
@@ -1222,7 +1228,7 @@ local function RefreshTidy(self, frame, rv)
 		line:SetTextColor(c[1], c[2], c[3], 1)
 	end
 	HideCard(rv)
-	rv.locate:Hide(); rv.nick:Hide()
+	rv.locate:Hide(); rv.nick:Hide(); rv.souvenir:Hide()
 	rv.tidyYes:SetText(self:F("RES_TIDY_YES", #list))
 	Enable(rv.tidyYes, #list > 0)
 	rv.tidyYes:Show(); rv.tidyNo:Show()
@@ -1269,7 +1275,7 @@ local function RefreshDetails(self, frame, rv, spec)
 	HideCard(rv)
 	if not spec then
 		ui.PreviewSet(p, "", { L.RES_PICK }, {})
-		rv.locate:Hide(); rv.nick:Hide()
+		rv.locate:Hide(); rv.nick:Hide(); rv.souvenir:Hide()
 		return
 	end
 	local bond = self:SpecimenBondLevel(spec)
@@ -1332,6 +1338,7 @@ local function RefreshDetails(self, frame, rv, spec)
 	rv.nick.tipText = nickPrice > 0 and self:F("RES_NICK_TIP", nickPrice) or L.RES_NICK_TIP_FREE
 	Enable(rv.nick, true)
 	rv.nick:Show()
+	if type(ns.SouvenirShow) == "function" then rv.souvenir:Show() else rv.souvenir:Hide() end
 	-- états : surnom, remplacer un exemplaire lié, relâcher (confirmation)
 	if frame.resNick == spec.id then
 		rv.nickBox:Show()

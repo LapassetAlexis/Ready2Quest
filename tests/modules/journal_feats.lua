@@ -464,6 +464,9 @@ do
 		return true
 	end)())
 	-- Partager : seulement obtenu ; Carte souvenir : seulement si elle existe
+	-- (3.7.0 étape 3 : Souvenir.lua la livre ; retirée ici le temps du contrôle)
+	local realSouvenir = NS.SouvenirShow
+	NS.SouvenirShow = nil
 	NS:OpenJournalFeatsAt("char_level_30")
 	local open = RowOf(f, function(r) return r.selected end)
 	s.ok("série dépliée non finie : pas de Partager", open and not open.share:IsShown())
@@ -476,7 +479,7 @@ do
 	NS:RefreshJournal()
 	open = RowOf(f, function(r) return r.selected end)
 	s.ok("ns.SouvenirShow présente : Carte souvenir", open and open.souvenir:IsShown())
-	NS.SouvenirShow = nil
+	NS.SouvenirShow = realSouvenir
 	s.check("[JF] suivre : trois au plus (phrase), Maj+clic, ligne du suivi à l'écran (rang 3, nom, cur / max, clic : déplié), secrets, obtenu sort ; Partager, Carte souvenir")
 	f:Hide()
 	Drop()

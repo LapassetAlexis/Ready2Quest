@@ -444,7 +444,7 @@ ns.FeatCatalog(function()
 		-- l'ensemble des fiches consultées du moteur (50 noms au plus) : son compteur
 		{ "soc_card_25",          405, "soc", 25, A, crit = { "streak", "cards", 25 }, series = "cards",
 			reward = { soon = { "cardbg", "card_directory" } } },
-		{ "soc_photo_1",          406, "soc", 5,  A, crit = T("souvenir", 1), desc = "FEATD_soc_photo_1", pending = true },
+		{ "soc_photo_1",          406, "soc", 5,  A, crit = T("souvenir", 1), desc = "FEATD_soc_photo_1" },
 		{ "soc_code_1",           407, "soc", 5,  A, crit = T("codeCopy", 1), desc = "FEATD_soc_code_1", pending = true },
 		{ "soc_code_5",           408, "soc", 10, A, crit = T("codeOpen", 5), desc = "FEATD_soc_code_5", pending = true },
 		{ "soc_compare",          409, "soc", 5,  A, crit = T("compare", 1), desc = "FEATD_soc_compare" },

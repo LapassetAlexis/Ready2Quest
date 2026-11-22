@@ -18,7 +18,6 @@ end
 -- qui livre sa fonction est fusionnée (le haut fait devient alors visible).
 local STILL_PENDING = {
 	day_week_1 = true, day_week_10 = true, day_week_52 = true, day_swarm_10 = true,     -- étape 4 : le monde bouge
-	soc_photo_1 = true,                                                                  -- étape 3 : carte souvenir
 	soc_code_1 = true, soc_code_5 = true,                                                -- étape 3 : code de dresseur
 	soc_mentor_1 = true, soc_mentor_5 = true, soc_mentor_10 = true,                      -- étape 3 : parrainage
 }

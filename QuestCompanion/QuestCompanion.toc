@@ -130,5 +130,7 @@ CompanionStates.lua
 TrackerGoals.lua
 ZoneMedals.lua
 CompanionRested.lua
+DiscordCopy.lua
+Souvenir.lua
 NamesES.lua
 Locales_es.lua

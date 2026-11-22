@@ -64,7 +64,7 @@ comp_treat_all 366 comp 10 c|comp_pets_500 367 comp 25 r|comp_partners_10 368 co
 comp_wardrobe_10 370 comp 5 r|comp_wardrobe_25 371 comp 10 r|comp_wardrobe_50 372 comp 25 r|comp_wardrobe_100 373 comp 50 r
 comp_juke_fav_10 374 comp 5 e|comp_juke_list 375 comp 5 e|comp_juke_100 376 comp 10 c|comp_jokes_25 377 comp 5 c
 soc_share_1 397 soc 5 c|soc_share_25 398 soc 10 c|soc_trade_25 399 soc 25 r|soc_trade_partners_5 400 soc 10 c|soc_guild_feat_10 401 soc 10 c
-soc_guild_cheer_100 402 soc 10 r|soc_group_50 403 soc 10 c|soc_holders_10 404 soc 5 c|soc_card_25 405 soc 25 c|soc_photo_1 406 soc 5 f
+soc_guild_cheer_100 402 soc 10 r|soc_group_50 403 soc 10 c|soc_holders_10 404 soc 5 c|soc_card_25 405 soc 25 c|soc_photo_1 406 soc 5 c
 soc_code_1 407 soc 5 f|soc_code_5 408 soc 10 f|soc_compare 409 soc 5 c|soc_mentor_1 410 soc 5 f|soc_mentor_5 411 soc 10 f
 soc_mentor_10 412 soc 25 f|soc_discord 414 soc 10 c|soc_feedback 415 soc 5 c
 fun_critters_10 416 fun 10 r|fun_murlocs_10 417 fun 10 r|fun_dance_100 418 fun 5 r|fun_winter_all 419 fun 10 c
@@ -121,10 +121,11 @@ do
 	local codes = {}
 	for _, def in ipairs(NS:FeatDefs()) do codes[def.n] = def.id end
 	s.ok("104 lignes, code 413 réservé", #LIST == 104 and #NS.FEAT_COMPAGNON_IDS == 104 and codes[413] == nil)
-	-- (la page Communauté et la comparaison sont là : « Porte ouverte », « Mon grain de sel » et « Jeu des différences » ne sont plus en attente)
-	s.ok("totaux : 10 en attente, 10 secrets, 4 tours de force", pending == 10 and secrets == 10, pending .. "/" .. secrets)
+	-- (la page Communauté, la comparaison et la carte souvenir sont là : « Porte ouverte », « Mon grain de sel »,
+	-- « Jeu des différences » et « Souriez ! » ne sont plus en attente)
+	s.ok("totaux : 9 en attente, 10 secrets, 4 tours de force", pending == 9 and secrets == 10, pending .. "/" .. secrets)
 	s.ok("points : 1 870 en tout", pts == 1870, pts)
-	s.ok("lignes comptables : 80", countable == 80, countable)
+	s.ok("lignes comptables : 81", countable == 81, countable)
 	local glyph = false
 	for _, set in ipairs({ fr, en }) do
 		for _, text in pairs(set) do if text:find("★", 1, true) or text:find("☆", 1, true) or text:find("✓", 1, true) or text:find("✗", 1, true) then glyph = true end end
@@ -204,7 +205,7 @@ do
 	NS:FeatAward("fos_golden_legend", { silent = true })
 	local total = NS:FeatPoints(nil)
 	s.ok("tour de force : 0 point, hors total", Got("fos_golden_legend") and total == 5 and not NS:FeatCountable("fos_golden_legend"), total)
-	s.check("[B2b] dix secrets cachés avec leur indice, 10 lignes en attente invisibles, tours de force hors total")
+	s.check("[B2b] dix secrets cachés avec leur indice, 9 lignes en attente invisibles, tours de force hors total")
 end
 
 -- 4. Sources neuves : zéro, sous le seuil, au seuil, rattrapage ----------------------------------------------
