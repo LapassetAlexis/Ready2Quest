@@ -449,6 +449,16 @@ do
 		["interface/minimap/compassnorthtag"] = 136427,
 		-- 3.6.0 : grimoire du savant (wago.tools, listfile)
 		["interface/icons/inv_misc_book_09"] = 133741, ["interface/icons/inv_misc_book_11"] = 133743,
+		-- 3.7.0 : sept ornements et le soleil levant (wowdev/wow-listfile, community-listfile.csv)
+		["interface/icons/inv_misc_gem_sapphire_02"] = 134132, ["interface/icons/inv_misc_gem_sapphire_01"] = 134131,
+		["interface/icons/inv_misc_gem_amethyst_02"] = 134075, ["interface/icons/inv_jewelry_talisman_01"] = 133434,
+		["interface/icons/inv_misc_spyglass_03"] = 134442, ["interface/icons/inv_misc_spyglass_02"] = 134441,
+		["interface/icons/ability_hunter_snipershot"] = 132212, ["interface/icons/inv_misc_bag_10"] = 133639,
+		["interface/icons/inv_misc_coin_02"] = 133785, ["interface/icons/inv_misc_coin_01"] = 133784,
+		["interface/icons/inv_misc_token_argentdawn"] = 134499, ["interface/icons/inv_misc_token_argentdawn2"] = 134500,
+		["interface/icons/spell_holy_devotionaura"] = 135893, ["interface/icons/inv_misc_orb_01"] = 134333,
+		["interface/icons/inv_misc_map_01"] = 134269, ["interface/icons/inv_misc_gem_opal_01"] = 134116,
+		["interface/icons/inv_misc_gem_topaz_02"] = 134136, ["interface/icons/inv_misc_gem_pearl_04"] = 134123,
 	}
 	local ATLASES = { ["BonusChest-CircleGlow"] = 99, ["garrlanding-circleglow"] = 46 }
 	-- sols des sceaux : FileDataID -> chemin du listfile

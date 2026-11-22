@@ -1820,6 +1820,39 @@ Snap.scenes["qc-companion-winter"] = function(T)
 	return frame, "QuestCompanion : médaillon forgé au Voile d'hiver (flocons, anneau Givre)"
 end
 
+-- 3.7.0 : les dix cosmétiques neufs des hauts faits, un par scène
+-- (qc-feat37-<id>), et tous les ornements des hauts faits à la fois
+-- (qc-feat37-ornaments) : les icônes du client restent des vignettes
+local function QCFeat37(T, kind, id)
+	local ns, frame = QCCompanion(T, function(n)
+		local data = n:CompanionData()
+		data.unlocked[kind .. ":" .. id] = true
+		if kind == "frame" then data.frameStyle = id elseif kind == "bg" then data.background = id end
+	end)
+	ns:CompanionApplyFrame()
+	ns:CompanionApplyBackground()
+	ns:CompanionApplyOrnaments()
+	return frame, "QuestCompanion : cosmétique des hauts faits 3.7, " .. kind .. ":" .. id
+end
+Snap.scenes["qc-feat37-feat_rarities"] = function(T) return QCFeat37(T, "orn", "feat_rarities") end
+Snap.scenes["qc-feat37-feat_contest"] = function(T) return QCFeat37(T, "orn", "feat_contest") end
+Snap.scenes["qc-feat37-feat_rare_size"] = function(T) return QCFeat37(T, "orn", "feat_rare_size") end
+Snap.scenes["qc-feat37-feat_glitter"] = function(T) return QCFeat37(T, "orn", "feat_glitter") end
+Snap.scenes["qc-feat37-feat_volunteer"] = function(T) return QCFeat37(T, "orn", "feat_volunteer") end
+Snap.scenes["qc-feat37-feat_worlds"] = function(T) return QCFeat37(T, "orn", "feat_worlds") end
+Snap.scenes["qc-feat37-feat_unfindable"] = function(T) return QCFeat37(T, "orn", "feat_unfindable") end
+Snap.scenes["qc-feat37-feat_starry"] = function(T) return QCFeat37(T, "frame", "feat_starry") end
+Snap.scenes["qc-feat37-feat_sparkle"] = function(T) return QCFeat37(T, "bg", "feat_sparkle") end
+Snap.scenes["qc-feat37-feat_perfect"] = function(T) return QCFeat37(T, "bg", "feat_perfect") end
+Snap.scenes["qc-feat37-ornaments"] = function(T)
+	local ns, frame = QCCompanion(T, function(n)
+		local data = n:CompanionData()
+		for _, def in ipairs(n.FEAT_COSMETICS.orn) do data.unlocked["orn:" .. def.id] = true end
+	end)
+	ns:CompanionApplyOrnaments()
+	return frame, "QuestCompanion : tous les ornements des hauts faits (3.7)"
+end
+
 Snap.scenes["qc-tutorial"] = function(T)
 	local ns, frame = QCCompanion(T, function(n) n:CompanionData().tutoDone = nil end)
 	ns:CompanionStartTutorial(true)

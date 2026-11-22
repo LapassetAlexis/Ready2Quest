@@ -39,7 +39,10 @@ Scènes (Snap.scenes dans tests/snapshot.lua ; « list » les donne toutes) :
   qc-journal-confirm, qc-journal-winter, qc-journal-community-discord,
   qc-journal-community-avis (3.7.0 : page Communauté), qc-trainer, qc-trainer-style, qc-allure ; compagnon
   qc-companion, qc-companion-hover, qc-companion-frame-tint, qc-companion-talk,
-  qc-companion-sad, qc-companion-winter, qc-tutorial, qc-pantry ; capture
+  qc-companion-sad, qc-companion-winter, qc-tutorial, qc-pantry ; cosmétiques
+  des hauts faits 3.7 : qc-feat37-<id> (feat_rarities, feat_contest,
+  feat_rare_size, feat_glitter, feat_volunteer, feat_worlds, feat_unfindable,
+  feat_starry, feat_sparkle, feat_perfect) et qc-feat37-ornaments ; capture
   qc-capture, qc-capture-shake, qc-capture-ok, qc-capture-fail, qc-capture-toast,
   qc-capture-shiny, qc-capture-prep, qc-capture-batch3, qc-capture-batch6,
   qc-capture-chooser ; bandeaux qc-result-forge, qc-result-shiny-forge,

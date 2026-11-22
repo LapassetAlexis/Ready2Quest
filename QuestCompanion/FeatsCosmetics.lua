@@ -14,6 +14,9 @@
 -- 3.6.0 : un cadre (les 8 caractères), un fond (les 5 tailles) et un
 -- ornement (100 espèces maîtrisées) de plus, toujours en images du client.
 --
+-- 3.7.0 : dix de plus (sept ornements, un cadre étoilé, deux fonds), que le
+-- catalogue 3.7 réclame par reward.soon ; même fabrique, mêmes gardes.
+--
 -- Images : UNIQUEMENT celles du client (aucune texture livrée), par chemin
 -- (icônes, carte du monde, minicarte) ou nom d'atlas, relevées dans le
 -- listfile et les tables UiTextureAtlas* de Forever (wago.tools). Présence
@@ -55,6 +58,11 @@ local FRAMES = {
 	{ id = "feat_traits", label = "COMP_FRAME_FEAT_TRAITS", tier = 0, unlock = { feat = "men_traits_all" },
 		edge = { 0.80, 0.62, 0.95, 1 }, inner = { 0.96, 0.78, 0.49, 0.55 },
 		backdrop = { file = GOLD_BORDER, size = 16, color = { 0.92, 0.80, 1 } } },
+	-- 3.7.0 : 250 espèces à 3 étoiles (filet bleu de nuit, filet d'or, bordure
+	-- argentée du client, étoiles des marqueurs de raid posées sur le cadre)
+	{ id = "feat_starry", label = "COMP_FRAME_FEAT_STARRY", tier = 0, unlock = { feat = "spec_stars3_250" },
+		edge = { 0.55, 0.66, 0.98, 1 }, inner = { 1, 0.86, 0.45, 0.5 }, deco = "starry",
+		backdrop = { file = TOOLTIP_BORDER, size = 14, color = { 0.72, 0.80, 1 } } },
 }
 -- fonds : l'Atlas = une case de la carte du monde d'origine (Royaumes de
 -- l'Est) ; le Feu de camp = nuit étoilée en dégradé, halo orangé (atlas) et
@@ -69,12 +77,23 @@ local BACKGROUNDS = {
 	{ id = "feat_sizes", label = "COMP_BG_FEAT_SIZES", tier = 0, unlock = { feat = "men_sizes_all" },
 		color = { 0.10, 0.12, 0.20, 0.92 }, stars = true,
 		gradient = { top = { 0.05, 0.07, 0.18, 0.92 }, bottom = { 0.26, 0.20, 0.10, 0.90 } } },
+	-- 3.7.0 : `deco` = décor posé par FeatApplyBackgroundDeco (images du client)
+	-- 100 brillantes : nuit d'azur étoilée, halo argenté derrière le compagnon
+	{ id = "feat_sparkle", label = "COMP_BG_FEAT_SPARKLE", tier = 0, unlock = { feat = "shiny_found_100" },
+		color = { 0.08, 0.14, 0.28, 0.92 }, stars = true, deco = "sparkle",
+		gradient = { top = { 0.03, 0.05, 0.18, 0.92 }, bottom = { 0.12, 0.26, 0.42, 0.90 } } },
+	-- 100 journées parfaites : ciel d'aurore, soleil qui se lève à l'horizon
+	{ id = "feat_perfect", label = "COMP_BG_FEAT_PERFECT", tier = 0, unlock = { feat = "day_perfect_100" },
+		color = { 0.30, 0.16, 0.16, 0.92 }, deco = "sunrise",
+		gradient = { top = { 0.08, 0.07, 0.24, 0.92 }, bottom = { 0.62, 0.30, 0.12, 0.92 } } },
 }
 -- ornements : `icons` = icônes du client par ordre de préférence (la
 -- première présente gagne) dans l'anneau d'un bouton de minicarte ; `look` :
 -- "stars" (trois étoiles des marqueurs de raid), "compass" (minicarte et sa
--- flèche) ; `spin` = halo dont la teinte tourne ; `at` = ancrage (point,
--- point du cadre, x, y)
+-- flèche) ; `spin` = halo dont la teinte tourne ; `glow` = halo fixe de cette
+-- teinte (3.7.0) ; `at` = ancrage (point, point du cadre, x, y). 3.7.0 : la
+-- dernière icône de chaque liste neuve est déjà employée ailleurs par l'addon
+-- (repli sûr)
 local ORNAMENTS = {
 	{ id = "feat_chain", key = "companionOrnFeatChain", label = "COMP_ORN_FEAT_CHAIN", tier = 0,
 		unlock = { feat = "men_boss_1" }, icons = { "Spell_Frost_ChainsOfIce", "Spell_Nature_StrangleVines" },
@@ -99,6 +118,36 @@ local ORNAMENTS = {
 	{ id = "feat_scholar", key = "companionOrnFeatScholar", label = "COMP_ORN_FEAT_SCHOLAR", tier = 0,
 		unlock = { feat = "men_study_100" }, icons = { "INV_Misc_Book_09", "INV_Misc_Book_11" },
 		size = 24, at = { "TOPRIGHT", "TOPRIGHT", 9, 10 } },
+	-- 3.7.0 : sept de plus (catalogue 3.7, reward.soon)
+	-- 50 rares : un saphir (le bleu des objets rares)
+	{ id = "feat_rarities", key = "companionOrnFeatRarities", label = "COMP_ORN_FEAT_RARITIES", tier = 0,
+		unlock = { feat = "men_rare_50" }, icons = { "INV_Misc_Gem_Sapphire_02", "INV_Misc_Gem_Sapphire_01", "INV_Misc_Gem_Amethyst_02" },
+		size = 24, at = { "TOPLEFT", "TOPLEFT", -12, 12 } },
+	-- spécimen 3 étoiles de taille rare : la médaille du concours
+	{ id = "feat_contest", key = "companionOrnFeatContest", label = "COMP_ORN_FEAT_CONTEST", tier = 0,
+		unlock = { feat = "spec_contest" }, icons = { "INV_Jewelry_Talisman_01", "INV_Misc_Ribbon_01" },
+		size = 24, at = { "BOTTOM", "BOTTOM", -28, -30 } },
+	-- brillante de taille rare : la loupe du naturaliste
+	{ id = "feat_rare_size", key = "companionOrnFeatRareSize", label = "COMP_ORN_FEAT_RARE_SIZE", tier = 0,
+		unlock = { feat = "shiny_rare_size" }, icons = { "INV_Misc_Spyglass_03", "INV_Misc_Spyglass_02", "Ability_Hunter_SniperShot" },
+		size = 24, at = { "BOTTOM", "BOTTOM", 28, -30 } },
+	-- 100 000 paillettes : une bourse dans un halo pailleté fixe
+	{ id = "feat_glitter", key = "companionOrnFeatGlitter", label = "COMP_ORN_FEAT_GLITTER", tier = 0,
+		unlock = { feat = "shop_glitter_100000" }, icons = { "INV_Misc_Bag_10", "INV_Misc_Coin_02", "INV_Misc_Coin_01" },
+		size = 24, at = { "RIGHT", "RIGHT", 10, 12 }, glow = { 1, 0.86, 0.62, 0.85 } },
+	-- 500 missions : l'insigne d'argent du volontaire
+	{ id = "feat_volunteer", key = "companionOrnFeatVolunteer", label = "COMP_ORN_FEAT_VOLUNTEER", tier = 0,
+		unlock = { feat = "day_mission_500" }, icons = { "INV_Misc_Token_ArgentDawn", "INV_Misc_Token_ArgentDawn2", "Spell_Holy_DevotionAura" },
+		size = 24, at = { "LEFT", "LEFT", -10, 12 } },
+	-- le mot du Discord : un globe (repli : la carte)
+	{ id = "feat_worlds", key = "companionOrnFeatWorlds", label = "COMP_ORN_FEAT_WORLDS", tier = 0,
+		unlock = { feat = "soc_discord" }, icons = { "INV_Misc_Orb_01", "INV_Misc_Map_01" },
+		size = 24, at = { "BOTTOM", "TOP", -27, -10 } },
+	-- brillante 3 étoiles de taille rare : une opale (l'orange des
+	-- légendaires), un peu plus grande, dans un halo fixe
+	{ id = "feat_unfindable", key = "companionOrnFeatUnfindable", label = "COMP_ORN_FEAT_UNFINDABLE", tier = 0,
+		unlock = { feat = "fos_unfindable" }, icons = { "INV_Misc_Gem_Opal_01", "INV_Misc_Gem_Topaz_02", "INV_Misc_Gem_Pearl_04" },
+		size = 26, at = { "BOTTOM", "BOTTOM", 0, -40 }, glow = { 1, 0.62, 0.22, 0.9 } },
 }
 ns.FEAT_COSMETICS = { frame = FRAMES, bg = BACKGROUNDS, orn = ORNAMENTS }
 -- 3.1.0 : leur place sur le médaillon forgé (les coins du carré tombent dans
@@ -115,7 +164,19 @@ ns.FEAT_ORN_FORGE = {
 	feat_anniversary = { angle = 340, r = -2 },
 	feat_wildcrown = { angle = 65, r = 4 },
 	feat_scholar = { angle = 22, r = 4 },
+	-- 3.7.0 : le premier rang de l'anneau est plein (ornements de base
+	-- compris) : les nouveaux se rangent au second rang, entre deux du premier
+	feat_worlds = { angle = 112, r = 4 },
+	feat_rarities = { angle = 146, r = 24 },
+	feat_volunteer = { angle = 192, r = 24 },
+	feat_glitter = { angle = 348, r = 24 },
+	feat_contest = { plate = "underLeft" },
+	feat_rare_size = { plate = "underRight" },
+	feat_unfindable = { angle = 33, r = 24 },
 }
+-- 3.7.0 : « underLeft » / « underRight » : centre sous la plaque du nom
+-- (drop px sous son bord bas), à inset px du bout de la plaque vers le milieu
+ns.FEAT_ORN_UNDER = { drop = 10, inset = 14 }
 -- 2.15.0 : deux cosmétiques de l'Échoppe du dresseur (JournalReserve.lua,
 -- prix dans ns.PAILLETTES_SHOP), achetés en paillettes et gardés au compte
 -- (QuestCompanionDB.capture.shopOwned) : `unlock = { shop = id }`, palier 0
@@ -162,6 +223,12 @@ ns.FEAT_FAMILY_ICONS = FAMILY_ICONS
 ns.FEAT_COSMETIC_CLIENT_FILES = { RING_BORDER, RING_BACK, ROUND_MASK, "Interface\\WorldMap\\Azeroth\\Azeroth6",
 	"Interface\\Minimap\\MinimapArrow", "Interface\\Minimap\\CompassNorthTag", "Interface\\TargetingFrame\\UI-RaidTargetingIcon_1",
 	ICONS .. "Spell_Fire_Fire", GOLD_BORDER, TOOLTIP_BORDER }
+-- 3.7.0 : le soleil levant (la perle, déjà employée par l'addon : un disque
+-- lumineux, coupé à l'horizon ; repli l'aura de dévotion) et l'étoile des
+-- marqueurs de raid du cadre étoilé
+local SUN_ICONS = { "INV_Misc_Gem_Pearl_04", "Spell_Holy_DevotionAura" }
+local STAR_FILE = "Interface\\TargetingFrame\\UI-RaidTargetingIcon_1"
+ns.FEAT_SUN_ICONS = SUN_ICONS
 ns.FEAT_COSMETIC_ATLASES = GLOW_ATLAS
 
 local function Append(list, defs)
@@ -196,6 +263,16 @@ local FR = {
 	COMP_FRAME_FEAT_TRAITS    = "Cadre des huit caractères",
 	COMP_BG_FEAT_SIZES        = "Aube des cinq tailles",
 	COMP_ORN_FEAT_SCHOLAR     = "Grimoire du savant",
+	COMP_FRAME_FEAT_STARRY    = "Cadre étoilé",
+	COMP_BG_FEAT_SPARKLE      = "Nuit scintillante",
+	COMP_BG_FEAT_PERFECT      = "Soleil levant",
+	COMP_ORN_FEAT_RARITIES    = "Saphir des raretés",
+	COMP_ORN_FEAT_CONTEST     = "Médaille du concours",
+	COMP_ORN_FEAT_RARE_SIZE   = "Loupe du naturaliste",
+	COMP_ORN_FEAT_GLITTER     = "Bourse scintillante",
+	COMP_ORN_FEAT_VOLUNTEER   = "Insigne du volontaire",
+	COMP_ORN_FEAT_WORLDS      = "Globe de l'explorateur",
+	COMP_ORN_FEAT_UNFINDABLE  = "Joyau introuvable",
 	COMP_FRAME_SHOP_GLITTER   = "Cadre pailleté",
 	COMP_BG_SHOP_STARFALL     = "Nuit pailletée",
 	COMP_FRAME_SHOP_EMBER     = "Cadre de braise",
@@ -225,6 +302,16 @@ local EN = {
 	COMP_FRAME_FEAT_TRAITS    = "Frame of the Eight Personalities",
 	COMP_BG_FEAT_SIZES        = "Dawn of the Five Sizes",
 	COMP_ORN_FEAT_SCHOLAR     = "Scholar's Tome",
+	COMP_FRAME_FEAT_STARRY    = "Starry Frame",
+	COMP_BG_FEAT_SPARKLE      = "Sparkling Night",
+	COMP_BG_FEAT_PERFECT      = "Sunrise",
+	COMP_ORN_FEAT_RARITIES    = "Sapphire of Rarities",
+	COMP_ORN_FEAT_CONTEST     = "Contest Medal",
+	COMP_ORN_FEAT_RARE_SIZE   = "Naturalist's Lens",
+	COMP_ORN_FEAT_GLITTER     = "Glittering Purse",
+	COMP_ORN_FEAT_VOLUNTEER   = "Volunteer's Badge",
+	COMP_ORN_FEAT_WORLDS      = "Explorer's Globe",
+	COMP_ORN_FEAT_UNFINDABLE  = "Unfindable Jewel",
 	COMP_FRAME_SHOP_GLITTER   = "Glitter Frame",
 	COMP_BG_SHOP_STARFALL     = "Glittering Night",
 	COMP_FRAME_SHOP_EMBER     = "Ember Frame",
@@ -442,6 +529,15 @@ local EIGHT_SIZE = 13
 -- compté vers le bas, comme l'ancien habillage), le secteur bas (30° à
 -- 150°) restant à la plaque du nom
 ns.FEAT_EIGHT_FORGE = { from = 150, span = 240 }
+-- 3.7.0 : cadre étoilé. Sobre : (point du cadre, x, y, taille) ; anneau :
+-- premier angle et arc (degrés, sens trigonométrique, 0 à droite : l'arc du
+-- haut, le bas libre pour la plaque du nom), tailles alternées
+local STARRY_SOBRE = {
+	{ "TOPLEFT", 0, 0, 12 }, { "TOP", -26, 0, 8 }, { "TOP", 26, 0, 8 }, { "TOPRIGHT", 0, 0, 12 },
+	{ "RIGHT", 0, 0, 8 }, { "BOTTOMRIGHT", 0, 0, 12 }, { "BOTTOMLEFT", 0, 0, 12 }, { "LEFT", 0, 0, 8 },
+}
+ns.FEAT_STARRY_SOBRE = STARRY_SOBRE
+ns.FEAT_STARRY_RING = { from = -30, span = 240, size = { 12, 8 } }
 
 -- 3.1.0 : le médaillon forgé (frame.ring)
 local function Azeroth(frame)
@@ -580,6 +676,38 @@ function ns:FeatApplyFrameDeco()
 	elseif holder.eight then
 		for _, icon in ipairs(holder.eight) do icon:Hide() end
 	end
+	-- 3.7.0 : cadre étoilé : étoiles des marqueurs de raid sur le cadre
+	-- (fichier absent du client : aucune, le cadre garde filets et bordure)
+	if deco == "starry" and holder.starry == nil then
+		holder.starry = false
+		if ns.FeatClientFile(STAR_FILE) then
+			holder.starry = {}
+			for index = 1, #STARRY_SOBRE do
+				local star = holder:CreateTexture(nil, "OVERLAY")
+				pcall(star.SetTexture, star, STAR_FILE)
+				holder.starry[index] = star
+			end
+		end
+	end
+	if holder.starry then
+		local ring = Ring(frame)
+		for index, star in ipairs(holder.starry) do
+			star:ClearAllPoints()
+			local spec = STARRY_SOBRE[index]
+			if az then
+				-- sur l'arc du haut de l'anneau (le bas reste à la plaque du nom)
+				local S = ns.FEAT_STARRY_RING
+				local a = math.rad(S.from + (index - 1) * S.span / (#holder.starry - 1))
+				local r = ring.w / 2 - 3
+				star:SetSize(S.size[index % 2 + 1], S.size[index % 2 + 1])
+				star:SetPoint("CENTER", frame, "TOP", r * math.cos(a), ring.y + r * math.sin(a))
+			else
+				star:SetSize(spec[4], spec[4])
+				star:SetPoint("CENTER", frame, spec[1], spec[2], spec[3])
+			end
+			if deco == "starry" then star:Show() else star:Hide() end
+		end
+	end
 	-- filet arc-en-ciel (Sobre) ou halo du client qui tourne autour de l'anneau (Azeroth)
 	if deco == "prism" then
 		-- un halo par anneau (celui du client au-dessus de son habit ; celui du
@@ -656,6 +784,15 @@ local function BuildOrnament(frame, def)
 			o.glow:SetSize(s * 1.5, s * 1.5)
 			o.glow:SetPoint("CENTER", o, "TOPLEFT", 17 * k, -15 * k)
 		end
+	elseif def.glow then
+		-- 3.7.0 : halo fixe, de sa teinte (le même atlas du client)
+		o.glow = Glow(o, "BACKGROUND")
+		if o.glow then
+			o.glow:SetSize(s * 1.6, s * 1.6)
+			o.glow:SetPoint("CENTER", o, "TOPLEFT", 17 * k, -15 * k)
+			local c = def.glow
+			o.glow:SetVertexColor(c[1], c[2], c[3], c[4] or 1)
+		end
 	end
 	o.back = o:CreateTexture(nil, "BACKGROUND")
 	pcall(o.back.SetTexture, o.back, RING_BACK)
@@ -709,6 +846,10 @@ local function PlaceOrnament(frame, o, def)
 		if spec.plate == "below" then
 			local M = ns.FORGE_MOOD_TAB
 			o:SetPoint("TOP", frame, "TOP", 0, top - P.height - (M.h - M.tuck))
+		elseif spec.plate == "underLeft" or spec.plate == "underRight" then
+			-- 3.7.0 : sous la plaque, de part et d'autre de l'étiquette d'humeur
+			local x = half - ns.FEAT_ORN_UNDER.inset
+			o:SetPoint("CENTER", frame, "TOP", spec.plate == "underLeft" and -x or x, top - P.height - ns.FEAT_ORN_UNDER.drop)
 		else
 			o:SetPoint("CENTER", frame, "TOP", spec.plate == "left" and -half or half, top - P.height / 2)
 		end
@@ -751,6 +892,59 @@ function ns:FeatApplyOrnaments()
 	return shown
 end
 
+-- 3.7.0 : décors des fonds neufs, sur le cadre comme le feu de camp (sous
+-- l'habillage, arrondis par son masque). Une pièce absente du client (atlas
+-- ou icône) est sautée : le dégradé du fond reste, c'est le repli.
+-- `glow` : taille (l, h), centre (y depuis le haut du cadre : anneau, carré),
+-- teinte ; `sun` : taille, bas du disque (y depuis le haut : anneau, carré),
+-- part haute de l'icône. Au carré du Sobre, l'horizon reste au-dessus de la
+-- bande du nom.
+ns.FEAT_BG_DECO = {
+	sparkle = { glow = { 100, 100, -45, -42, { 0.70, 0.84, 1, 0.55 } } },
+	sunrise = { glow = { 110, 60, -82, -72, { 1, 0.62, 0.24, 0.85 } }, sun = { 30, -86, -76, 0.5 } },
+}
+local MaskParts
+local function BgGlow(frame, spec)
+	local tex = Glow(frame, "BORDER")
+	if not tex then return nil end
+	tex:SetSize(spec[1], spec[2])
+	tex.featY = { spec[3], spec[4] }
+	local c = spec[5]
+	tex:SetVertexColor(c[1], c[2], c[3], c[4] or 1)
+	return tex
+end
+-- les pièces à leur hauteur : sur l'anneau ou au carré
+local function PlaceBgParts(frame, parts)
+	local index = Azeroth(frame) and 1 or 2
+	for _, tex in pairs(parts) do
+		if tex.featY then
+			tex:ClearAllPoints()
+			tex:SetPoint(tex.featPoint or "CENTER", frame, "TOP", 0, tex.featY[index])
+		end
+	end
+end
+local BG_DECO = {
+	sparkle = function(frame)
+		return { glow = BgGlow(frame, ns.FEAT_BG_DECO.sparkle.glow) }
+	end,
+	sunrise = function(frame)
+		local D = ns.FEAT_BG_DECO.sunrise
+		local parts = { glow = BgGlow(frame, D.glow) }
+		local path = ns.FeatPickIcon(SUN_ICONS)
+		if path then
+			-- le disque coupé à l'horizon : la moitié haute de l'icône (bord ôté)
+			local sun = frame:CreateTexture(nil, "BORDER")
+			pcall(sun.SetTexture, sun, path)
+			if sun.SetTexCoord then sun:SetTexCoord(0.08, 0.92, 0.08, 0.08 + 0.84 * D.sun[4]) end
+			Method(sun, "SetBlendMode", "ADD")
+			sun:SetSize(D.sun[1], D.sun[1] * D.sun[4])
+			sun.featPoint, sun.featY = "BOTTOM", { D.sun[2], D.sun[3] }
+			parts.sun = sun
+		end
+		return parts
+	end,
+}
+
 -- Feu de camp : halo orangé et flamme aux pieds du compagnon, sur le cadre
 -- lui-même (sous l'habillage Azeroth, arrondis par son masque s'il existe)
 function ns:FeatApplyBackgroundDeco()
@@ -774,12 +968,33 @@ function ns:FeatApplyBackgroundDeco()
 		fire.flame:SetPoint("CENTER", frame, "TOP", 0, -72)
 		frame.featFire = fire
 	end
+	-- 3.7.0 : décors des fonds neufs (frame.featBgDeco[deco] = pièces)
+	local deco = def and def.deco
+	if deco and BG_DECO[deco] then
+		frame.featBgDeco = frame.featBgDeco or {}
+		if frame.featBgDeco[deco] == nil then frame.featBgDeco[deco] = BG_DECO[deco](frame) end
+	end
 	local fire = frame.featFire
-	if not fire then return nil end
+	if not fire and not frame.featBgDeco then return nil end
 	-- 3.1.0 : le masque de l'anneau posé (ancien habillage ou médaillon forgé)
 	local skin = ns.CompanionRingSkin and ns.CompanionRingSkin(frame)
 	local mask = skin and skin.mask
-	for _, tex in pairs(fire) do
+	local groups = {}
+	if fire then groups[#groups + 1] = { parts = fire, on = on } end
+	for key, parts in pairs(frame.featBgDeco or {}) do
+		groups[#groups + 1] = { parts = parts, on = key == deco }
+	end
+	for _, group in ipairs(groups) do
+		MaskParts(frame, group.parts, group.on, mask)
+		PlaceBgParts(frame, group.parts)
+	end
+	return on or deco
+end
+
+-- pièces d'un décor de fond : montrées ou cachées, arrondies par le masque
+-- de l'anneau en Azeroth (rendues au carré en Sobre)
+function MaskParts(frame, parts, on, mask)
+	for _, tex in pairs(parts) do
 		if on then tex:Show() else tex:Hide() end
 		if tex.azMasked and tex.azMask and tex.azMask ~= mask then
 			Method(tex, "RemoveMaskTexture", tex.azMask)
