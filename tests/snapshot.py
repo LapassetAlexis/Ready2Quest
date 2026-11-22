@@ -48,7 +48,9 @@ Scènes (Snap.scenes dans tests/snapshot.lua ; « list » les donne toutes) :
   qc-capture-shiny, qc-capture-prep, qc-capture-batch3, qc-capture-batch6,
   qc-capture-chooser ; bandeaux qc-result-forge, qc-result-shiny-forge,
   qc-feat-forge, qc-feat-big-forge, qc-guild-forge, qc-tour-forge ; divers
-  qc-chest, qc-notify, qc-tracker, qc-tracker-feat, qc-tooltip.
+  qc-chest, qc-notify, qc-tracker, qc-tracker-feat, qc-tooltip ; 3.7 (médailles de zone, série
+  de chasse, suspense) : qc-journal-menagerie-medals0, -medals1, -medals3,
+  qc-tracker-37, qc-tooltip-37, qc-capture-express-suspense.
 Ne pas versionner les HTML produits.
 """
 import base64

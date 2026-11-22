@@ -2221,6 +2221,103 @@ Snap.scenes["qc-tooltip"] = function(T)
 	return tip, "QuestCompanion : infobulle d'une créature (ligne du bestiaire)"
 end
 
+-- 3.7.0 : médailles de zone sur la page Créatures (0, 1 et 3 médailles) : la
+-- scène de l'espèce maîtrisée, avec assez d'espèces des Tarides capturées
+local function MedalScene(T, want)
+	local frame = Snap.scenes["qc-journal-menagerie-mastered"](T)
+	local ns = T.QNS
+	local capture = ns:CaptureData()
+	local ids = {}
+	for npc, species in pairs(ns:BestiarySpecies(1413)) do
+		if type(species) == "table" and species.class ~= "worldboss" then ids[#ids + 1] = tonumber(npc) or npc end
+	end
+	table.sort(ids)
+	for _, npc in ipairs(ids) do
+		if select(1, ns:MenagerieSealProgress(1413)) >= want then break end
+		if capture.creatures[npc] == nil then
+			capture.creatures[npc] = { name = "Créature " .. npc, normal = true, zoneID = 1413, at = 1, stars = 1 }
+			capture.count = capture.count + 1
+		end
+	end
+	capture.serial = (tonumber(capture.serial) or 0) + 1
+	if ns.ZoneMedalReset then ns.ZoneMedalReset() end
+	ns:RefreshJournal()
+	return frame, "QuestCompanion : carnet, Créatures, médailles de zone (3.7)"
+end
+Snap.scenes["qc-journal-menagerie-medals0"] = function(T) return MedalScene(T, 0) end
+Snap.scenes["qc-journal-menagerie-medals1"] = function(T) return MedalScene(T, 50) end
+Snap.scenes["qc-journal-menagerie-medals3"] = function(T) return MedalScene(T, 140) end
+
+-- 3.7.0 : le suivi avec la ligne de zone devenue médaille
+Snap.scenes["qc-tracker-37"] = function(T)
+	local ns = QCWorld(T)
+	ns:DB().journalTracker = true
+	local capture, count = ns:CaptureData(), 0
+	local ids = {}
+	for npc, species in pairs(ns:BestiarySpecies(1413)) do
+		if type(species) == "table" and species.class ~= "worldboss" then ids[#ids + 1] = tonumber(npc) or npc end
+	end
+	table.sort(ids)
+	for _, npc in ipairs(ids) do
+		if count >= 5 then break end
+		if capture.creatures[npc] == nil then
+			capture.creatures[npc] = { name = "Créature " .. npc, normal = true, zoneID = 1413, at = 1, stars = 1 }
+			capture.count = capture.count + 1
+		end
+		count = count + 1
+	end
+	capture.serial = (tonumber(capture.serial) or 0) + 1
+	if ns.ZoneMedalReset then ns.ZoneMedalReset() end
+	-- (deux objectifs de rang 3 masqués : la ligne de zone, au dernier rang, se voit)
+	local kept = 0
+	for _, goal in ipairs(ns:JournalObjectives()) do
+		if not goal.id:find("^medal:") then
+			kept = kept + 1
+			if kept > 2 then ns:JournalDismiss(goal.id, true) end
+		end
+	end
+	ns:RefreshJournalTracker()
+	local tracker = ns.journalTracker
+	tracker:ClearAllPoints()
+	tracker:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	return tracker, "QuestCompanion : bloc « Carnet », la médaille de la zone (3.7)"
+end
+
+-- 3.7.0 : l'infobulle avec la série de chasse (23 abattus)
+Snap.scenes["qc-tooltip-37"] = function(T)
+	local ns = QCWorld(T)
+	ns.SHINY_CHANCE = 1 / 150
+	local guid = "Creature-0-0-0-0-3398-0000"
+	local zoneID = ns:JournalZone()
+	local data = ns:JournalData()
+	data.bestiary = data.bestiary or {}
+	data.bestiary[zoneID] = data.bestiary[zoneID] or {}
+	data.bestiary[zoneID][3398] = { name = "Gesharahan", seen = true, killed = 23 }
+	GameTooltip:ClearLines()
+	GameTooltip:AddLine("Gesharahan", 1, 1, 1)
+	GameTooltip:AddLine("Niveau 20 Bête (rare élite)", 1, 1, 1)
+	local text, color = ns:BestiaryTooltipLine(guid)
+	if not text then text, color = ns:F("BST_TOOLTIP", ns:F("JRN_ITEM_KILLED", 23)), ns.Theme.GOLD end
+	GameTooltip:AddLine(text, color[1], color[2], color[3])
+	local chain = ns:BestiaryTooltipChain(guid) or ns:F("MEN_TIP_CHAIN", 23, 50, "2,3")
+	local c = ns.Theme.GOLD
+	GameTooltip:AddLine(chain, c[1], c[2], c[3])
+	local tip = Snap.Tooltip(GameTooltip, nil, 260)
+	tip:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	return tip, "QuestCompanion : infobulle, série de chasse (3.7)"
+end
+
+-- 3.7.0 : une pastille de la capture express en suspens, puis le verdict d'une autre
+Snap.scenes["qc-capture-express-suspense"] = function(T)
+	local ns, frame = QCCompanion(T)
+	ns.captureExpressDormant = nil
+	ns:CaptureExpressPush("notable", "Raptor des Tarides", ns.L.CAPTURE_X_NEW)
+	local item = ns:CaptureExpressPush("suspense", "Raptor des Tarides", ns.L.CAPTURE_X_SHAKE, 5)
+	item.verdict, item.revealAt, item.shakes = { "notable", "Raptor des Tarides", ns.L.CAPTURE_X_NEW }, ns.Now() + 1, 2
+	ns:CaptureExpressUpdate(ns.Now() + 0.3)
+	return Snap.Group(frame, ns.captureExpressFeed), "QuestCompanion : capture express, le filet tremble (3.7)"
+end
+
 -- Thème d'une scène : « sobre:<scène> » ou « azeroth:<scène> » ; sans
 -- préfixe, Azeroth (le thème par défaut des deux addons). Rend le thème et
 -- le nom de la scène.
