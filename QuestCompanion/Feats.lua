@@ -1039,9 +1039,10 @@ function ns:FeatFlush(force)
 	local db = self:DB()
 	local units, pts, grouped = 0, 0, false
 	local names, namedPts = {}, 0
-	local size = "small"
+	local size, retro = "small", false
 	for _, record in ipairs(pending) do
 		units, pts = units + (record.many or 1), pts + (record.pts or 0)
+		if record.retro then retro = true end
 		size = Bigger(size, record.size or "big")
 		if record.many then grouped = true
 		else names[#names + 1] = record.name; namedPts = namedPts + (record.pts or 0) end
@@ -1059,7 +1060,11 @@ function ns:FeatFlush(force)
 	if db.featToast == false or not self.JournalToastPush then return true end
 	-- 3.7.0 : le son suit la taille de la fête (le dessin de la pastille
 	-- viendra avec la page ; la taille part avec le bandeau)
-	local function Sound(which) return function() ns:FeatPlaySize(which) end end
+	-- (rattrapage de connexion ou de version : jamais de fanfare, Quiet.lua)
+	local function Sound(which)
+		if retro then return nil end
+		return function() ns:FeatPlaySize(which) end
+	end
 	local function Open() ns:FeatOpenRecent() end
 	if collapse then
 		local text = self:F("FEAT_TOAST_MANY", units, pts)
@@ -1069,11 +1074,13 @@ function ns:FeatFlush(force)
 		local named = not grouped and #names > 0
 		self:JournalToastPush({ kind = "feat", title = named and self:F("FEAT_TOAST_MANY_HEAD", units) or L.FEAT_TOAST_MANY_TITLE,
 			name = text, message = text, names = named and names or nil, size = size,
-			icon = metaCat and metaCat.icon, points = pts, onShow = Sound(size), onClick = Open, count = units })
+			icon = metaCat and metaCat.icon, points = pts, onShow = Sound(size), onClick = Open, count = units, retro = retro or nil })
 	else
 		for _, record in ipairs(pending) do
 			local one = record.size or "big"
-			self:JournalToastPush({ kind = "feat", title = L.FEAT_TOAST_TITLE, name = record.name, id = record.id,
+			-- (un rattrapage d'un seul : son bandeau muet, sans le grand effet)
+			self:JournalToastPush({ kind = "feat", title = L.FEAT_TOAST_TITLE, name = record.name, id = not record.retro and record.id or nil,
+				retro = record.retro or nil,
 				message = self:F("FEAT_CHAT", record.name, record.pts or 0), icon = record.icon, points = record.pts, size = one,
 				sub = record.title and self:F("FEAT_TOAST_NEW_TITLE", record.title) or nil, onShow = Sound(one) })
 		end
@@ -1140,7 +1147,8 @@ function ns:FeatAward(def, opts)
 	local pts = tonumber(def.pts) or 0
 	if not opts.silent then
 		self:FeatQueue(Record(self, def))
-		if (pts >= ns.FEAT_GUILD_MIN or titled) and self.CompanionSay then
+		-- 3.7.0 : la bulle seulement pour une grande fête, jamais en mode discret
+		if self:FeatSize(def) == "big" and not (self.Quiet and self:Quiet()) and self.CompanionSay then
 			pcall(self.CompanionSay, self, "UNLOCK", { args = { self:FeatName(def) } })
 		end
 	end
@@ -1315,8 +1323,12 @@ function ns:FeatLogin()
 			size = Bigger(size, self:FeatSize(def))
 		end
 		self:Print(self:F("FEAT_RETRO", #found, pts))
-		if #found == 1 then self:FeatQueue(Record(self, found[1]))
-		else self:FeatQueue({ many = #found, pts = pts, size = size }) end
+		-- 3.7.0 : un rattrapage ne sonne jamais (un seul bandeau, muet)
+		if #found == 1 then
+			local record = Record(self, found[1])
+			record.retro = true
+			self:FeatQueue(record)
+		else self:FeatQueue({ many = #found, pts = pts, size = size, retro = true }) end
 	end
 	-- 3.7.0 : les paillettes des hauts faits obtenus avant (une ligne de chat)
 	local okPay, glitter, paid = pcall(self.FeatGlitterCatchUp, self)

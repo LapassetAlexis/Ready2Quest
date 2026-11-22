@@ -160,7 +160,8 @@ do
 		-- 3.0.1 : le bandeau « Capturé ! » passe d'abord (Banners.lua) ; il se ferme
 		if NS.CaptureResultHide then NS:CaptureResultHide() end
 		HF.Run(2)
-		local toast = NS.journalToast
+		-- 3.7.0 : un haut fait à 5 points n'a plus de bandeau, mais une pastille (Quiet.lua)
+		local toast = NS:EnsureJournalToast()
 		HF.Run(5)
 		-- combat : l'obtention se fait, l'annonce attend
 		NS:DB().featChat = true
@@ -174,7 +175,8 @@ do
 		HF.combat = false
 		Mock:Fire("PLAYER_REGEN_ENABLED")
 		HF.Run(1)
-		s.ok("sortie de combat : bandeau et chat", toast:IsShown() and toast.text:GetText() == "Sur la route"
+		s.ok("sortie de combat : pastille et chat", not toast:IsShown() and NS.featPill and NS.featPill:IsShown()
+			and NS.featPill.text:GetText() == "Haut fait : Sur la route"
 			and Mock:Output():find("Haut fait obtenu : Sur la route (+5 points).", 1, true), Mock:Output())
 		HF.Run(5)
 		NS:DB().captureMuteUntil = (time() or 0) + 600
@@ -189,8 +191,8 @@ do
 		HF.earned = {}
 		NS:FeatAward("char_level_60")
 		HF.Run(3)
-		Check("[HF] titre : sous-ligne « Nouveau titre », annonce de guilde permise", HF.earned[1].announce == true
-			and HF.earned[1].title == 21 and toast.stars:GetText() == "Nouveau titre : Aventurier", toast.stars:GetText())
+		Check("[HF] titre : sous-ligne « Nouveau titre » et ses paillettes, annonce de guilde permise", HF.earned[1].announce == true
+			and HF.earned[1].title == 21 and toast.stars:GetText() == "Nouveau titre : Aventurier · 15 paillettes", toast.stars:GetText())
 		HF.Run(5)
 		NS:DB().featToast, NS:DB().featChat = false, false
 		Mock:Reset()
@@ -391,13 +393,15 @@ do
 		HF.Reset(60)
 		NS:FeatAward("char_level_10"); NS:FeatAward("char_level_20")
 		HF.Run(2)
-		local toast = NS.journalToast
+		-- 3.7.0 : deux petits (5 points) : deux pastilles l'une après l'autre, aucun bandeau (Quiet.lua)
+		local toast = NS:EnsureJournalToast()
+		local pill = NS.featPill
 		local s = Steps()
-		s.ok("deux : le premier", toast:IsShown() and toast.text:GetText() == "Premiers pas" and #NS.journalToasts == 1)
-		-- (3.1.0 : un haut fait porte le bouton Partager, 3 s de plus)
-		HF.Run(5 + (NS.SHARE_EXTRA or 0))
-		s.ok("… puis le second", toast:IsShown() and toast.text:GetText() == "Sur la route")
-		HF.Run(5 + (NS.SHARE_EXTRA or 0))
+		s.ok("deux : la première pastille", pill and pill:IsShown() and pill.text:GetText() == "Haut fait : Premiers pas"
+			and #NS.featPills == 1 and not toast:IsShown() and #NS.journalToasts == 0)
+		HF.Run(2)
+		s.ok("… puis la seconde", pill:IsShown() and pill.text:GetText() == "Haut fait : Sur la route")
+		HF.Run(5)
 		NS:FeatAward("char_level_30"); NS:FeatAward("char_level_40"); NS:FeatAward("char_level_50")
 		HF.Run(2)
 		-- 3.0.1 : le bandeau groupé nomme ses hauts faits (compte dans le titre, points dans le bouclier)
@@ -406,7 +410,7 @@ do
 			and toast.medal.badge.text:GetText() == "30" and #NS.journalToasts == 0, toast.text:GetText())
 		s.ok("une ligne de chat qui les nomme", Mock:Output():find("Hauts faits obtenus : À mi-chemin, En selle, Vétéran (30 points).", 1, true) ~= nil,
 			Mock:Output())
-		s.check("[HF] bandeaux : deux l'un après l'autre, trois d'un coup en un seul bandeau qui les nomme")
+		s.check("[HF] fêtes : deux petits en deux pastilles l'une après l'autre, trois d'un coup en un seul bandeau qui les nomme")
 		HF.Run(5)
 		HF.Reset(60)
 		local meta = NS.FeatAdd({ "test_meta_pts", 902, "meta", 10, "account", crit = { "points", 10 } })

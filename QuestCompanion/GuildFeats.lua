@@ -887,6 +887,8 @@ function ns:GuildFeatsToastTick(now)
 		return false
 	end
 	if InCombat() then return false end
+	-- 3.7.0 : mode discret : un bandeau de guilde (regroupé) toutes les 10 min au plus ; le reste ne s'accumule pas
+	if ns.Quiet and self:Quiet() and state.shownAt and now - state.shownAt < (ns.QUIET_GUILD_GAP or 600) then state.toasts = {}; if self.BannerCancel then self:BannerCancel("guild") end; return false end
 	-- 3.0.1 : une seule place pour les bandeaux du haut (Banners.lua)
 	if self.BannerTurn and not self:BannerTurn("guild") then return false end
 	local best = 1
@@ -894,6 +896,7 @@ function ns:GuildFeatsToastTick(now)
 		if item.score > kept[best].score or (item.score == kept[best].score and item.at < kept[best].at) then best = index end
 	end
 	local item = table.remove(kept, best)
+	state.shownAt = now
 	return self:GuildFeatsShowToast(item) ~= nil
 end
 

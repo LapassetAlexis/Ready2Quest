@@ -14,7 +14,7 @@
 --   * Quoi : le bouton Partager n'envoie rien sans le clic du joueur (règle
 --     de Blizzard : Dire et les canaux publics veulent un événement
 --     matériel). Seule exception, plus bas (« Annonce automatique ») : les
---     brillantes et les 3 étoiles partent seules au groupe (réglage
+--     brillantes (3.7.0 : plus les 3 étoiles) partent seules au groupe (réglage
 --     announceGroup, actif par défaut) et, au choix, à la guilde
 --     (announceGuild) ; jamais en combat ni pendant un écran de chargement,
 --     coupées pour la session après un refus du jeu. Le clic ouvre un petit menu des canaux disponibles : Guilde (en guilde),
@@ -112,8 +112,10 @@ local FR = {
 	-- annonce automatique (brillante, 3 étoiles) : un lot de « Tout capturer »
 	SHARE_MSG_BATCH      = "%s a capturé %d spécimens : %s !",
 	SHARE_BATCH_SHINY    = "%s",
-	OPT_ANNOUNCE_GROUP   = "Annoncer au groupe mes brillantes et 3 étoiles",
-	OPT_ANNOUNCE_GROUP_DESC = "Une ligne dans le chat du groupe (ou du raid) quand tu captures une brillante ou un spécimen 3 étoiles. Seul : rien. Jamais en combat (elle part à la fin du combat), au plus une toutes les 30 secondes.",
+	OPT_ANNOUNCE_GROUP   = "Annoncer au groupe mes brillantes",
+	OPT_ANNOUNCE_GROUP_DESC = "Une ligne dans le chat du groupe (ou du raid) quand tu captures une brillante (plus pour un 3 étoiles : le bouton Partager reste là pour ça). Seul : rien. Jamais en combat (elle part à la fin du combat), au plus une toutes les 30 secondes. Coupée en mode discret.",
+	-- 3.7.0 : la cote d'une prise rare, entre parenthèses après le nom (Quiet.lua)
+	SHARE_ODDS           = "1 chance sur %s",
 	OPT_ANNOUNCE_GUILD   = "Annoncer aussi à la guilde",
 	OPT_ANNOUNCE_GUILD_DESC = "La même ligne dans le chat de ta guilde.",
 }
@@ -164,8 +166,9 @@ local EN = {
 	SHARE_MSG_TITLE      = "%s now bears the title \"%s\"!",
 	SHARE_MSG_BATCH      = "%s captured %d specimens: %s!",
 	SHARE_BATCH_SHINY    = "shiny %s",
-	OPT_ANNOUNCE_GROUP   = "Announce my shinies and 3-star captures to the group",
-	OPT_ANNOUNCE_GROUP_DESC = "A line in your party (or raid) chat when you capture a shiny or a 3-star specimen. Solo: nothing. Never in combat (it goes out when combat ends), at most one every 30 seconds.",
+	OPT_ANNOUNCE_GROUP   = "Announce my shinies to the group",
+	OPT_ANNOUNCE_GROUP_DESC = "A line in your party (or raid) chat when you capture a shiny (no longer for a 3-star specimen: the Share button is there for that). Solo: nothing. Never in combat (it goes out when combat ends), at most one every 30 seconds. Off in quiet mode.",
+	SHARE_ODDS           = "1 in %s",
 	OPT_ANNOUNCE_GUILD   = "Also announce to the guild",
 	OPT_ANNOUNCE_GUILD_DESC = "The same line in your guild chat.",
 }
@@ -279,6 +282,7 @@ local function CaptureBody(lang, item, who)
 	end
 	if item.class and ns.SHARE_NAMED[item.class] then details[#details + 1] = S(lang, "SHARE_RANK_" .. item.class) end
 	if item.fresh then details[#details + 1] = S(lang, "SHARE_NEW") end
+	if tonumber(item.odds) and ns.OddsNumber then details[#details + 1] = Fmt(lang, "SHARE_ODDS", ns.OddsNumber(item.odds, lang)) end
 	if #details > 0 then phrase = Fmt(lang, "SHARE_DETAILS", phrase, table.concat(details, S(lang, "SHARE_SEP"))) end
 	return Fmt(lang, "SHARE_MSG_CAPTURE", who, phrase)
 end
@@ -339,8 +343,16 @@ function ns:ShareItemFromResult(result)
 	if not self:ShareNotable(result) then return nil end
 	local spec = result.specimen and self.SpecimenGet and self:SpecimenGet(result.specimen)
 	local name = self.CreatureName and result.npcID and self:CreatureName(result.npcID, { name = result.name }) or result.name
+	-- 3.7.0 : la cote de base d'une prise rare (après la prise ; Quiet.lua)
+	local odds = nil
+	if spec and self.SpecimenOddsShown then
+		local copy = {}
+		for k, v in pairs(spec) do copy[k] = v end
+		if result.shiny then copy.shiny = true end
+		odds = self:SpecimenOddsShown(copy)
+	end
 	return { kind = "capture", name = name, shiny = result.shiny and true or false, stars = result.stars,
-		size = spec and spec.size or nil, class = result.class, fresh = result.fresh and true or false,
+		size = spec and spec.size or nil, class = result.class, fresh = result.fresh and true or false, odds = odds,
 		key = "cap:" .. tostring(result.specimen or (tostring(result.npcID or result.name) .. ":" .. tostring(result.stars)
 			.. ":" .. tostring(result.shiny))) }
 end
@@ -350,7 +362,8 @@ function ns:ShareItemFromSpecimen(spec)
 	local entry = self.CaptureData and self:CaptureData().creatures[spec.npc]
 	local name = self.CreatureName and self:CreatureName(spec.npc, { name = spec.name }) or spec.name
 	return { kind = "capture", name = name, shiny = spec.shiny and true or false, stars = spec.stars, size = spec.size,
-		class = type(entry) == "table" and entry.class or nil, key = "cap:" .. tostring(spec.id) }
+		class = type(entry) == "table" and entry.class or nil, key = "cap:" .. tostring(spec.id),
+		odds = self.SpecimenOddsShown and self:SpecimenOddsShown(spec) or nil }
 end
 
 function ns:ShareItemFromFeat(def)
@@ -972,8 +985,10 @@ ns.ANNOUNCE_GAP = 30          -- s entre deux annonces automatiques d'un même c
 ns.announceQueue = ns.announceQueue or {}
 ns.announceLog = ns.announceLog or {}
 
+-- 3.7.0 : l'annonce automatique ne part plus que pour une brillante (le
+-- partage à la main, lui, ne change pas)
 local function Notable(stars, shiny)
-	return shiny == true or (tonumber(stars) or 0) >= (ns.CAPTURE_STAR_MAX or 3)
+	return shiny == true
 end
 
 -- Une erreur d'annonce, notée une fois, sans rien dire dans le chat
@@ -1080,6 +1095,8 @@ end
 -- Annonce maintenant (hors combat) ; rend le nombre de lignes envoyées
 function ns:AnnounceFlush()
 	local queue = self.announceQueue
+	-- 3.7.0 : mode discret : rien ne part, rien n'attend (Quiet.lua)
+	if #queue > 0 and ns.Quiet and self:Quiet() then self.announceQueue = {}; return 0 end
 	if #queue == 0 or self:AnnounceInCombat() then return 0 end
 	local held = self:AnnounceHeld()
 	if held == "cut" then self.announceQueue = {}; return 0 end
@@ -1113,6 +1130,7 @@ function ns:AnnounceCaptures(items)
 	if type(items) ~= "table" or #items == 0 then return false end
 	local db = self:DB()
 	if db.announceGroup == false and db.announceGuild ~= true then return false end
+	if ns.Quiet and self:Quiet() then return false end   -- 3.7.0 : mode discret
 	for _, item in ipairs(items) do self.announceQueue[#self.announceQueue + 1] = item end
 	return self:AnnounceFlush() > 0
 end

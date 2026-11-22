@@ -20,6 +20,7 @@ local GLOBALS = { "SendChatMessage", "IsInGuild", "IsInRaid", "IsInGroup", "IsIn
 	"ChatEdit_GetActiveWindow", "ChatEdit_InsertLink", "C_ChatInfo", "ChatFrameUtil", "InCombatLockdown", "UnitAffectingCombat" }
 for _, name in ipairs(GLOBALS) do SH.saved[name] = rawget(_G, name) end
 SH.rollSize = NS.SpecimenRollSize
+SH.rollTrait = NS.SpecimenRollTrait
 
 local function Steps()
 	local s = { bad = {} }
@@ -71,6 +72,7 @@ end
 function SH.Restore()
 	for _, name in ipairs(GLOBALS) do _G[name] = SH.saved[name] end
 	NS.SpecimenRollSize = SH.rollSize
+	NS.SpecimenRollTrait = SH.rollTrait
 end
 
 function SH.Step(dt)
@@ -562,9 +564,11 @@ do
 	s.check("[SHARE] capture réelle : le résultat porte rang, espèce nouvelle et spécimen ; bouton au bandeau, rien d'envoyé")
 end
 
--- 10. Annonce automatique au groupe : brillante et 3 étoiles ---------------------------------
+-- 10. Annonce automatique au groupe : brillante (3.7.0 : plus les 3 étoiles) ------------------
 do
 	local s = Steps()
+	-- (caractère fixé : un caractère rare ajouterait une cote au texte)
+	NS.SpecimenRollTrait = function() return "curious" end
 	local npc = 7500
 	local function Capture(stars, shiny, name)
 		npc = npc + 1
@@ -573,7 +577,7 @@ do
 			shiny = shiny, zoneID = 1413 } })
 	end
 	NS.SpecimenRollSize = function() return "large" end
-	-- en groupe : une brillante, puis un 3 étoiles (30 s plus tard), une ligne chacun
+	-- en groupe : une brillante (une ligne, sa cote de base), puis un 3 étoiles (30 s plus tard) : rien
 	SH.Reset({ party = true })
 	NS.SpecimenRollSize = function() return "large" end
 	Capture(1, true)
@@ -582,17 +586,17 @@ do
 		SH.sends[1] and SH.sends[1].text)
 	SH.Step(31)
 	Capture(3, false, "Loup")
-	s.ok("3 étoiles : une ligne", #SH.sends == 2 and SH.sends[2].text:find("Loup (3 étoiles", 1, true) ~= nil, SH.sends[2] and SH.sends[2].text)
+	s.ok("3 étoiles : plus d'annonce automatique", #SH.sends == 1, SH.sends[2] and SH.sends[2].text)
 	SH.Step(31)
 	Capture(2, false, "Lapin")
 	Capture(1, false, "Crabe")
-	s.ok("1 ou 2 étoiles, pas brillant : rien", #SH.sends == 2)
+	s.ok("1 ou 2 étoiles, pas brillant : rien", #SH.sends == 1)
 	-- raid, groupe d'instance
 	SH.Reset({ raid = true })
-	Capture(3, false)
+	Capture(1, true)
 	s.ok("raid : RAID", #SH.sends == 1 and SH.sends[1].channel == "RAID")
 	SH.Reset({ instance = true, party = true })
-	Capture(3, false)
+	Capture(1, true)
 	s.ok("groupe d'instance : INSTANCE_CHAT", #SH.sends == 1 and SH.sends[1].channel == "INSTANCE_CHAT")
 	-- seul : rien ; jamais SAY
 	SH.Reset({ guild = true })
@@ -609,7 +613,7 @@ do
 	s.ok("second réglage : la guilde", #SH.sends == 1 and SH.sends[1].channel == "GUILD")
 	SH.Reset({ guild = true, party = true })
 	NS:DB().announceGuild = true
-	Capture(3, false)
+	Capture(1, true)
 	s.ok("groupe et guilde : deux lignes", #SH.sends == 2 and SH.sends[1].channel == "PARTY" and SH.sends[2].channel == "GUILD")
 	SH.Reset()
 	s.ok("défauts : groupe actif, guilde coupée", NS:DB().announceGroup == true and NS:DB().announceGuild == false)
@@ -618,11 +622,11 @@ do
 	SH.combat = true
 	Capture(1, true, "Raptor")
 	Capture(3, false, "Loup")
-	s.ok("en combat : rien, en file", #SH.sends == 0 and #NS.announceQueue == 2)
+	s.ok("en combat : rien, la brillante seule en file", #SH.sends == 0 and #NS.announceQueue == 1)
 	SH.combat = false
 	Mock:Fire("PLAYER_REGEN_ENABLED")
-	s.ok("fin du combat : une ligne pour les deux", #SH.sends == 1
-		and SH.sends[1].text == "[Quest Companion] Testeur a capturé 2 spécimens : Raptor (version brillante), Loup (3 étoiles) !",
+	s.ok("fin du combat : une ligne, la brillante", #SH.sends == 1
+		and SH.sends[1].text:find("Raptor (version brillante", 1, true) ~= nil and not SH.sends[1].text:find("Loup", 1, true),
 		SH.sends[1] and SH.sends[1].text)
 	-- limite : une annonce par canal toutes les 30 s
 	SH.Reset({ party = true })
@@ -635,7 +639,7 @@ do
 	s.ok("30 s après : de nouveau", #SH.sends == 2)
 	SH.Reset()
 	SH.Restore()
-	s.check("[ANN] annonce auto : brillante et 3 étoiles une fois au groupe (PARTY / RAID / INSTANCE_CHAT), rien seul ni pour 1-2 étoiles ; réglages ; combat ; 30 s")
+	s.check("[ANN] annonce auto : la brillante seule, une fois au groupe (PARTY / RAID / INSTANCE_CHAT), rien seul ni pour un 3 étoiles ; réglages ; combat ; 30 s")
 end
 
 -- 11. Lot de « Tout capturer », doublons avec le partage, envoi refusé -----------------------
@@ -649,8 +653,8 @@ do
 		{ success = false, stars = 3, target = { name = "Ours", npcID = 7604, class = "normal" } },
 	} }
 	NS:CaptureBatchFlush(batch)
-	s.ok("lot : une seule ligne, les deux prises notables", #SH.sends == 1
-		and SH.sends[1].text == "[Quest Companion] Testeur a capturé 2 spécimens : Loup (3 étoiles), Raptor (version brillante) !", SH.sends[1] and SH.sends[1].text)
+	s.ok("lot : une seule ligne, la brillante (plus le 3 étoiles)", #SH.sends == 1
+		and SH.sends[1].text == "[Quest Companion] Testeur a capturé : Raptor (version brillante, 1 étoile) !", SH.sends[1] and SH.sends[1].text)
 	NS:CaptureBatchFlush(batch)
 	s.ok("lot déjà annoncé : rien de plus", #SH.sends == 1)
 	local en = NS:AnnounceText({ { name = "Raptor", shiny = true, stars = 1 }, { name = "Wolf", stars = 3 }, who = "Dyokrion" }, "en")

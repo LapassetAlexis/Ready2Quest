@@ -1306,6 +1306,7 @@ local function RefreshDetails(self, frame, rv, spec)
 		lines[#lines + 1] = L[WHY[why] or "RES_WHY_missing"]
 		rv.reasonLine = #lines
 	end
+	local odds = self.SpecimenOddsText and self:SpecimenOddsText(spec); if odds then lines[#lines + 1] = odds end   -- 3.7.0 : cote de base (Quiet.lua)
 	lines[#lines + 1] = self:SpecimenOriginText(spec)
 	ui.PreviewSet(p, self:SpecimenDisplayName(spec), lines, { creature = spec.npc, shiny = spec.shiny })
 	-- couleurs : atout en vert, revers en orange (estompé avant le lien 2),

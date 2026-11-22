@@ -3528,6 +3528,7 @@ function ns:CompanionNextTip()
 end
 
 function ns:CompanionTryTip(force)
+	if ns.Quiet and self:Quiet() then return false end   -- 3.7.0 : mode discret (Quiet.lua)
 	if self:CompanionChatterLevel() < 3 or InCombat() then return false end
 	local rt, now = RT(), Clock()
 	if not rt.tipAt then rt.tipAt = now + TipDelay() end
@@ -3568,7 +3569,7 @@ end
 -- Objectif : un rappel quand le prochain déblocage est tout proche
 local GOAL_NEAR = { player = 2, journal = 3 }
 function ns:CompanionTryGoal()
-	if InCombat() then return false end
+	if InCombat() or (ns.Quiet and self:Quiet()) then return false end   -- 3.7.0 : mode discret
 	local rt, now = RT(), Clock()
 	if not rt.goalAt then rt.goalAt = now + GOAL_FIRST end
 	if now < rt.goalAt then return false end

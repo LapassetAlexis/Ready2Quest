@@ -190,6 +190,7 @@ ns.LoreState = State
 local function LoreOn(self)
 	local db = self:DB()
 	if db.companionLore == false then return false end
+	if ns.Quiet and self:Quiet() then return false end   -- 3.7.0 : mode discret (Quiet.lua)
 	if ns.CompanionOn and not ns.CompanionOn() then return false end
 	if ns.LoreSpokenLoaded() then return false end
 	return Raw() ~= nil
