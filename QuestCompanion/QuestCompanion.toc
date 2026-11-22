@@ -132,5 +132,6 @@ ZoneMedals.lua
 CompanionRested.lua
 DiscordCopy.lua
 Souvenir.lua
+WorldDaily.lua
 NamesES.lua
 Locales_es.lua

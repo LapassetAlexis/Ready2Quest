@@ -55,8 +55,8 @@ zone_seal_25 328 zone 50 r|zone_seal_all 329 zone 50 r|zone_chests_25 330 zone 2
 zone_lore_10 333 zone 5 r|zone_lore_all 334 zone 25 r|zone_milestones_100 335 zone 25 r
 day_mission_250 336 day 25 r|day_mission_500 337 day 50 r|day_perfect_30 338 day 25 r|day_perfect_100 339 day 50 r
 day_weekly_10 340 day 25 c|day_weekly_25 341 day 50 c|day_inn_100 342 day 25 r|day_inn_cards_10 343 day 10 r|day_rare_100 344 day 25 r
-day_played_30 345 day 10 c|day_played_100 346 day 25 c|day_played_365 347 day 50 c|day_week_1 348 day 5 f|day_week_10 349 day 10 f
-day_week_52 350 day 50 f|day_swarm_10 351 day 10 f
+day_played_30 345 day 10 c|day_played_100 346 day 25 c|day_played_365 347 day 50 c|day_week_1 348 day 5 c|day_week_10 349 day 10 c
+day_week_52 350 day 50 c|day_swarm_10 351 day 10 c
 comp_stage_2 352 comp 5 r|comp_stage_3 353 comp 5 r|comp_stage_4 354 comp 10 r|comp_stage_5 355 comp 25 r|comp_persona 356 comp 10 r
 comp_radiant_60 357 comp 10 c|comp_radiant_600 358 comp 25 c|comp_radiant_3000 359 comp 50 c|comp_wish_10 360 comp 5 c
 comp_wish_50 361 comp 10 c|comp_wish_250 362 comp 25 c|comp_treat_25 363 comp 5 c|comp_treat_100 364 comp 10 c|comp_treat_500 365 comp 25 c
@@ -121,11 +121,11 @@ do
 	local codes = {}
 	for _, def in ipairs(NS:FeatDefs()) do codes[def.n] = def.id end
 	s.ok("104 lignes, code 413 réservé", #LIST == 104 and #NS.FEAT_COMPAGNON_IDS == 104 and codes[413] == nil)
-	-- (la page Communauté, la comparaison et la carte souvenir sont là : « Porte ouverte », « Mon grain de sel »,
-	-- « Jeu des différences » et « Souriez ! » ne sont plus en attente)
-	s.ok("totaux : 9 en attente, 10 secrets, 4 tours de force", pending == 9 and secrets == 10, pending .. "/" .. secrets)
+	-- (page Communauté, comparaison, carte souvenir et monde du jour sont là : restent en attente
+	-- le code de dresseur et le parrainage)
+	s.ok("totaux : 5 en attente, 10 secrets, 4 tours de force", pending == 5 and secrets == 10, pending .. "/" .. secrets)
 	s.ok("points : 1 870 en tout", pts == 1870, pts)
-	s.ok("lignes comptables : 81", countable == 81, countable)
+	s.ok("lignes comptables : 85", countable == 85, countable)
 	local glyph = false
 	for _, set in ipairs({ fr, en }) do
 		for _, text in pairs(set) do if text:find("★", 1, true) or text:find("☆", 1, true) or text:find("✓", 1, true) or text:find("✗", 1, true) then glyph = true end end
@@ -205,7 +205,7 @@ do
 	NS:FeatAward("fos_golden_legend", { silent = true })
 	local total = NS:FeatPoints(nil)
 	s.ok("tour de force : 0 point, hors total", Got("fos_golden_legend") and total == 5 and not NS:FeatCountable("fos_golden_legend"), total)
-	s.check("[B2b] dix secrets cachés avec leur indice, 9 lignes en attente invisibles, tours de force hors total")
+	s.check("[B2b] dix secrets cachés avec leur indice, 5 lignes en attente invisibles, tours de force hors total")
 end
 
 -- 4. Sources neuves : zéro, sous le seuil, au seuil, rattrapage ----------------------------------------------

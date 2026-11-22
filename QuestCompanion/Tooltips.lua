@@ -183,6 +183,9 @@ function ns:BestiaryOnTooltip(tooltip, data)
 	if wary then Theme.TooltipLine(tooltip, wary, Theme.ORANGE or Theme.GOLD) end
 	local chain = self:BestiaryTooltipChain(guid)
 	if chain then Theme.TooltipLine(tooltip, chain, Theme.GOLD) end
+	-- 3.7.0 : « Pullulation du jour : brillantes ×2 » (WorldDaily.lua)
+	local swarm = self.WorldSwarmTooltip and self:WorldSwarmTooltip(guid)
+	if swarm then Theme.TooltipLine(tooltip, swarm, Theme.GOLD) end
 	-- accroche OnTooltipSetUnit (pas de data) : le cadre reprend sa taille
 	if data == nil and type(tooltip.Show) == "function" then pcall(tooltip.Show, tooltip) end
 	return true

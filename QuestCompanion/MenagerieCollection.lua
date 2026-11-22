@@ -910,6 +910,9 @@ function ns:MenagerieCollectionBuild(pane, content, box)
 	-- à la place de la barre : toutes zones (les médailles gagnées), zone sans liste
 	strip.note = NoWrap(ui.Text(strip, Theme.F_SMALL, Theme.MUTED_LIGHT, barW))
 	strip.note:SetPoint("TOPLEFT", strip, "TOPLEFT", K.pad, -(K.barY - 4))
+	-- 3.7.0 : en bas à gauche, la pullulation du jour de la zone (WorldDaily.lua)
+	strip.swarm = NoWrap(ui.Text(strip, Theme.F_SMALL, Theme.GOLD, math.floor(barW / 2)))
+	strip.swarm:SetPoint("TOPLEFT", strip, "TOPLEFT", K.pad, -K.bottomY)
 	strip.trainer = NoWrap(ui.Text(strip, Theme.F_SMALL, Theme.GOLD, math.floor(barW / 2)))
 	strip.trainer:SetJustifyH("RIGHT")
 	strip.trainer:SetPoint("TOPRIGHT", strip, "TOPRIGHT", -K.pad, -K.bottomY)
@@ -1024,6 +1027,7 @@ function ns:MenagerieCollectionRefresh(pane, zone)
 		strip.trainer:SetText(self:F("MEN_COLL_TITLE", L["TRAINER_" .. rank.key], species))
 	end
 	strip.tipTitle = rank and L["TRAINER_" .. rank.key] or L.JRN_SEC_menagerie
+	strip.swarm:SetText(zoneID and self.WorldSwarmStripText and self:WorldSwarmStripText(zoneID) or "")
 	strip:Show()
 end
 

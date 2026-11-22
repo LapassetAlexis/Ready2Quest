@@ -273,6 +273,7 @@ local LAY = {
 	headY = 36, headH = 100, headTitleY = 10, headTextY = 29, linkY = 66, linkW = 232, hintX = 254, hintY = 64,
 	salonsHeadY = 150, salonY = 168, salonStep = 50, salonW = 347, salonH = 46, salonX2 = 363,
 	wordHeadY = 330, tileY = 348, tileW = 347, tileH = 92, fieldY = 58, fieldW = 232, buttonX = 250, buttonW = 87,
+	weekButtonW = 120, weekMineX = 140, weekMineY = 63,
 	discordNoteY = 452,
 	-- Ton avis
 	introY = 34, feelHeadY = 74, colW = 440, qY = 92, qStep = 28, qLabelW = 164, chipH = 22,
@@ -710,6 +711,16 @@ local function BuildDiscord(self, pane, view)
 	week.text = Label(pane, week, Theme.F_SMALL, Theme.MUTED_LIGHT, LAY.tileW - 20, "tile")
 	Place(week.text, week, 10, 25)
 	week.text:SetText(L.COM_WEEK_TEXT)
+	-- 3.7.0 : la prise de la semaine (WorldDaily.lua) : le bouton de la carte
+	-- souvenir (seulement si ns.SouvenirShow existe) et « ta prise : … »
+	week.button = Theme.CreateButton(week, LAY.weekButtonW, "sm", L.WORLD_SOUVENIR or "", function()
+		local best = ns.WorldWeekBest and ns:WorldWeekBest()
+		if ns.SouvenirShow and best then ns:SouvenirShow(best.id) end
+	end)
+	Place(week.button, week, 10, LAY.fieldY)
+	week.button:Hide()
+	week.mine = Label(pane, week, Theme.F_SMALL, Theme.MUTED_LIGHT, LAY.tileW - 20, "tile")
+	if week.mine.SetWordWrap then week.mine:SetWordWrap(false) end
 
 	view.note = Label(pane, view, Theme.F_SMALL, Theme.MUTED, W, "page")
 	Place(view.note, view, 0, LAY.discordNoteY)
@@ -1019,8 +1030,33 @@ function ns:CommunitySelectTab(id)
 		self:CommunityAvisPaint()
 	else
 		self:CommunityWordPaint()
+		self:CommunityWeekPaint()
 	end
 	return true
+end
+
+-- 3.7.0 : la tuile « Cette semaine » : « Prise de la semaine : <espèce> »,
+-- « ta prise : <étoiles>, <taille> (<indice>) » quand elle existe
+function ns:CommunityWeekPaint()
+	local pane = Pane(self)
+	local week = pane and pane.views.discord and pane.views.discord.week
+	if not week then return end
+	local on = self.WorldDailyOn and self:WorldDailyOn()
+	local npc, name = nil, nil
+	if on then npc, name = self:WorldWeekCreature(self:WorldBracket()) end
+	local best = npc and self:WorldWeekBest(npc) or nil
+	if npc then
+		week.title:SetText(self:F("COM_WEEK_CATCH_TITLE", name))
+		week.text:SetText(L.COM_WEEK_CATCH_TEXT)
+	else
+		week.title:SetText(L.COM_WEEK_TITLE)
+		week.text:SetText(L.COM_WEEK_TEXT)
+	end
+	local souvenir = best ~= nil and ns.SouvenirShow ~= nil
+	if souvenir then week.button:Show() else week.button:Hide() end
+	week.mine:SetText(best and self:F("COM_WEEK_CATCH_MINE", self:WorldCatchText(best)) or "")
+	Place(week.mine, week, souvenir and LAY.weekMineX or 10, LAY.weekMineY)
+	week.mine:SetWidth(LAY.tileW - 10 - (souvenir and LAY.weekMineX or 10))
 end
 
 local function Refresh(self, frame)

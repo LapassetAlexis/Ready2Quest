@@ -1506,6 +1506,7 @@ local MIS = {
 	swap = 22, reward = 14, calloutMin = 30,
 	dash = 10, dashGap = 6,                       -- pointillés des encarts
 	stamp = 20, stampStep = 37, cellGap = 4, cellH = 84, aidIcon = 24,
+	scrollStep = 40, clipTop = 4,                  -- 3.7.0 : un cran de molette (px), marge de la coupe sous l'en-tête
 }
 MIS.rightX = MIS.leftW + MIS.gap                                        -- 436
 MIS.rightW = INNER - MIS.rightX                                         -- 274
@@ -1784,9 +1785,15 @@ ns.JournalCalloutDashes = Dashes
 
 local function BuildDay(self, frame, content)
 	local pane = CreateFrame("Frame", nil, content)
-	pane:SetAllPoints()
+	-- 3.7.0 : la page défile à la molette (l'encart « Aujourd'hui en Azeroth »
+	-- la fait déborder) : ce qui sort de la bande sous l'en-tête est coupé
+	pane:SetPoint("TOPLEFT", content, "TOPLEFT", 0, TOP + MIS.clipTop)
+	pane:SetPoint("BOTTOMRIGHT", content, "BOTTOMRIGHT", 0, 0)
+	if pane.SetClipsChildren then pane:SetClipsChildren(true) end
 	frame.day = pane
 	local rightX, rightW = MIS.rightX, MIS.rightW
+	-- 3.7.0 : « Aujourd'hui en Azeroth », trois tuiles en tête (WorldDaily.lua)
+	if self.WorldTodayBuild then self:WorldTodayBuild(pane) end
 
 	-- bande résumé
 	pane.summary = {}
@@ -2017,14 +2024,20 @@ local function PlaceGroup(pane, content, id, y)
 	return y - MIS.groupGap
 end
 
--- met en page les Missions (textes de longueur variable)
-local function LayoutDay(pane, content)
-	local y = TOP - MIS.sumH - MIS.sumGap
+-- met en page les Missions (textes de longueur variable). 3.7.0 : l'encart
+-- « Aujourd'hui en Azeroth » en tête (WorldDaily.lua), le reste descend ;
+-- `scroll` : px de défilement (molette), borné à ce qui déborde
+local function LayoutDay(pane, content, scroll)
+	scroll = math.max(0, tonumber(scroll) or 0)
+	local top = TOP + scroll
+	if ns.WorldTodayPlace then top = ns:WorldTodayPlace(pane, content, top) end
+	for index, plaque in ipairs(pane.summary) do At(plaque, content, (index - 1) * (MIS.sumW + MIS.sumColGap), top) end
+	local y = top - MIS.sumH - MIS.sumGap
 	for _, group in ipairs(MISSION_GROUPS) do y = PlaceGroup(pane, content, group.id, y) end
 	pane.missionsBottom = y + MIS.groupGap
 	-- colonne de droite
 	local rightX, w = MIS.rightX, MIS.rightW - 20
-	y = TOP - MIS.sumH - MIS.sumGap
+	y = top - MIS.sumH - MIS.sumGap
 	At(pane.innTitle, content, rightX, y)
 	y = y - MIS.rightGroupH
 	local inner = 48 + Theme.TextHeight(pane.innTotal, w, Theme.F_LABEL) + 4
@@ -3023,7 +3036,23 @@ local function RefreshDay(self, frame)
 		tile.name:SetText(self:CaptureAidLabel(tile.aid))
 		if tile.icon.SetDesaturated then tile.icon:SetDesaturated(count == 0) end
 	end
-	LayoutDay(pane, frame.content)
+	-- 3.7.0 : l'encart du jour, puis la page, défilée de frame.offset crans
+	-- (molette ; remis à 0 en changeant de page), bornée à ce qui déborde
+	if self.WorldTodayPaint then self:WorldTodayPaint(pane) end
+	local step = MIS.scrollStep
+	local notches = math.max(0, math.floor(tonumber(frame.offset) or 0))
+	LayoutDay(pane, frame.content, notches * step)
+	local bottom = math.min(pane.missionsBottom or 0, pane.pantryBottom or 0) - notches * step
+	local height = tonumber(frame.content.GetHeight and frame.content:GetHeight()) or 0
+	if height <= 0 then height = HEIGHT - FOOTER_H end
+	local max = math.max(0, math.ceil((-(height - MIS.pad) - bottom) / step))
+	pane.scrollMax = max
+	if notches > max then
+		frame.offset = max
+		LayoutDay(pane, frame.content, max * step)
+	else
+		frame.offset = notches
+	end
 end
 
 -- la page Missions compte les missions qui restent, jour et semaine (pastille)
