@@ -375,6 +375,11 @@ do
 	local s = Steps()
 	NS.RegisterStrings({ FEAT_test_fete_h = "Secret", FEATH_test_fete_h = "Il paraît que Lardeur aime les promenades…" },
 		{ FEAT_test_fete_h = "Secret", FEATH_test_fete_h = "Rumour has it Lardeur loves walks…" })
+	-- (les dix secrets du catalogue sont mis de côté le temps du test : l'indice tiré est celui de la ligne d'essai)
+	local realSecrets = {}
+	for _, other in ipairs(NS:FeatDefs()) do
+		if other.hidden then realSecrets[#realSecrets + 1] = other; other.hidden = nil end
+	end
 	local def = NS.FeatAdd({ "test_fete_h", 990, "jeu", 5, "account", crit = { "flag", "fete_h" }, hidden = true })
 	local function Pick() local tip = NS:DiscoveryPick(); return tip and tip.hint and tip or nil end
 	NS:DB().companionDiscovery = false
@@ -403,6 +408,7 @@ do
 	s.ok("dans le créneau des astuces : une bulle TIP, pas une de plus", tipSaid and tipSaid.opts.line == "FEATH_test_fete_h"
 		and #F.says == 1, #F.says)
 	for index = #NS.FEAT_DEFS, 1, -1 do if NS.FEAT_DEFS[index] == def then table.remove(NS.FEAT_DEFS, index) end end
+	for _, other in ipairs(realSecrets) do other.hidden = true end
 	NS.featIndexDirty = true
 	NS:DB().companionDiscovery = true
 	s.check("[INDICE] au repos, une fois par semaine au compte, hors mode discret, dans le créneau des astuces ; rien sans secret")

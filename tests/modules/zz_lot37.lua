@@ -169,5 +169,55 @@ do
 	NS:FeatEvaluate({ tally = true })
 	s.ok("« Mon grain de sel » obtenu", Got("soc_feedback"))
 	s.check("[L37] page Communauté : le mot de la version donne « Porte ouverte » et son ornement, un avis composé donne « Mon grain de sel »")
+	NS.COMMUNITY_WORDS, NS.CommunityVersion = SAVED_WORDS, SAVED_VERSION
+end
+
+-- 4. Une médaille de zone donne son haut fait ; le compagnon lâche l'indice d'un vrai secret ---------------
+do
+	Say("-- lot 3.7 : médaille de zone et indice de secret")
+	Reset()
+	local s = Steps()
+	local savedZones, savedMedals, savedResting = rawget(NS, "ZONE_CREATURES"), NS.zoneMedalsDormant, rawget(_G, "IsResting")
+	-- une petite zone de 4 espèces : la première capture vaut le bronze (25 %)
+	local zones = { [1412] = {} }
+	for index = 1, 4 do zones[1412][6000 + index] = { lvl = { 5, 6 }, rank = 0, fr = "Kodo " .. index, en = "Kodo " .. index } end
+	NS.ZONE_CREATURES = zones
+	NS.menagerieStatic = nil
+	NS.zoneMedalsDormant = nil
+	NS.ZoneMedalReset()
+	NS:FeatCompagnonCacheReset()
+	s.ok("avant : aucune zone médaillée", NS:ZoneMedalCounts()[1] == 0 and not Got("zone_medal_bronze_1"))
+	local capture = NS:CaptureData()
+	capture.creatures[6001] = { name = "Kodo 1", class = "normal", zoneID = 1412, normal = true, at = 1 }
+	capture.count = (tonumber(capture.count) or 0) + 1
+	capture.serial = (tonumber(capture.serial) or 0) + 1
+	NS.ZoneMedalReset()
+	-- (comme à la capture : la médaille gagnée est notée et payée)
+	local before = NS:Paillettes()
+	NS:ZoneMedalCheck(1412, { quiet = true })
+	NS:FeatCompagnonCacheReset()
+	local level = NS:ZoneMedal(1412)
+	s.ok("1 espèce sur 4 : bronze, noté, 3 paillettes", level == 1 and NS:ZoneMedalCounts()[1] == 1 and NS:Paillettes() - before == 3,
+		level .. " / " .. NS:ZoneMedalCounts()[1] .. " / " .. (NS:Paillettes() - before))
+	NS:FeatEvaluate(nil)
+	s.ok("« Premier bronze » obtenu", Got("zone_medal_bronze_1"))
+	NS.ZONE_CREATURES, NS.zoneMedalsDormant = savedZones, savedMedals
+	NS.menagerieStatic = nil
+	NS.ZoneMedalReset()
+	-- l'indice d'un secret du catalogue, au repos, dans le créneau des astuces
+	_G.IsResting = function() return true end
+	NS:DB().companionDiscovery = false
+	NS:DB().quiet = false
+	NS:DB().quietHintAt = nil
+	local tip = NS:DiscoveryPick()
+	local line = tip and tip.hint and tip.line or nil
+	s.ok("au repos : l'indice d'un vrai secret", type(line) == "string" and line:find("^FEATH_fun_") ~= nil and NS:F(line) ~= line, line)
+	NS:DB().quiet = true
+	NS:DB().quietHintAt = nil
+	local hushed = NS:DiscoveryPick()
+	s.ok("mode discret : pas d'indice", not (hushed and hushed.hint))
+	NS:DB().quiet, NS:DB().companionDiscovery = false, true
+	_G.IsResting = savedResting
+	s.check("[L37] médaille de zone -> « Premier bronze » ; indice d'un secret du catalogue au repos, coupé par le mode discret")
 	Restore()
 end
