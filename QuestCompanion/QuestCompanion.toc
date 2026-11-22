@@ -84,6 +84,7 @@ GuildFeats.lua
 AzerothStyle.lua
 ForgeCompanion.lua
 ForgeBanners.lua
+Tally.lua
 FeatsData.lua
 FeatsCatMenagerie.lua
 FeatsCatJeu.lua
