@@ -65,8 +65,8 @@ comp_wardrobe_10 370 comp 5 r|comp_wardrobe_25 371 comp 10 r|comp_wardrobe_50 37
 comp_juke_fav_10 374 comp 5 e|comp_juke_list 375 comp 5 e|comp_juke_100 376 comp 10 c|comp_jokes_25 377 comp 5 c
 soc_share_1 397 soc 5 c|soc_share_25 398 soc 10 c|soc_trade_25 399 soc 25 r|soc_trade_partners_5 400 soc 10 c|soc_guild_feat_10 401 soc 10 c
 soc_guild_cheer_100 402 soc 10 r|soc_group_50 403 soc 10 c|soc_holders_10 404 soc 5 c|soc_card_25 405 soc 25 c|soc_photo_1 406 soc 5 c
-soc_code_1 407 soc 5 f|soc_code_5 408 soc 10 f|soc_compare 409 soc 5 c|soc_mentor_1 410 soc 5 f|soc_mentor_5 411 soc 10 f
-soc_mentor_10 412 soc 25 f|soc_discord 414 soc 10 c|soc_feedback 415 soc 5 c
+soc_code_1 407 soc 5 c|soc_code_5 408 soc 10 c|soc_compare 409 soc 5 c|soc_mentor_1 410 soc 5 c|soc_mentor_5 411 soc 10 c
+soc_mentor_10 412 soc 25 c|soc_discord 414 soc 10 c|soc_feedback 415 soc 5 c
 fun_critters_10 416 fun 10 r|fun_murlocs_10 417 fun 10 r|fun_dance_100 418 fun 5 r|fun_winter_all 419 fun 10 c
 fun_hogger_partner 420 fun 10 e s|fun_hogger_shiny 421 fun 25 r s|fun_namesake 422 fun 5 e s|fun_clones 423 fun 5 e s
 fun_close_call 424 fun 10 c s|fun_boss_miss 425 fun 5 c s|fun_winter_song 426 fun 5 c s|fun_small_game 427 fun 5 c s|fun_wake 428 fun 5 c s
@@ -121,11 +121,10 @@ do
 	local codes = {}
 	for _, def in ipairs(NS:FeatDefs()) do codes[def.n] = def.id end
 	s.ok("104 lignes, code 413 réservé", #LIST == 104 and #NS.FEAT_COMPAGNON_IDS == 104 and codes[413] == nil)
-	-- (page Communauté, comparaison, carte souvenir et monde du jour sont là : restent en attente
-	-- le code de dresseur et le parrainage)
-	s.ok("totaux : 5 en attente, 10 secrets, 4 tours de force", pending == 5 and secrets == 10, pending .. "/" .. secrets)
+	-- (toutes les fonctions du lot sont là : plus aucune ligne en attente)
+	s.ok("totaux : aucune en attente, 10 secrets, 4 tours de force", pending == 0 and secrets == 10, pending .. "/" .. secrets)
 	s.ok("points : 1 870 en tout", pts == 1870, pts)
-	s.ok("lignes comptables : 85", countable == 85, countable)
+	s.ok("lignes comptables : 90", countable == 90, countable)
 	local glyph = false
 	for _, set in ipairs({ fr, en }) do
 		for _, text in pairs(set) do if text:find("★", 1, true) or text:find("☆", 1, true) or text:find("✓", 1, true) or text:find("✗", 1, true) then glyph = true end end
@@ -205,7 +204,7 @@ do
 	NS:FeatAward("fos_golden_legend", { silent = true })
 	local total = NS:FeatPoints(nil)
 	s.ok("tour de force : 0 point, hors total", Got("fos_golden_legend") and total == 5 and not NS:FeatCountable("fos_golden_legend"), total)
-	s.check("[B2b] dix secrets cachés avec leur indice, 5 lignes en attente invisibles, tours de force hors total")
+	s.check("[B2b] dix secrets cachés avec leur indice, plus aucune ligne en attente, tours de force hors total")
 end
 
 -- 4. Sources neuves : zéro, sous le seuil, au seuil, rattrapage ----------------------------------------------

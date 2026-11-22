@@ -157,7 +157,10 @@ do
 		and NS:DiscordText("feat", { kind = "feat", entry = { id = "char_level_30" } }) == feat)
 	s.ok("haut fait pas obtenu : aucun texte", NS:DiscordText("feat", "char_level_60") == nil)
 	s.ok("secret non découvert : aucun texte", NS:FeatDef("fun_wake").hidden and NS:DiscordText("feat", "fun_wake") == nil)
-	s.ok("ligne en attente : aucun texte", NS:FeatDef("soc_code_1") and NS:FeatDef("soc_code_1").pending and NS:DiscordText("feat", "soc_code_1") == nil)
+	-- (une ligne encore en attente : n'importe laquelle du catalogue, s'il en reste)
+	local waiting
+	for _, def in ipairs(NS:FeatDefs()) do if def.pending then waiting = def; break end end
+	s.ok("ligne en attente : aucun texte", waiting ~= nil and NS:DiscordText("feat", waiting.id) == nil, waiting and waiting.id)
 	-- statistiques : seulement si l'onglet les donne
 	s.ok("statistiques : rien sans ns:FeatStatsBlocks", NS:DiscordText("stats") == nil)
 	NS.FeatStatsBlocks = function()

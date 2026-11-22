@@ -1098,12 +1098,12 @@ Choix faits au codage :
 - `soc_holders_10` (code 404) — Du beau monde / Good Company — Croiser 10 dresseurs, 5 points, calcul `compteur`.
 - `soc_card_25` (code 405) — Annuaire / Who's Who — Consulter 25 fiches de dresseur différentes, 25 points, calcul `compteur` ; récompense : fond de fiche (à créer).
 - `soc_photo_1` (code 406) — Souriez ! / Say Cheese! — Créer une carte souvenir, 5 points, calcul `fonction` (carte souvenir, livrée).
-- `soc_code_1` (code 407) — Carte de visite / Calling Card — Copier ton code de dresseur, 5 points, calcul `fonction` ; en attente (`pending`, étape suivante).
-- `soc_code_5` (code 408) — Correspondants / Pen Pals — Ouvrir 5 fiches reçues par code, 10 points, calcul `fonction` ; en attente (`pending`, étape suivante).
+- `soc_code_1` (code 407) — Carte de visite / Calling Card — Copier ton code de dresseur, 5 points, calcul `fonction` (code de dresseur, livré).
+- `soc_code_5` (code 408) — Correspondants / Pen Pals — Ouvrir 5 fiches reçues par code, 10 points, calcul `fonction` (code de dresseur, livré).
 - `soc_compare` (code 409) — Jeu des différences / Spot the Difference — Comparer tes hauts faits avec ceux d'un dresseur, 5 points, calcul `fonction` (fenêtre de comparaison, livrée).
-- `soc_mentor_1` (code 410) — Passeur / Word of Mouth — Faire découvrir Quest Companion à un joueur, 5 points, calcul `fonction` ; en attente (`pending`, étape suivante).
-- `soc_mentor_5` (code 411) — Cinq filleuls / Five Protégés — Faire découvrir Quest Companion à 5 joueurs, 10 points, calcul `fonction` ; en attente (`pending`, étape suivante).
-- `soc_mentor_10` (code 412) — Dix filleuls / Ten Protégés — Faire découvrir Quest Companion à 10 joueurs, 25 points, calcul `fonction` ; en attente (`pending`, étape suivante) ; récompense : titre « le Passeur ».
+- `soc_mentor_1` (code 410) — Passeur / Word of Mouth — Faire découvrir Quest Companion à un joueur, 5 points, calcul `fonction` (parrainage, livré).
+- `soc_mentor_5` (code 411) — Cinq filleuls / Five Protégés — Faire découvrir Quest Companion à 5 joueurs, 10 points, calcul `fonction` (parrainage, livré).
+- `soc_mentor_10` (code 412) — Dix filleuls / Ten Protégés — Faire découvrir Quest Companion à 10 joueurs, 25 points, calcul `fonction` (parrainage, livré) ; récompense : titre « le Passeur ».
 - `soc_discord` (code 414) — Porte ouverte / Open Door — Saisir le mot de la version trouvé sur le Discord (page Communauté), 10 points, calcul `fonction` (page Communauté, livrée) ; récompense : ornement « Explorateur des mondes » (`feat_worlds`).
 - `soc_feedback` (code 415) — Mon grain de sel / My Two Cents — Composer un avis sur la page Communauté, 5 points, calcul `fonction` (page Communauté, livrée).
 

@@ -16,10 +16,7 @@ end
 
 -- Lignes du lot encore en attente : chacune sort de cette table quand l'étape
 -- qui livre sa fonction est fusionnée (le haut fait devient alors visible).
-local STILL_PENDING = {
-	soc_code_1 = true, soc_code_5 = true,                                                -- étape 3 : code de dresseur
-	soc_mentor_1 = true, soc_mentor_5 = true, soc_mentor_10 = true,                      -- étape 3 : parrainage
-}
+local STILL_PENDING = {}   -- toutes les fonctions du lot sont livrées
 local FIRST, LAST, RESERVED = 244, 447, 413    -- codes de la deuxième édition ; 413 : « Chasse en meute », hors du lot
 
 local SAVED = {}
