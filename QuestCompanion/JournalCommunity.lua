@@ -715,7 +715,7 @@ local function BuildDiscord(self, pane, view)
 	-- souvenir (seulement si ns.SouvenirShow existe) et « ta prise : … »
 	week.button = Theme.CreateButton(week, LAY.weekButtonW, "sm", L.WORLD_SOUVENIR or "", function()
 		local best = ns.WorldWeekBest and ns:WorldWeekBest()
-		if ns.SouvenirShow and best then ns:SouvenirShow(best.id) end
+		if ns.SouvenirShow and best then ns:SouvenirShow({ kind = "specimen", id = best.id }) end
 	end)
 	Place(week.button, week, 10, LAY.fieldY)
 	week.button:Hide()

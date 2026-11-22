@@ -589,11 +589,12 @@ do
 	s.ok("ta prise : étoiles, taille (indice)", week.mine.text:find("^ta prise : 1 étoile, ") ~= nil, week.mine.text)
 	s.ok("sans ns.SouvenirShow : pas de bouton", not week.button:IsShown())
 	local shownWith
-	NS.SouvenirShow = function(_, id) shownWith = id end
+	NS.SouvenirShow = function(_, subject) shownWith = subject end
 	NS:CommunityWeekPaint()
 	s.ok("avec ns.SouvenirShow : le bouton", week.button:IsShown())
 	week.button:Click()
-	s.ok("le bouton ouvre la carte de la plus belle prise", shownWith == NS:WorldWeekBest(wnpc).id, shownWith)
+	s.ok("le bouton ouvre la carte de la plus belle prise", type(shownWith) == "table" and shownWith.kind == "specimen"
+		and shownWith.id == NS:WorldWeekBest(wnpc).id, tostring(shownWith))
 	NS.SouvenirShow = nil
 	NS:WorldWeekRecord().best = {}
 	NS:CommunityWeekPaint()

@@ -6484,6 +6484,8 @@ ns.RegisterLocaleStrings("es", {
 	["WORLD_WEEK_PAID_SHORT"] = "capturada",
 	["WORLD_WEEK_REWARD"] = "+%d de purpurina por la primera captura",
 	["WORLD_WEEK_REWARD_SHORT"] = "+%d de purpurina",
+	["WORLD_WEEK_TROPHIES_MANY"] = "%d trofeos",
+	["WORLD_WEEK_TROPHIES_ONE"] = "%d trofeo",
 	["ZONE_MEDAL_1"] = "bronce",
 	["ZONE_MEDAL_2"] = "plata",
 	["ZONE_MEDAL_3"] = "oro",

@@ -76,6 +76,8 @@ local FR = {
 	WORLD_WEEK_PAID       = "Prise de la semaine faite",
 	WORLD_WEEK_REWARD_SHORT = "+%d paillettes",
 	WORLD_WEEK_PAID_SHORT = "prise faite",
+	WORLD_WEEK_TROPHIES_ONE = "%d trophée",
+	WORLD_WEEK_TROPHIES_MANY = "%d trophées",
 	WORLD_WEEK_NONE       = "Aucune cette semaine",
 	WORLD_CATCH           = "%s, %s (%d)",
 	WORLD_STARS_1         = "%d étoile",
@@ -124,6 +126,8 @@ local EN = {
 	WORLD_WEEK_PAID       = "Catch of the week done",
 	WORLD_WEEK_REWARD_SHORT = "+%d glitter",
 	WORLD_WEEK_PAID_SHORT = "caught",
+	WORLD_WEEK_TROPHIES_ONE = "%d trophy",
+	WORLD_WEEK_TROPHIES_MANY = "%d trophies",
 	WORLD_WEEK_NONE       = "None this week",
 	WORLD_CATCH           = "%s, %s (%d)",
 	WORLD_STARS_1         = "%d star",
@@ -654,7 +658,7 @@ function ns:WorldTodayBuild(pane)
 	local week = box.tiles.week
 	week.button = Theme.CreateButton(week, K.buttonW, "sm", L.WORLD_SOUVENIR, function()
 		local best = ns:WorldWeekBest()
-		if ns.SouvenirShow and best then ns:SouvenirShow(best.id) end
+		if ns.SouvenirShow and best then ns:SouvenirShow({ kind = "specimen", id = best.id }) end
 	end)
 	week.button:SetPoint("TOPLEFT", week, "TOPLEFT", K.pad, -K.buttonY)
 	week.button:Hide()
@@ -737,7 +741,10 @@ function ns:WorldTodayPaint(pane)
 	-- à côté du bouton, en bref ; seule, en toutes lettres
 	local text = ""
 	if wnpc and souvenir then
-		text = rec.paid and L.WORLD_WEEK_PAID_SHORT or self:F("WORLD_WEEK_REWARD_SHORT", W.weekGlitter)
+		-- prise faite : le nombre de créatures de la semaine déjà capturées (le compteur des hauts faits)
+		local trophies = rec.paid and self.TallyGet and tonumber(self:TallyGet("weekCatch")) or 0
+		if rec.paid and trophies >= 1 then text = self:FP("WORLD_WEEK_TROPHIES", trophies)
+		else text = rec.paid and L.WORLD_WEEK_PAID_SHORT or self:F("WORLD_WEEK_REWARD_SHORT", W.weekGlitter) end
 	elseif wnpc then
 		text = rec.paid and L.WORLD_WEEK_PAID or self:F("WORLD_WEEK_REWARD", W.weekGlitter)
 	end

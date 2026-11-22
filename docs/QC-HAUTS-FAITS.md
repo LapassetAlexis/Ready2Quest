@@ -1052,10 +1052,10 @@ Choix faits au codage :
 - `day_played_30` (code 345) — Trente jours de route / Thirty Days on the Road — Jouer 30 jours différents (pas forcément d'affilée), 10 points, calcul `compteur`.
 - `day_played_100` (code 346) — Cent jours de route / A Hundred Days on the Road — Jouer 100 jours différents, 25 points, calcul `compteur`.
 - `day_played_365` (code 347) — Une année de route / A Year on the Road — Jouer 365 jours différents, 50 points, calcul `compteur`.
-- `day_week_1` (code 348) — Prise de la semaine / Catch of the Week — Capturer la créature de la semaine, 5 points, calcul `fonction` ; en attente (`pending`, étape suivante).
-- `day_week_10` (code 349) — Dix prises de la semaine / Ten Catches of the Week — Capturer 10 créatures de la semaine, 10 points, calcul `fonction` ; en attente (`pending`, étape suivante).
-- `day_week_52` (code 350) — Une année de prises / A Year of Catches — Capturer 52 créatures de la semaine, 50 points, calcul `fonction` ; en attente (`pending`, étape suivante).
-- `day_swarm_10` (code 351) — Chasseur de pullulations / Swarm Chaser — Capturer l'espèce en pullulation dans 10 zones différentes, 10 points, calcul `fonction` ; en attente (`pending`, étape suivante).
+- `day_week_1` (code 348) — Prise de la semaine / Catch of the Week — Capturer la créature de la semaine, 5 points, calcul `fonction` (créature de la semaine, livrée).
+- `day_week_10` (code 349) — Dix prises de la semaine / Ten Catches of the Week — Capturer 10 créatures de la semaine, 10 points, calcul `fonction` (créature de la semaine, livrée).
+- `day_week_52` (code 350) — Une année de prises / A Year of Catches — Capturer 52 créatures de la semaine, 50 points, calcul `fonction` (créature de la semaine, livrée).
+- `day_swarm_10` (code 351) — Chasseur de pullulations / Swarm Chaser — Capturer l'espèce en pullulation dans 10 zones différentes, 10 points, calcul `fonction` (pullulation du jour, livrée).
 
 **Compagnon (`comp`, personnage)**
 
@@ -1097,7 +1097,7 @@ Choix faits au codage :
 - `soc_group_50` (code 403) — Meute soudée / Tight-Knit Pack — Capturer 50 créatures en groupe, 10 points, calcul `compteur`.
 - `soc_holders_10` (code 404) — Du beau monde / Good Company — Croiser 10 dresseurs, 5 points, calcul `compteur`.
 - `soc_card_25` (code 405) — Annuaire / Who's Who — Consulter 25 fiches de dresseur différentes, 25 points, calcul `compteur` ; récompense : fond de fiche (à créer).
-- `soc_photo_1` (code 406) — Souriez ! / Say Cheese! — Créer une carte souvenir, 5 points, calcul `fonction` ; en attente (`pending`, étape suivante).
+- `soc_photo_1` (code 406) — Souriez ! / Say Cheese! — Créer une carte souvenir, 5 points, calcul `fonction` (carte souvenir, livrée).
 - `soc_code_1` (code 407) — Carte de visite / Calling Card — Copier ton code de dresseur, 5 points, calcul `fonction` ; en attente (`pending`, étape suivante).
 - `soc_code_5` (code 408) — Correspondants / Pen Pals — Ouvrir 5 fiches reçues par code, 10 points, calcul `fonction` ; en attente (`pending`, étape suivante).
 - `soc_compare` (code 409) — Jeu des différences / Spot the Difference — Comparer tes hauts faits avec ceux d'un dresseur, 5 points, calcul `fonction` (fenêtre de comparaison, livrée).
