@@ -124,5 +124,7 @@ ShopWeek.lua
 ReserveBrowse.lua
 CompanionStates.lua
 TrackerGoals.lua
+ZoneMedals.lua
+CompanionRested.lua
 NamesES.lua
 Locales_es.lua
