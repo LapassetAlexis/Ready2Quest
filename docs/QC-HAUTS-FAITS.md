@@ -907,7 +907,7 @@ Relevés posés par ce fichier, faute de donnée complète dans la sauvegarde (l
 - `init_study` (code 248) — Première leçon / First Lesson — Finir une tâche d'étude — 5 points — `count, studyTasks, 1`
 - `init_radiant` (code 249) — Rayonnant ! / All Aglow! — Rendre ton compagnon Rayonnant — 5 points — `tally, radiant, 1, char`
 - `init_wish` (code 250) — À tes souhaits / Wish Granted — Combler une envie du compagnon — 5 points — `tally, wish, 1, char`
-- `init_treat` (code 251) — Petite douceur / Sweet Tooth — Donner une friandise — 5 points — `tally, treat, 1, char`
+- `init_treat` (code 251) — Petite douceur / A Little Treat — Donner une friandise — 5 points — `tally, treat, 1, char`
 - `init_hunt` (code 252) — Ouverture de la chasse / Open Season — Lancer le mode chasse — 5 points — `tally, huntStart, 1`
 - `init_release` (code 253) — Rendu à la nature / Back to the Wild — Relâcher un spécimen — 5 points — `tally, release, 1`
 - `init_shop` (code 254) — Premier achat / First Purchase — Acheter un article à l'Échoppe — 5 points — `count, shopBought, 1`
@@ -1047,7 +1047,7 @@ Choix faits au codage :
 - `day_weekly_10` (code 340) — Dix semaines bouclées / Ten Weeks Wrapped Up — Boucler toutes les missions de 10 semaines, 25 points, calcul `compteur`.
 - `day_weekly_25` (code 341) — Vingt-cinq semaines bouclées / Twenty-Five Weeks Wrapped Up — Boucler toutes les missions de 25 semaines, 50 points, calcul `compteur`.
 - `day_inn_100` (code 342) — Cent nuits à l'auberge / A Hundred Nights at the Inn — Passer 100 jours à l'auberge, 25 points, calcul `retro`.
-- `day_inn_cards_10` (code 343) — Carte de fidélité / Loyalty Card — Remplir 10 cartes d'auberge, 10 points, calcul `retro`.
+- `day_inn_cards_10` (code 343) — Habitué de la maison / Regular Guest — Remplir 10 cartes d'auberge, 10 points, calcul `retro`.
 - `day_rare_100` (code 344) — Cent têtes mises à prix / A Hundred Bounties — Vaincre 100 ennemis rares, 25 points, calcul `retro`.
 - `day_played_30` (code 345) — Trente jours de route / Thirty Days on the Road — Jouer 30 jours différents (pas forcément d'affilée), 10 points, calcul `compteur`.
 - `day_played_100` (code 346) — Cent jours de route / A Hundred Days on the Road — Jouer 100 jours différents, 25 points, calcul `compteur`.

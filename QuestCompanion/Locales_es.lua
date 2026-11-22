@@ -4308,7 +4308,7 @@ ns.RegisterLocaleStrings("es", {
 	["FEAT_day_days_365"] = "Un año juntos",
 	["FEAT_day_inn_100"] = "Cien noches en la posada",
 	["FEAT_day_inn_30"] = "Habitual de la barra",
-	["FEAT_day_inn_cards_10"] = "Tarjeta de cliente",
+	["FEAT_day_inn_cards_10"] = "Cliente de la casa",
 	["FEAT_day_mission_1"] = "A sus órdenes",
 	["FEAT_day_mission_100"] = "Incansable",
 	["FEAT_day_mission_25"] = "De confianza",

@@ -46,7 +46,7 @@ local ROWS = {
 	shop_order_week = { 393, 10, "shop" }, shop_order_week_10 = { 394, 25, "shop" }, shop_arrivals_all = { 395, 25, "shop" },
 	shop_aids_100 = { 396, 10, "shop" },
 }
--- récompenses : titres, aides, cosmétiques à venir (contrat B2)
+-- récompenses : titres, aides, cosmétiques promis (contrat B2)
 local TITLES = { init_all = 50, men_caught_10000 = 51, men_elite_150 = 52, men_medal5_all = 53, spec_study_250 = 54,
 	spec_bond_10 = 55, shiny_found_250 = 56, shiny_cap_100 = 57, shop_order_150 = 58 }
 local AIDS = { init_net = "appat:2", init_all = "lasso:2", men_caught_500 = "lasso:1", men_caught_2000 = "sifflet:1",
@@ -115,8 +115,10 @@ do
 			local aids = nil
 			for aid, n in pairs(reward.aids or {}) do aids = aid .. ":" .. n end
 			s.ok(id .. " aides", aids == AIDS[id], aids)
-			local soon = reward.soon and (reward.soon[1] .. ":" .. reward.soon[2]) or nil
-			s.ok(id .. " cosmétique à venir", soon == SOON[id], soon)
+			-- à venir (reward.soon), ou déjà fabriqué : le moteur l'a alors changé en reward.cosmetic
+			local pair = reward.soon or reward.cosmetic
+			local soon = pair and (pair[1] .. ":" .. pair[2]) or nil
+			s.ok(id .. " cosmétique promis", soon == SOON[id], soon)
 			for _, glyph in ipairs({ "\226\152\133", "\226\152\134", "\226\156\147", "\226\156\151" }) do
 				s.ok(id .. " glyphe", not (fr["FEAT_" .. id] .. fr["FEATD_" .. id] .. en["FEAT_" .. id] .. en["FEATD_" .. id]):find(glyph, 1, true))
 			end
@@ -134,7 +136,7 @@ do
 		end
 	end
 	s.ok("noms anglais uniques", #dup == 0, table.concat(dup, ", "))
-	s.check("[B2a] 99 lignes : code, points, catégorie, portée, noms et descriptions FR/EN/ES, titres, aides, cosmétiques à venir")
+	s.check("[B2a] 99 lignes : code, points, catégorie, portée, noms et descriptions FR/EN/ES, titres, aides, cosmétiques promis")
 
 	s = Steps()
 	for _, code in ipairs({ 50, 51, 52, 53, 54, 55, 56, 57, 58 }) do
