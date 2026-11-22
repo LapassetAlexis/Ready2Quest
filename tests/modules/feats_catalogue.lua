@@ -151,7 +151,9 @@ do
 			-- 3.4.0 : étude et lien (181 à 187) ; 3.6.0 : rangs longs (188 à 194)
 			if not (before and (def.id == "fun_unlucky" or def.id == "fun_winter_veil" or def.id == "men_size_giant"
 				or def.id == "men_size_tiny" or def.id == "soc_trade_1" or def.id == "soc_trade_10"
-				or def.id == "soc_trade_new" or def.n >= 181)) then defs[#defs + 1] = def end
+				or def.id == "soc_trade_new" or def.n >= 181))
+				-- 3.7.0 : les lignes de la deuxième édition (codes 244 et suivants) ont leurs propres tests
+				and def.n < 244 then defs[#defs + 1] = def end
 		end
 		table.sort(defs, function(a, b) return a.n < b.n end)
 		local lines = {}
@@ -159,6 +161,10 @@ do
 			local pending = def.pending == true or (before and I.UNPENDED[def.id]) or false
 			local reward = def.reward
 			if before and def.id == "meta_hero" then reward = { title = reward.title } end
+			-- 3.7.0 : « Un nom qui circule » reçoit le cadre de fiche bronze (à venir) : relue sans lui
+			if def.id == "meta_points_500" and type(reward) == "table" and reward.soon and reward.soon[2] == "card_rank_bronze" then
+				reward = nil
+			end
 			-- 3.0.0 (bêta 6) : « Au galop » ne lit plus la statistique 339 (collection du compte)
 			local crit = def.crit
 			if before and def.id == "char_mount" then crit = { "stat", { 339 }, 1, alt = "mountSeen" } end
@@ -383,7 +389,7 @@ do
 			end
 		end
 	end
-	Check("[TIT] 52 titres (3.6.0 : + 12), formes FR m/f et EN conformes au document (§4.1)", rows == 52 and #bad == 0,
+	Check("[TIT] titres du registre (52 en 3.6.0 ; 3.7.0 : + T59, T60, T64 à T72), formes FR m/f et EN conformes au document (§4.1)", rows >= 63 and rows == (function() local n = 0; for _ in pairs(T_) do n = n + 1 end; return n end)() and #bad == 0,
 		rows .. " lignes ; " .. table.concat(bad, ", "))
 	local count, shape = 0, {}
 	for code, t in pairs(T_) do
@@ -403,7 +409,7 @@ do
 		if t.enf and code ~= 35 and code ~= 37 then shape[#shape + 1] = code .. " enf" end
 	end
 	Check("[TIT] codes 1 à 49 et 61 à 63 uniques, un seul %s par forme, place cohérente, source citée, anglais genré pour 35 et 37 seulement",
-		count == 52 and #shape == 0 and T_[35].enf and T_[37].enf, table.concat(shape, ", "))
+		count >= 63 and #shape == 0 and T_[35].enf and T_[37].enf, table.concat(shape, ", "))
 	-- chaque titre d'une ligne existe une fois au registre, et chaque titre a sa ligne (sa source)
 	local used, missing = {}, {}
 	for _, d in ipairs(NS:FeatDefs()) do
@@ -563,7 +569,7 @@ do
 		table.concat(raw, " | ") .. " / " .. R("men_species_500"))
 	local pending, kinds = 0, true
 	for _, def in ipairs(NS:FeatDefs()) do
-		if def.reward and def.reward.soon then
+		if def.reward and def.reward.soon and def.n < 244 and def.id ~= "meta_points_500" then   -- (3.7.0 : la deuxième édition attend ses cosmétiques de l'étape 2)
 			pending = pending + 1
 			if def.reward.soon[1] ~= "cardbg" and def.reward.soon[1] ~= "cardframe" then kinds = false end
 		end

@@ -88,6 +88,18 @@ local TITLES = {
 	[62] = { pos = "suf", src = "men_patron_50",   m = "%s le Grand Mécène", f = "%s la Grande Mécène", en = "%s the Great Patron" },
 	[63] = { pos = "suf", src = "men_patron_100",  m = "%s, Bienfaiteur des créatures", f = "%s, Bienfaitrice des créatures",
 		en = "%s, Benefactor of Creatures" },
+	-- 3.7.0 : deuxième édition, catalogue Compagnon et voyage, Entre dresseurs, Insolite, Tours de force, Grands hauts faits (FeatsCatCompagnon.lua)
+	[59] = { pos = "suf", src = "zone_seal_all",     m = "%s, Gardien d'Azeroth", f = "%s, Gardienne d'Azeroth", en = "%s, Guardian of Azeroth" },
+	[60] = { pos = "suf", src = "comp_radiant_3000", m = "%s le Rayonnant", f = "%s la Rayonnante", en = "%s the Radiant" },
+	[64] = { pos = "suf", src = "comp_wish_250",     m = "%s l'Attentionné", f = "%s l'Attentionnée", en = "%s the Thoughtful" },
+	[65] = { pos = "suf", src = "comp_wardrobe_100", m = "%s l'Élégant", f = "%s l'Élégante", en = "%s the Elegant" },
+	[66] = { pos = "suf", src = "soc_trade_25",      m = "%s le Marchand", f = "%s la Marchande", en = "%s the Merchant" },
+	[67] = { pos = "suf", src = "soc_mentor_10",     m = "%s le Passeur", f = "%s la Passeuse", en = "%s the Torchbearer" },
+	[68] = { pos = "suf", src = "fos_pioneer",       m = "%s le Pionnier", f = "%s la Pionnière", en = "%s the Pioneer" },
+	[69] = { pos = "suf", src = "meta_points_5000",  m = "%s le Renommé", f = "%s la Renommée", en = "%s the Renowned" },
+	[70] = { pos = "suf", src = "meta_soc",          m = "%s le Sociable", f = "%s la Sociable", en = "%s the Sociable" },
+	[71] = { pos = "suf", src = "meta_fun",          m = "%s l'Original", f = "%s l'Originale", en = "%s the Eccentric" },
+	[72] = { pos = "pre", src = "meta_all",          m = "Dresseur accompli %s", f = "Dresseuse accomplie %s", en = "Accomplished Trainer %s" },
 }
 
 -- Mémoire : chaque titre devient un tableau de 6 cases (pos, src, m, f, en,

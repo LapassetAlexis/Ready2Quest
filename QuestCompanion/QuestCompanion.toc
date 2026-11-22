@@ -89,6 +89,7 @@ Tally.lua
 FeatsData.lua
 FeatsCatMenagerie.lua
 FeatsCatJeu.lua
+FeatsCatCompagnon.lua
 Feats.lua
 FeatsCosmetics.lua
 JournalFeats.lua

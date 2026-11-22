@@ -134,8 +134,8 @@ do
 			if not def.file:find("Libs\\Socle\\Media\\" .. def.tex, 1, true) then bad[#bad + 1] = def.id .. " chemin" end
 		end
 	end
-	local soon = 0
-	for _, def in ipairs(NS:FeatDefs()) do if def.reward and def.reward.soon then soon = soon + 1 end end
+	local soon = 0   -- (3.7.0 : hors deuxième édition, dont les cosmétiques viennent à l'étape 2)
+	for _, def in ipairs(NS:FeatDefs()) do if def.reward and def.reward.soon and def.n < 244 and def.id ~= "meta_points_500" then soon = soon + 1 end end
 	Check("[L36B] 4 fonds et 3 cadres de fiche : donnés par les 7 hauts faits promis, nommés FR/EN, textures dans le socle des deux addons",
 		#BG == 4 and #FR == 3 and #bad == 0 and soon == 0, table.concat(bad, ", "))
 	local src = (Read("tools/gen_ui_assets.py") or "")

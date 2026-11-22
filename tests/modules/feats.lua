@@ -1372,7 +1372,15 @@ do
 		s.ok("16 catégories, 3 familles", count == 16 and #NS.FEAT_FAMILIES == 3)
 		s.ok("« Entre dresseurs » (soc)", NS.L.FEATC_soc == "Entre dresseurs" and NS:FeatCategory("soc").scope == "account")
 		s.ok("catégorie vide non listée", (function()
-			for _, id in ipairs(NS:FeatCategories()) do if id == "init" or id == "fos" then return false end end
+			-- (3.7.0 : chaque catégorie listée a au moins une ligne ; init et fos se remplissent avec la deuxième édition)
+			local used = {}
+			for _, def in ipairs(NS:FeatDefs()) do used[def.cat] = true end
+			for _, id in ipairs(NS:FeatCategories()) do if not used[id] then return false end end
+			for _, cat in ipairs(NS.FEAT_CATEGORIES) do
+				local listed = false
+				for _, id in ipairs(NS:FeatCategories()) do if id == cat.id then listed = true end end
+				if used[cat.id] ~= listed and not (used[cat.id] == nil and not listed) then return false end
+			end
 			return true
 		end)())
 		s.check("[HF37] 16 catégories en trois familles (dresseur, compagnon et voyage, aventure) : portée, icône du client, noms FR/EN")
@@ -1433,6 +1441,10 @@ do
 		s.ok("pas de liste cochée, pas de suivi", NS:FeatChecklist(a) == nil and NS:FeatFollow("test_hid_a") == false)
 		local savedRandom = math.random
 		math.random = function(n) return n end
+		-- (3.7.0 : les secrets du catalogue mis de côté, indices déjà révélés : restent les deux du test)
+		local hintStore = NS:FeatStore("account")
+		hintStore.hints = hintStore.hints or {}
+		for _, d in ipairs(NS:FeatDefs()) do if d.hidden and not d.id:find("^test_") then hintStore.hints[d.id] = 1 end end
 		local hint1, id1 = NS:FeatHintNext()
 		local hint2, id2 = NS:FeatHintNext()
 		local none = NS:FeatHintNext()
@@ -1751,7 +1763,13 @@ do
 		local progress = NS.FeatProgress
 		NS.FeatProgress = function(self, def, ...) seen[#seen + 1] = def; return progress(self, def, ...) end
 		NS:FeatEvaluate({ tally = true })
-		local tallyOnly = #seen
+		-- (3.7.0 : le catalogue a des lignes sur compteurs : la passe « tally » ne lit qu'elles)
+		local tallyOnly = 0
+		for _, def in ipairs(seen) do
+			local sub = false
+			for _, topic in ipairs(def.topicList) do if topic == "tally" or topic == "feat" then sub = true end end
+			if not sub then tallyOnly = tallyOnly + 1 end
+		end
 		seen = {}
 		NS:FeatEvaluate({ mission = true })
 		local wrong = {}
@@ -1761,7 +1779,7 @@ do
 			if not sub then wrong[#wrong + 1] = def.id end
 		end
 		NS.FeatProgress = progress
-		Check("[HF37] coût : une passe ne lit que les lignes abonnées au sujet (index sujet -> lignes) ; aucune ligne tally au catalogue",
+		Check("[HF37] coût : une passe ne lit que les lignes abonnées au sujet (index sujet -> lignes) ; la passe « tally » ne lit que les lignes sur compteurs",
 			tallyOnly == 0 and #seen > 0 and #wrong == 0, table.concat(wrong, ", "))
 	end
 
