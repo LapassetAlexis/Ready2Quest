@@ -133,5 +133,6 @@ CompanionRested.lua
 DiscordCopy.lua
 Souvenir.lua
 WorldDaily.lua
+TripRecap.lua
 NamesES.lua
 Locales_es.lua

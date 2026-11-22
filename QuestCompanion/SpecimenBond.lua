@@ -198,7 +198,10 @@ function ns:SpecimenBondAdd(source, n)
 	if after > before then
 		-- le cache des effets suit le niveau (pas chaque point)
 		Touch(self)
-		self:Print(self:F("BOND_UP", self:SpecimenDisplayName(spec), self:SpecimenBondName(after)))
+		-- 3.7.0 : muette par défaut, dans le bilan de sortie (TripRecap.lua)
+		if not self.TripChatOn or self:TripChatOn() then
+			self:Print(self:F("BOND_UP", self:SpecimenDisplayName(spec), self:SpecimenBondName(after)))
+		end
 		if ns.FireCallback then ns:FireCallback("BOND", "level", spec.id, after) end
 	end
 	if newDay then Keepsake(self, spec) end

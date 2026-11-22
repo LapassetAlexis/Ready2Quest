@@ -276,6 +276,9 @@ local function Distinct(self)
 end
 ns.SpecimenStudyDistinct = Distinct
 
+-- 3.7.0 : les lignes de chat des tâches d'étude, muettes par défaut (TripRecap.lua)
+local function Chat(self) return not self.TripChatOn or self:TripChatOn() end
+
 -- À chaque capture faite soi-même : l'étude, ses paiements, les records
 function ns:SpecimenStudyNote(spec)
 	if type(spec) ~= "table" or spec.origin ~= "capture" or ns.studyDormant then return nil end
@@ -297,7 +300,7 @@ function ns:SpecimenStudyNote(spec)
 			row.paid = With(row.paid, index)
 			gained = gained + ns.STUDY_REWARD.task
 			self:PaillettesAdd(ns.STUDY_REWARD.task, "study")
-			self:Print(self:F("STUDY_DONE", name, L["STUDY_" .. task], ns.STUDY_REWARD.task))
+			if Chat(self) then self:Print(self:F("STUDY_DONE", name, L["STUDY_" .. task], ns.STUDY_REWARD.task)) end
 			if self.MissionEvent then pcall(self.MissionEvent, self, "studyTask", 1) end
 		end
 	end
@@ -307,7 +310,7 @@ function ns:SpecimenStudyNote(spec)
 		row.paid = With(row.paid, masteredBit)
 		gained = gained + ns.STUDY_REWARD.mastered
 		self:PaillettesAdd(ns.STUDY_REWARD.mastered, "study")
-		self:Print(self:F("STUDY_MASTER", name, ns.STUDY_REWARD.mastered))
+		if Chat(self) then self:Print(self:F("STUDY_MASTER", name, ns.STUDY_REWARD.mastered)) end
 		-- (haut fait : la source « studyMastered » relit le nombre d'espèces maîtrisées)
 		if self.FeatTouch and not ns.featsDormant then pcall(self.FeatTouch, self, "capture") end
 	end
@@ -315,7 +318,7 @@ function ns:SpecimenStudyNote(spec)
 		row.paid = With(row.paid, ShinyBit())
 		gained = gained + ns.STUDY_REWARD.shiny
 		self:PaillettesAdd(ns.STUDY_REWARD.shiny, "study")
-		self:Print(self:F("STUDY_DONE", name, L.STUDY_shiny, ns.STUDY_REWARD.shiny))
+		if Chat(self) then self:Print(self:F("STUDY_DONE", name, L.STUDY_shiny, ns.STUDY_REWARD.shiny)) end
 	end
 	if record and zi then
 		self:Print(self:F(record == "small" and "STUDY_RECORD_SMALL" or "STUDY_RECORD_BIG", name, zi))

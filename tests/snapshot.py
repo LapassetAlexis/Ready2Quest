@@ -57,7 +57,9 @@ Scènes (Snap.scenes dans tests/snapshot.lua ; « list » les donne toutes) :
   qc-souvenir-trainer, qc-souvenir-noshot, qc-discord-copy ; 3.7 (le monde bouge :
   pullulation, type et créature de la semaine) : qc-journal-day-37 (et
   -scrolled, défilée à la molette), qc-journal-menagerie-swarm, qc-tracker-world,
-  qc-tooltip-world, qc-journal-community-week. Un cadre qui coupe ses enfants
+  qc-tooltip-world, qc-journal-community-week ; 3.7 (bilan de sortie) :
+  qc-trip-recap (le bandeau, « Détail »), qc-journal-trip (page « Dernière sortie »),
+  qc-companion-hello (le bonjour utile). Un cadre qui coupe ses enfants
   (SetClipsChildren) coupe aussi l'aperçu.
 Ne pas versionner les HTML produits.
 """

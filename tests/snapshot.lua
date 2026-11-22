@@ -1992,6 +1992,21 @@ Snap.scenes["qc-companion-talk"] = function(T)
 	return Snap.Group(frame, ns.companionBubble), "QuestCompanion : il parle (bulle forgée, lueur ronde, reflet)"
 end
 
+-- 3.7.0, étape 3, S3 : la bulle de bonjour dit où l'on en était (TripRecap.lua),
+-- par la vraie connexion (somnolent après une absence) : 98 espèces sur 100
+Snap.scenes["qc-companion-hello"] = function(T)
+	local ns, frame = QCCompanion(T)
+	local dormant, rested = ns.featsDormant, ns.companionRestedDormant
+	ns.featsDormant, ns.companionRestedDormant = false, true
+	local capture = ns:CaptureData()
+	capture.creatures, capture.caught = {}, 0
+	for index = 1, 98 do capture.creatures[80000 + index] = { name = "Bête", normal = true, stars = 1 } end
+	ns:CompanionData().lastSeen = (time() or 0) - 10 * 3600
+	ns:CompanionLogin()
+	ns.featsDormant, ns.companionRestedDormant = dormant, rested
+	return Snap.Group(frame, ns.companionBubble), "QuestCompanion : bulle de bonjour, le haut fait le plus proche (3.7)"
+end
+
 -- 3.1.0 (bêta 9) : les pastilles de la capture express sous le compagnon,
 -- sous l'étiquette d'humeur, la plus récente contre lui ; la bulle au-dessus
 -- et le filet à côté restent libres
@@ -2299,6 +2314,24 @@ Snap.scenes["qc-feat-medium"] = function(T)
 	ns:JournalToastPush({ kind = "feat", title = ns.L.FEAT_TOAST_TITLE, name = "Cinq cents prises", size = "medium",
 		icon = "Interface\\Icons\\INV_Misc_Map_01", points = 10, sub = ns:F("FEAT_GLITTER_N", 5) .. " · Lasso ×1" })
 	return Centered(ns.journalToast), "QuestCompanion : bandeau moyen (10 points, ligne de récompense, 3.7)"
+end
+
+-- 3.7.0, étape 3, S3 : bilan de sortie (TripRecap.lua) : le bandeau moyen, d'autres textes, « Détail »
+local QC_TRIP_RECAP = { at = 1000, ended = 1000 + 5040, dur = 5040, captures = 14, species = 3, shinies = 1, glitter = 31,
+	study = 4, bond = 7, by = { study = 12, milestone = 10, feat = 5, capture = 4 },
+	best = { name = "Raptor de Strangleronce (brillant)", stars = 3, shiny = true, size = "giant" }, feats = { "men_caught_100" } }
+Snap.scenes["qc-trip-recap"] = function(T)
+	local ns = QCBannerWorld(T)
+	ns:TripBanner(QC_TRIP_RECAP)
+	return Centered(ns.journalToast), "QuestCompanion : bilan de sortie (bandeau moyen, « Détail », 3.7)"
+end
+
+Snap.scenes["qc-journal-trip"] = function(T)
+	local frame = QCJournal(T, "evolution", function(ns)
+		ns:CharData().tripLast = QC_TRIP_RECAP
+	end)
+	T.QNS:TripDetailOpen()
+	return frame, "QuestCompanion : carnet, page « Dernière sortie » (3.7)"
 end
 
 Snap.scenes["qc-feat-big-sig"] = function(T)

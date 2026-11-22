@@ -153,6 +153,9 @@ if ns.AddOptionPage then
 				describe = function() return ns.L.OPT_ANNOUNCE_GROUP_DESC end },
 			{ key = "announceGuild", label = "OPT_ANNOUNCE_GUILD", kind = "bool",
 				describe = function() return ns.L.OPT_ANNOUNCE_GUILD_DESC end },
+			-- 3.7.0 : lignes de chat de l'étude, du lien et des paliers (TripRecap.lua)
+			{ key = "tripChat", label = "OPT_TRIP_CHAT", kind = "bool",
+				describe = function() return ns.L.OPT_TRIP_CHAT_DESC end },
 		},
 		-- bouton construit par Options.lua (L.OPT_ACTION_JOURNAL), action
 		-- traitée par le relais de RunOptionAction plus bas

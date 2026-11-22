@@ -3580,6 +3580,13 @@ function ns:CompanionTryGoal()
 		if not item.ready and item.need - item.have <= (GOAL_NEAR[item.source] or 3) then target = item; break end
 	end
 	if not target then
+		-- 3.7.0 : le haut fait suivi ou le plus proche, dans le même créneau (TripRecap.lua)
+		local line, args
+		if self.TripGoalLine then line, args = self:TripGoalLine() end
+		if line and self:CompanionSay("GOAL", { line = line, args = args, cd = "goal" }) then
+			rt.goalAt = now + COOLDOWNS.goal
+			return true
+		end
 		rt.goalAt = now + 300      -- rien de proche : on regardera plus tard
 		return false
 	end
@@ -3659,7 +3666,10 @@ function ns:CompanionLogin()
 	elseif first then
 		self:CompanionSay("HELLO", { force = true, args = { self:CompanionName() } })
 	elseif data.sleepy then
-		self:CompanionSay("MISSED", { force = true, line = rested })
+		-- 3.7.0 : sans réplique du repos, le bonjour dit où il en était (TripRecap.lua)
+		local line, args = rested, nil
+		if not line and self.TripGreeting then line, args = self:TripGreeting() end
+		self:CompanionSay("MISSED", { force = true, line = line, args = args })
 	end
 	self:CompanionRefreshLabels()
 	return away
