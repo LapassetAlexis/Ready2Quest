@@ -1788,7 +1788,7 @@ local function BuildDay(self, frame, content)
 	-- 3.7.0 : la page défile à la molette (l'encart « Aujourd'hui en Azeroth »
 	-- la fait déborder) : ce qui sort de la bande sous l'en-tête est coupé
 	pane:SetPoint("TOPLEFT", content, "TOPLEFT", 0, TOP + MIS.clipTop)
-	pane:SetPoint("BOTTOMRIGHT", content, "BOTTOMRIGHT", 0, 0)
+	pane:SetPoint("BOTTOMRIGHT", content, "BOTTOMRIGHT", 0, frame.footer and FOOTER_H or 0)
 	if pane.SetClipsChildren then pane:SetClipsChildren(true) end
 	frame.day = pane
 	local rightX, rightW = MIS.rightX, MIS.rightW
@@ -3043,8 +3043,10 @@ local function RefreshDay(self, frame)
 	local notches = math.max(0, math.floor(tonumber(frame.offset) or 0))
 	LayoutDay(pane, frame.content, notches * step)
 	local bottom = math.min(pane.missionsBottom or 0, pane.pantryBottom or 0) - notches * step
+	-- le bas visible : le haut du pied (le pied est posé dans le contenu)
 	local height = tonumber(frame.content.GetHeight and frame.content:GetHeight()) or 0
-	if height <= 0 then height = HEIGHT - FOOTER_H end
+	if height <= 0 then height = HEIGHT end
+	if frame.footer then height = height - FOOTER_H end
 	local max = math.max(0, math.ceil((-(height - MIS.pad) - bottom) / step))
 	pane.scrollMax = max
 	if notches > max then

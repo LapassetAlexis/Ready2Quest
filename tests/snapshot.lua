@@ -347,6 +347,30 @@ function Snap.LiveLevel(frame)
 	return level + 1
 end
 
+-- 3.7.0 : la coupe d'un cadre (SetClipsChildren, la page Missions qui
+-- défile) : le rectangle commun à tous les ancêtres qui coupent (le cadre
+-- propriétaire d'une texture ou d'un texte compris), ou nil
+local function ClipRect(region, ctx)
+	local node = region.mockParent
+	local clip, guard = nil, 0
+	while node and guard < 60 do
+		if node.clipsChildren then
+			local r = Snap.Rect(node, ctx)
+			if r then
+				if not clip then
+					clip = { left = r.left, top = r.top, right = r.left + r.width, bottom = r.top + r.height }
+				else
+					clip.left, clip.top = math.max(clip.left, r.left), math.max(clip.top, r.top)
+					clip.right, clip.bottom = math.min(clip.right, r.left + r.width), math.min(clip.bottom, r.top + r.height)
+				end
+			end
+		end
+		node = node.mockParent
+		guard = guard + 1
+	end
+	return clip
+end
+
 function Snap.Render(root, opts)
 	opts = opts or {}
 	local ctx = { memo = {}, screen = opts.screen or Snap.SCREEN, root = root }
@@ -358,11 +382,17 @@ function Snap.Render(root, opts)
 		if Snap.Visible(region, root) then
 			local rect = Snap.Rect(region, ctx)
 			local drawable = IsRegion(region) or (region.kind == "EditBox" and region.text ~= "")
+			local clip = rect and ClipRect(region, ctx)
+			-- tout entier hors de la coupe : pas dessiné
+			if clip and (rect.left >= clip.right or rect.left + rect.width <= clip.left
+				or rect.top >= clip.bottom or rect.top + rect.height <= clip.top) then
+				drawable = false
+			end
 			if rect and drawable and region.drawLayer ~= "HIGHLIGHT" and rect.width >= 0 and rect.height >= 0 then
 				local frame = IsRegion(region) and region.mockParent or region
 				local strata, level = FrameOrder(frame, orderMemo)
 				items[#items + 1] = {
-					region = region, rect = rect,
+					region = region, rect = rect, clip = clip,
 					key = { strata, level, frame and frame.mockId or 0,
 						IsRegion(region) and (LAYER[region.drawLayer or "ARTWORK"] or 3) or 6,
 						tonumber(region.subLevel) or 0, region.mockId or 0 },
@@ -391,6 +421,14 @@ function Snap.Render(root, opts)
 		local alpha = EffectiveAlpha(region)
 		local pos = string.format("left:%.1fpx;top:%.1fpx;width:%.1fpx;height:%.1fpx", r.left + ox, r.top + oy,
 			math.max(0, r.width), math.max(0, r.height))
+		local cut = item.clip
+		if cut then
+			local top, left = math.max(0, cut.top - r.top), math.max(0, cut.left - r.left)
+			local bottom, right = math.max(0, r.top + r.height - cut.bottom), math.max(0, r.left + r.width - cut.right)
+			if top > 0 or left > 0 or bottom > 0 or right > 0 then
+				pos = pos .. string.format(";clip-path:inset(%.1fpx %.1fpx %.1fpx %.1fpx)", top, right, bottom, left)
+			end
+		end
 		if region.kind == "Texture" then
 			local style, file = TextureStyle(region, alpha)
 			-- texture retournée par SetTexCoord (haut et bas échangés), tournée
@@ -2548,6 +2586,138 @@ Snap.scenes["qc-capture-express-suspense"] = function(T)
 	ns:CaptureExpressUpdate(ns.Now() + 0.3)
 	return Snap.Group(frame, ns.captureExpressFeed), "QuestCompanion : capture express, le filet tremble (3.7)"
 end
+
+-- 3.7.0, chantier E2 : le monde bouge (WorldDaily.lua). Le module est réveillé
+-- (le banc l'endort) ; le jour et la semaine sont choisis pour retrouver la
+-- maquette : une semaine des Bêtes dont la créature des niveaux 20 à 40 est le
+-- Raptor de Strangleronce, un jour où la pullulation des Tarides est le Kodo
+-- des Tarides (la maquette invente un « Raptor des Tarides » que la table n'a
+-- pas). Remise à zéro de la semaine un mardi.
+local function WorldAwake(ns, opts)
+	opts = opts or {}
+	ns.worldDailyDormant = nil
+	local week, day, fallback = nil, "2026-11-22", nil
+	for k = 2900, 9900 do
+		local id = "r" .. k
+		if ns:WorldWeekType(id) == "beast" then
+			fallback = fallback or id
+			if ns:WorldWeekCreature(2, id) == 685 then week = id; break end
+		end
+	end
+	week = week or fallback
+	local base = os.time({ year = 2026, month = 11, day = 22, hour = 12 })
+	for n = 0, 900 do
+		day = os.date("%Y-%m-%d", base + n * 86400)
+		ns.WorldDailyReset()
+		if ns:WorldSwarm(1413, day) == 3236 then break end
+	end
+	ns.WorldDay = function() return day end
+	ns.WorldWeek = function() return week end
+	ns.WorldDailyReset()
+	-- le jour de la remise à zéro (le faux client n'en a pas) : un mardi
+	ns.WorldWeekEndText = function(self) return self:F("WORLD_TYPE_UNTIL", ns.L.WORLD_WD_3) end
+	if opts.best then
+		local npc = ns:WorldWeekCreature(2)
+		local id = ns:SpecimenAdd({ npc = npc, zone = 1434, stars = 2, size = "large", origin = "trade" })
+		local spec = ns:SpecimenGet(id)
+		spec.zi = 112
+		ns:WorldWeekRecord().best[npc] = { stars = 2, size = "large", zi = 112, id = id }
+	end
+	-- le bouton « Carte souvenir » ne vient qu'avec ns.SouvenirShow (autre chantier)
+	if opts.souvenir then ns.SouvenirShow = function() end end
+	return ns
+end
+
+-- page Missions : « Aujourd'hui en Azeroth » en tête, le reste descend
+Snap.scenes["qc-journal-day-37"] = function(T)
+	local frame = Snap.scenes["qc-journal-day"](T)
+	local ns = T.QNS
+	WorldAwake(ns, { best = true, souvenir = true })
+	ns:RefreshJournal()
+	return frame, "QuestCompanion : carnet, Missions, « Aujourd'hui en Azeroth » (3.7)"
+end
+-- la même, défilée jusqu'en bas (molette)
+Snap.scenes["qc-journal-day-37-scrolled"] = function(T)
+	local frame = Snap.scenes["qc-journal-day-37"](T)
+	local ns = T.QNS
+	for _ = 1, 20 do ns:ScrollJournal(-1) end
+	return frame, "QuestCompanion : carnet, Missions défilées jusqu'en bas (3.7)"
+end
+
+-- page Créatures : la ligne « Pullulation » de l'encadré
+Snap.scenes["qc-journal-menagerie-swarm"] = function(T)
+	local frame = MedalScene(T, 5)
+	local ns = T.QNS
+	WorldAwake(ns)
+	ns:RefreshJournal()
+	return frame, "QuestCompanion : carnet, Créatures, pullulation du jour (3.7)"
+end
+
+-- suivi : un haut fait suivi, la médaille de la zone, la pullulation, la créature de la semaine
+Snap.scenes["qc-tracker-world"] = function(T)
+	local ns = QCWorld(T)
+	ns:DB().journalTracker = true
+	FeatsWorld(ns)
+	WorldAwake(ns)
+	local capture, count = ns:CaptureData(), 0
+	local ids = {}
+	for npc, species in pairs(ns:BestiarySpecies(1413)) do
+		if type(species) == "table" and species.class ~= "worldboss" then ids[#ids + 1] = tonumber(npc) or npc end
+	end
+	table.sort(ids)
+	for _, npc in ipairs(ids) do
+		if count >= 5 then break end
+		if capture.creatures[npc] == nil then
+			capture.creatures[npc] = { name = "Créature " .. npc, normal = true, zoneID = 1413, at = 1, stars = 1 }
+			capture.count = capture.count + 1
+		end
+		count = count + 1
+	end
+	capture.serial = (tonumber(capture.serial) or 0) + 1
+	if ns.ZoneMedalReset then ns.ZoneMedalReset() end
+	for _, goal in ipairs(ns:JournalObjectives()) do
+		local id = goal.id
+		if not (id:find("^feat:") or id:find("^medal:") or id:find("^swarm:") or id:find("^week:")) then ns:JournalDismiss(id, true) end
+	end
+	ns:RefreshJournalTracker()
+	local tracker = ns.journalTracker
+	tracker:ClearAllPoints()
+	tracker:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	return tracker, "QuestCompanion : suivi, la zone, le jour, la semaine (3.7)"
+end
+
+-- infobulle : la série de chasse, puis la pullulation du jour
+Snap.scenes["qc-tooltip-world"] = function(T)
+	local ns = QCWorld(T)
+	WorldAwake(ns)
+	ns.SHINY_CHANCE = 1 / 150
+	local npc, name = ns:WorldSwarm(1413)
+	local guid = "Creature-0-0-0-0-" .. npc .. "-0000"
+	local data = ns:JournalData()
+	data.bestiary[1413][npc] = { name = name, seen = true, killed = 23 }
+	GameTooltip:ClearLines()
+	GameTooltip:AddLine(name, 1, 1, 1)
+	GameTooltip:AddLine("Niveau 19 Bête", 1, 1, 1)
+	local text, color = ns:BestiaryTooltipLine(guid)
+	if text then GameTooltip:AddLine(text, color[1], color[2], color[3]) end
+	local c = ns.Theme.GOLD
+	local chain = ns:BestiaryTooltipChain(guid)
+	if chain then GameTooltip:AddLine(chain, c[1], c[2], c[3]) end
+	local swarm = ns:WorldSwarmTooltip(guid)
+	if swarm then GameTooltip:AddLine(swarm, c[1], c[2], c[3]) end
+	local tip = Snap.Tooltip(GameTooltip, nil, 260)
+	tip:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	return tip, "QuestCompanion : infobulle, pullulation du jour (3.7)"
+end
+
+-- Communauté, onglet Discord : la tuile « Cette semaine »
+Snap.scenes["qc-journal-community-week"] = function(T) return OwnDraws(T, function(T)
+	return WithMultiLine(function()
+		local frame, ns = QCCommunity(T, "discord", function(ns) WorldAwake(ns, { best = true, souvenir = true }) end)
+		ns:CommunityWeekPaint()
+		return frame, "QuestCompanion : carnet, Communauté, prise de la semaine (3.7)"
+	end)
+end) end
 
 -- Thème d'une scène : « sobre:<scène> » ou « azeroth:<scène> » ; sans
 -- préfixe, Azeroth (le thème par défaut des deux addons). Rend le thème et

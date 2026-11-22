@@ -74,6 +74,8 @@ local FR = {
 	WORLD_WEEK_NOT_YET    = "%s · pas encore capturée",
 	WORLD_WEEK_REWARD     = "+%d paillettes à la première prise",
 	WORLD_WEEK_PAID       = "Prise de la semaine faite",
+	WORLD_WEEK_REWARD_SHORT = "+%d paillettes",
+	WORLD_WEEK_PAID_SHORT = "prise faite",
 	WORLD_WEEK_NONE       = "Aucune cette semaine",
 	WORLD_CATCH           = "%s, %s (%d)",
 	WORLD_STARS_1         = "%d étoile",
@@ -120,6 +122,8 @@ local EN = {
 	WORLD_WEEK_NOT_YET    = "%s · not caught yet",
 	WORLD_WEEK_REWARD     = "+%d glitter for the first catch",
 	WORLD_WEEK_PAID       = "Catch of the week done",
+	WORLD_WEEK_REWARD_SHORT = "+%d glitter",
+	WORLD_WEEK_PAID_SHORT = "caught",
 	WORLD_WEEK_NONE       = "None this week",
 	WORLD_CATCH           = "%s, %s (%d)",
 	WORLD_STARS_1         = "%d star",
@@ -730,7 +734,14 @@ function ns:WorldTodayPaint(pane)
 		week.extra:SetWidth(K.tileW - 2 * K.pad)
 	end
 	local rec = self:WorldWeekRecord()
-	week.extra:SetText(wnpc and (rec.paid and L.WORLD_WEEK_PAID or self:F("WORLD_WEEK_REWARD", W.weekGlitter)) or "")
+	-- à côté du bouton, en bref ; seule, en toutes lettres
+	local text = ""
+	if wnpc and souvenir then
+		text = rec.paid and L.WORLD_WEEK_PAID_SHORT or self:F("WORLD_WEEK_REWARD_SHORT", W.weekGlitter)
+	elseif wnpc then
+		text = rec.paid and L.WORLD_WEEK_PAID or self:F("WORLD_WEEK_REWARD", W.weekGlitter)
+	end
+	week.extra:SetText(text)
 	box.note:SetText(L.WORLD_NOTE)
 	return true
 end
