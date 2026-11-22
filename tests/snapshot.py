@@ -35,7 +35,8 @@ Scènes (Snap.scenes dans tests/snapshot.lua ; « list » les donne toutes) :
   r2q-exit-alert ; infobulles et divers : r2q-pace, r2q-minimap-tooltip, r2q-reward,
   r2q-settings-canvas ; QuestCompanion (3.1.0 : tout au thème forgé) : carnet
   qc-journal-creature, qc-journal-progress, qc-journal-day, qc-journal-menagerie,
-  qc-journal-guide, qc-journal-feats, qc-journal-reserve, qc-journal-juke,
+  qc-journal-guide, qc-journal-feats, qc-journal-feats-list, qc-journal-feats-secrets,
+  qc-journal-feats-fos, qc-journal-reserve, qc-journal-juke,
   qc-journal-confirm, qc-journal-winter, qc-journal-community-discord,
   qc-journal-community-avis (3.7.0 : page Communauté), qc-trainer, qc-trainer-style, qc-allure ; compagnon
   qc-companion, qc-companion-hover, qc-companion-frame-tint, qc-companion-talk,
@@ -47,7 +48,7 @@ Scènes (Snap.scenes dans tests/snapshot.lua ; « list » les donne toutes) :
   qc-capture-shiny, qc-capture-prep, qc-capture-batch3, qc-capture-batch6,
   qc-capture-chooser ; bandeaux qc-result-forge, qc-result-shiny-forge,
   qc-feat-forge, qc-feat-big-forge, qc-guild-forge, qc-tour-forge ; divers
-  qc-chest, qc-notify, qc-tracker, qc-tooltip.
+  qc-chest, qc-notify, qc-tracker, qc-tracker-feat, qc-tooltip.
 Ne pas versionner les HTML produits.
 """
 import base64

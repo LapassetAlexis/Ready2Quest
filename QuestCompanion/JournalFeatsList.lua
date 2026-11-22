@@ -157,7 +157,7 @@ local function BuildRow(parent, width)
 	row.desc = NoWrap(Theme.Text(row, Theme.F_SMALL, Theme.MUTED_LIGHT))
 	row.desc:SetJustifyH("LEFT")
 	row.desc:SetPoint("TOPLEFT", row, "TOPLEFT", R.textX, -R.descY)
-	row.line = NoWrap(Theme.Text(row, Theme.F_SMALL, Theme.GOLD_SOFT))
+	row.line = NoWrap(Theme.Text(row, Theme.F_SMALL, Theme.GOLD))
 	row.line:SetJustifyH("LEFT")
 	row.line:SetPoint("TOPLEFT", row, "TOPLEFT", R.textX, -R.lineY)
 	row.bar = Theme.CreateBar(row, R.barW, 4)
@@ -294,11 +294,11 @@ end
 local function Diamond(row, mode, pts)
 	-- mode : "got" (or plein, chiffre d'encre), "open" (ardoise), "secret" (?), "fos" (au trait or)
 	Theme.SetDiamond(row.diamond, mode == "fos")
-	local c = (mode == "got") and Theme.GOLD or (mode == "fos" and Theme.GOLD_LIGHT or Theme.EDGE)
+	local c = (mode == "got") and Theme.GOLD or (mode == "fos" and Theme.GOLD_LIGHT or Theme.CONTROL)
 	row.diamond:SetVertexColor(c[1], c[2], c[3], 1)
 	row.diamond:Show()
 	row.pts:SetText(mode == "secret" and "?" or (mode == "fos" and "" or tostring(pts or 0)))
-	Paint(row.pts, mode == "got" and Theme.INK or Theme.MUTED_LIGHT)
+	Paint(row.pts, mode == "got" and Theme.INK or Theme.PARCHMENT)
 	row.diaMode = mode
 end
 
@@ -467,13 +467,13 @@ function FP.FillRow(self, row, item, width, opts)
 		for _, pip in ipairs(row.pips or {}) do pip:Hide() end
 		name = self:FeatName(def)
 		if secret then
-			tags[#tags + 1] = { L.FEAT_TAG_SECRET, Theme.RANK.rare }
+			tags[#tags + 1] = { L.FEAT_TAG_SECRET, FP.SecretInk() }
 			local key = "FEATH_" .. tostring(def.id)
 			if self:FeatHintKnown(def.id) and L[key] ~= key then desc = self:F("FEAT_HINT_LINE", L[key])
 			else desc = L.FEAT_NO_HINT end
 			Diamond(row, "secret")
 		else
-			if def.hidden then tags[#tags + 1] = { L.FEAT_TAG_SECRET_FOUND, Theme.RANK.rare } end
+			if def.hidden then tags[#tags + 1] = { L.FEAT_TAG_SECRET_FOUND, FP.SecretInk() } end
 			if fos then tags[#tags + 1] = { L.FEAT_TAG_FOS, Theme.GOLD_LIGHT } end
 			if IsList(def) then tags[#tags + 1] = { L.FEAT_TAG_LIST, Theme.MUTED_LIGHT } end
 			desc = self:FeatDescription(def)
@@ -519,7 +519,7 @@ function FP.FillRow(self, row, item, width, opts)
 	if showBar then lineRight = math.min(lineRight, width - R.barR - R.barW - 8) end
 	row.line:SetWidth(math.max(60, lineRight - R.textX))
 	row.line:SetText(line)
-	Paint(row.line, fos and Theme.GOLD_SOFT or Theme.GOLD_SOFT)
+	Paint(row.line, Theme.GOLD)
 
 	row:SetSelected(opts.open and true or false)
 	row:SetAccent(nil)
@@ -764,6 +764,18 @@ function FP.LayoutList(self, frame, pane, scrollOnly)
 		FP.FillRow(self, row, item, width, { open = open, room = room, maxRows = maxRows, catTag = view.results })
 		y = y + h + K.rowGap
 		last = index
+	end
+	-- la ligne dépliée ne tient plus sous les autres : elle passe en tête
+	if frame.featsOpen and not scrollOnly and not view.relaid then
+		for index = last + 1, #items do
+			if KeyOf(items[index]) == frame.featsOpen then
+				frame.featsOffset = index - 1
+				view.relaid = true
+				FP.LayoutList(self, frame, pane, scrollOnly)
+				view.relaid = nil
+				return
+			end
+		end
 	end
 	for index = placed + 1, #view.rows do
 		local row = view.rows[index]

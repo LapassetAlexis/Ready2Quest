@@ -243,9 +243,11 @@ for from, to in pairs({ ["à"] = "a", ["â"] = "a", ["ä"] = "a", ["á"] = "a", 
 	["Ô"] = "o", ["Ö"] = "o", ["Õ"] = "o", ["Ú"] = "u", ["Ù"] = "u", ["Û"] = "u", ["Ü"] = "u", ["Ý"] = "y", ["Œ"] = "oe",
 	["Æ"] = "ae" }) do FOLD[from] = to end
 function FP.Fold(text)
-	text = tostring(text or ""):lower()
-	text = text:gsub("\226\128\153", "'")
+	-- (minuscules octet par octet, A à Z seulement : string.lower suit la
+	-- locale C de l'hôte et peut casser l'UTF-8)
+	text = tostring(text or ""):gsub("\226\128\153", "'")
 	text = text:gsub("[\195\197][\128-\191]", function(c) return FOLD[c] or c end)
+	text = text:gsub("[A-Z]", string.lower)
 	return text
 end
 
@@ -259,7 +261,7 @@ function FP.UpperFirst(text)
 end
 function FP.LowerFirst(text)
 	text = tostring(text or "")
-	return (text:gsub(FIRST, function(c) return LOWER[c] or c:lower() end, 1))
+	return (text:gsub(FIRST, function(c) return LOWER[c] or c:gsub("[A-Z]", string.lower) end, 1))
 end
 
 local function DateWith(format, at)
@@ -292,6 +294,10 @@ function FP.RewardLine(self, def)
 	if text == "" then return "" end
 	return self:F("FEAT_REWARD", text)
 end
+
+-- encre des étiquettes de secret : le violet « rare » du thème, éclairci (lisible sur son fond teinté)
+ns.FEAT_SECRET_LIFT = 0.3
+function FP.SecretInk() return Theme.Over(Theme.RANK.rare, Theme.WHITE, ns.FEAT_SECRET_LIFT) end
 
 -- un secret pas encore obtenu : rien de lui ne se montre
 function FP.Secret(self, def) return def and def.hidden and not self:FeatGot(def) end
@@ -659,7 +665,7 @@ function FP.BuildOverview(self, frame, pane, view)
 	for index = 1, K.rewards do
 		local line = {}
 		local y = K.rewardY + (index - 1) * K.rewardStep
-		line.reward = NoWrap(ui.Text(view, Theme.F_SMALL, Theme.GOLD_SOFT, W))
+		line.reward = NoWrap(ui.Text(view, Theme.F_SMALL, Theme.GOLD, W))
 		Place(line.reward, X, y)
 		line.line = NoWrap(ui.Text(view, Theme.F_SMALL, Theme.MUTED_LIGHT, W))
 		Place(line.line, X, y + 14)
@@ -692,11 +698,11 @@ function FP.BuildOverview(self, frame, pane, view)
 end
 
 local function Diamond(row, pts, got)
-	local c = got and Theme.GOLD or Theme.EDGE
+	local c = got and Theme.GOLD or Theme.CONTROL
 	row.diamond:SetVertexColor(c[1], c[2], c[3], 1)
 	row.diamond:Show()
 	row.pts:SetText(pts)
-	Paint(row.pts, got and Theme.INK or Theme.MUTED_LIGHT)
+	Paint(row.pts, got and Theme.INK or Theme.PARCHMENT)
 	if Theme.NoShadow and got then Theme.NoShadow(row.pts) end
 end
 FP.Diamond = Diamond
