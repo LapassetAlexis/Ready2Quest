@@ -21,7 +21,6 @@ local STILL_PENDING = {
 	soc_photo_1 = true,                                                                  -- étape 3 : carte souvenir
 	soc_code_1 = true, soc_code_5 = true,                                                -- étape 3 : code de dresseur
 	soc_mentor_1 = true, soc_mentor_5 = true, soc_mentor_10 = true,                      -- étape 3 : parrainage
-	soc_compare = true,                                                                  -- étape 2 : comparaison
 }
 local FIRST, LAST, RESERVED = 244, 447, 413    -- codes de la deuxième édition ; 413 : « Chasse en meute », hors du lot
 
@@ -84,6 +83,11 @@ do
 	end
 	for _, def in ipairs(defs) do
 		if def.cat == NS.FEAT_FOS then s.ok(def.id .. " : 0 point", def.pts == 0) else s.ok(def.id .. " : des points", def.pts > 0) end
+	end
+	-- tous les cosmétiques promis existent : plus aucune récompense « à venir »
+	for _, def in ipairs(defs) do
+		local soon = type(def.reward) == "table" and def.reward.soon
+		s.ok(def.id .. " : cosmétique encore à venir", not soon, soon and (tostring(soon[1]) .. ":" .. tostring(soon[2])))
 	end
 	Check("[L37] catalogue : 400 lignes, codes 244 à 447 sans le 413, 16 catégories garnies, lignes en attente = celles des étapes à venir",
 		#s.bad == 0, table.concat(s.bad, " ; "))

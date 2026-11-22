@@ -1100,7 +1100,7 @@ Choix faits au codage :
 - `soc_photo_1` (code 406) — Souriez ! / Say Cheese! — Créer une carte souvenir, 5 points, calcul `fonction` ; en attente (`pending`, étape suivante).
 - `soc_code_1` (code 407) — Carte de visite / Calling Card — Copier ton code de dresseur, 5 points, calcul `fonction` ; en attente (`pending`, étape suivante).
 - `soc_code_5` (code 408) — Correspondants / Pen Pals — Ouvrir 5 fiches reçues par code, 10 points, calcul `fonction` ; en attente (`pending`, étape suivante).
-- `soc_compare` (code 409) — Jeu des différences / Spot the Difference — Comparer tes hauts faits avec ceux d'un dresseur, 5 points, calcul `fonction` ; en attente (`pending`, étape suivante).
+- `soc_compare` (code 409) — Jeu des différences / Spot the Difference — Comparer tes hauts faits avec ceux d'un dresseur, 5 points, calcul `fonction` (fenêtre de comparaison, livrée).
 - `soc_mentor_1` (code 410) — Passeur / Word of Mouth — Faire découvrir Quest Companion à un joueur, 5 points, calcul `fonction` ; en attente (`pending`, étape suivante).
 - `soc_mentor_5` (code 411) — Cinq filleuls / Five Protégés — Faire découvrir Quest Companion à 5 joueurs, 10 points, calcul `fonction` ; en attente (`pending`, étape suivante).
 - `soc_mentor_10` (code 412) — Dix filleuls / Ten Protégés — Faire découvrir Quest Companion à 10 joueurs, 25 points, calcul `fonction` ; en attente (`pending`, étape suivante) ; récompense : titre « le Passeur ».

@@ -447,7 +447,7 @@ ns.FeatCatalog(function()
 		{ "soc_photo_1",          406, "soc", 5,  A, crit = T("souvenir", 1), desc = "FEATD_soc_photo_1", pending = true },
 		{ "soc_code_1",           407, "soc", 5,  A, crit = T("codeCopy", 1), desc = "FEATD_soc_code_1", pending = true },
 		{ "soc_code_5",           408, "soc", 10, A, crit = T("codeOpen", 5), desc = "FEATD_soc_code_5", pending = true },
-		{ "soc_compare",          409, "soc", 5,  A, crit = T("compare", 1), desc = "FEATD_soc_compare", pending = true },
+		{ "soc_compare",          409, "soc", 5,  A, crit = T("compare", 1), desc = "FEATD_soc_compare" },
 		{ "soc_mentor_1",         410, "soc", 5,  A, crit = TS("mentees", 1), desc = "FEATD_soc_mentor_1", series = "mentees", pending = true },
 		{ "soc_mentor_5",         411, "soc", 10, A, crit = TS("mentees", 5), desc = "FEATD_soc_mentor", series = "mentees", pending = true },
 		{ "soc_mentor_10",        412, "soc", 25, A, crit = TS("mentees", 10), desc = "FEATD_soc_mentor", series = "mentees", pending = true,

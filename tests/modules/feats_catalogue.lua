@@ -160,9 +160,10 @@ do
 			local pending = def.pending == true or (before and I.UNPENDED[def.id]) or false
 			local reward = def.reward
 			if before and def.id == "meta_hero" then reward = { title = reward.title } end
-			-- 3.7.0 : « Un nom qui circule » reçoit le cadre de fiche bronze (à venir) : relue sans lui
-			if def.id == "meta_points_500" and type(reward) == "table" and reward.soon and reward.soon[2] == "card_rank_bronze" then
-				reward = nil
+			-- 3.7.0 : « Un nom qui circule » reçoit le cadre de fiche bronze (à venir, puis fabriqué) : relue sans lui
+			if def.id == "meta_points_500" and type(reward) == "table" then
+				local pair = reward.soon or reward.cosmetic
+				if pair and pair[2] == "card_rank_bronze" then reward = nil end
 			end
 			-- 3.0.0 (bêta 6) : « Au galop » ne lit plus la statistique 339 (collection du compte)
 			local crit = def.crit
