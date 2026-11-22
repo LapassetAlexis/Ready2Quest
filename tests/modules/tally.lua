@@ -593,15 +593,16 @@ do
 	s.ok("déjà Rayonnant : pas de nouveau passage", NS:TallyGet("radiant", CH) == 1)
 	NS:CompanionData().sleepy = true
 	NS:CompanionWake(false)
-	s.ok("réveillé avec ses trois états : Rayonnant de nouveau", NS:TallyGet("radiant", CH) == 2)
+	-- 3.7.0 : la somnolence ne retire plus le bonus des états : le réveil n'est pas un passage
+	s.ok("réveillé avec ses trois états : déjà Rayonnant, pas de nouveau passage", NS:TallyGet("radiant", CH) == 1)
 	NS:CompanionWake(false)
-	s.ok("pas somnolent : rien", NS:TallyGet("radiant", CH) == 2)
+	s.ok("pas somnolent : rien", NS:TallyGet("radiant", CH) == 1)
 	NS:CompanionWishMet("hunger")
 	s.ok("envie comblée", NS:TallyGet("wish", CH) == 1)
 	needs.energy = 0
 	NS:CompanionData().wish = { key = "energy" }
 	NS:CompanionGrant("energy")
-	s.ok("envie comblée par l'état gagné", NS:TallyGet("wish", CH) == 2 and NS:TallyGet("radiant", CH) == 3)
+	s.ok("envie comblée par l'état gagné", NS:TallyGet("wish", CH) == 2 and NS:TallyGet("radiant", CH) == 2)
 	s.check("[TAL] wish, state, radiant (passage à Rayonnant, par l'état ou au réveil)")
 end
 

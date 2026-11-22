@@ -808,8 +808,8 @@ function ns:CompanionMood()
 	return ns.COMPANION_MOODS[self:CompanionStatesOn() + 1]
 end
 function ns:CompanionRadiant()
-	local data = self:CompanionData()
-	return not data.sleepy and self:CompanionStatesOn() == #NEED_KEYS
+	-- 3.7.0 : la somnolence du retour ne retire plus le bonus des états
+	return self:CompanionStatesOn() == #NEED_KEYS
 end
 
 -- ---------------------------------------------------------------------------
@@ -3650,13 +3650,15 @@ function ns:CompanionLogin()
 		data.sleepyLeft = Clamp(math.floor(away / 3600 * SLEEPY_PER_HOUR), SLEEPY_MIN, SLEEPY_MAX)
 		self:CompanionAnimate()
 	end
+	-- 3.7.0 : bien reposé (CompanionRested.lua) : les états, et la réplique du bonjour
+	local rested = self.CompanionRestedLogin and self:CompanionRestedLogin(away, first) or nil
 	-- première apparition : le tutoriel tient lieu de bonjour
 	if not data.tutoDone then
 		self:CompanionStartTutorial(false)
 	elseif first then
 		self:CompanionSay("HELLO", { force = true, args = { self:CompanionName() } })
 	elseif data.sleepy then
-		self:CompanionSay("MISSED", { force = true })
+		self:CompanionSay("MISSED", { force = true, line = rested })
 	end
 	self:CompanionRefreshLabels()
 	return away

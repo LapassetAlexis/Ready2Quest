@@ -376,7 +376,8 @@ do
 	S.ok("0 calme, 1 content, 2 joyeux, 3 rayonnant", table.concat(moods, ",") == "calm,happy,joyful,radiant", table.concat(moods, ","))
 	S.ok("Rayonnant : les trois", NS:CompanionRadiant() == true and NS:CompanionStatesOn() == 3)
 	NS:CompanionData().sleepy = true
-	S.ok("somnolent : l'humeur dit somnolent, pas Rayonnant", NS:CompanionMood() == "sleepy" and not NS:CompanionRadiant())
+	-- 3.7.0 : la somnolence garde son humeur mais ne retire plus le bonus des états
+	S.ok("somnolent : l'humeur dit somnolent, le bonus Rayonnant reste", NS:CompanionMood() == "sleepy" and NS:CompanionRadiant())
 	NS:CompanionData().sleepy = nil
 	S.ok("bonus : ×1,10 et ×1,20", NS.COMPANION_RADIANT.capture == 1.10 and NS.COMPANION_RADIANT.shiny == 1.20)
 	local info = { class = "normal", level = 20 }
