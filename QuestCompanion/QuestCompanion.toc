@@ -77,6 +77,7 @@ JournalWindow.lua
 JournalCompletion.lua
 JournalGuide.lua
 JournalAddons.lua
+JournalCommunity.lua
 MenagerieView.lua
 TrainerCard.lua
 TrainerCardStyle.lua

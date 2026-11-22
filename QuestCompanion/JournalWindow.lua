@@ -355,7 +355,10 @@ local LIST_W = math.floor((INNER - (LIST_COLS - 1) * 12) / LIST_COLS)
 -- 3.0.0 : « shop » (l'Échoppe du dresseur, JournalReserve.lua) a son onglet,
 -- juste après la Réserve (avant : une puce de la page Réserve)
 -- 3.0.1 : « addons » (Addons liés, JournalAddons.lua) sous le Guide
-local SECTIONS = { "evolution", "menagerie", "reserve", "shop", "feats", "day", "progress", "juke", "guide", "addons" }
+-- 3.7.0 : « community » (Communauté, JournalCommunity.lua) sous Addons liés ;
+-- le résumé du bas de la colonne descend d'une ligne
+local SECTIONS = { "evolution", "menagerie", "reserve", "shop", "feats", "day", "progress", "juke", "guide", "addons",
+	"community" }
 ns.JOURNAL_SECTIONS = SECTIONS
 local MEN_STATES = { "all", "todo", "pinned", "captured", "missing", "tokill", "shiny", "study" }
 local MEN_RANKS = { "all", "normal", "elite", "rare", "boss" }

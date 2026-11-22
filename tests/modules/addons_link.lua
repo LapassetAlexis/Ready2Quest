@@ -90,8 +90,9 @@ do
 		local f = A.Open()
 		local item, guide = f.sections.addons, f.sections.guide
 		s.ok(style .. " : entrée « Addons liés »", item and item.text and item.text:GetText() == "Addons liés")
-		s.ok(style .. " : sous le Guide, en dernier", item and guide and select(5, item:GetPoint()) < select(5, guide:GetPoint())
-			and QNS.JOURNAL_SECTIONS[#QNS.JOURNAL_SECTIONS] == "addons")
+		-- 3.7.0 : Communauté vient juste après
+		s.ok(style .. " : sous le Guide, avant Communauté", item and guide and select(5, item:GetPoint()) < select(5, guide:GetPoint())
+			and QNS.JOURNAL_SECTIONS[#QNS.JOURNAL_SECTIONS - 1] == "addons" and QNS.JOURNAL_SECTIONS[#QNS.JOURNAL_SECTIONS] == "community")
 		s.ok(style .. " : la page s'ouvre", f.kind == "addons" and f.addons:IsShown() and f.header.title:GetText() == "Addons liés")
 		local pane = f.addons
 		local lay = QNS.JOURNAL_ADDONS_LAYOUT

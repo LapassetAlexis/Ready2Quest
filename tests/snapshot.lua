@@ -451,6 +451,8 @@ function Snap.Render(root, opts)
 					inset = string.format(";padding:0 %dpx 0 %dpx;box-sizing:border-box", region.textInsets[2] or 0, region.textInsets[1] or 0)
 				end
 				local wrap = (region.widthSet and region.kind == "FontString" and region.wordWrap ~= false) and "normal" or "nowrap"
+				-- 3.7.0 : champ sur plusieurs lignes (SetMultiLine, posé par la scène) : le texte revient à la ligne
+				if region.kind == "EditBox" and region.multiLine then wrap = "pre-wrap" end
 				local clip = region.widthSet and region.kind == "FontString" and region.wordWrap == false
 				out[#out + 1] = string.format('<div class="txt" style="%s;font-size:%dpx;font-weight:%d;color:%s;justify-content:%s;'
 					.. 'align-items:%s;text-align:%s;white-space:%s%s%s"><span%s>%s</span></div>',
@@ -1496,6 +1498,60 @@ Snap.scenes["qc-journal-feats"] = function(T) return OwnDraws(T, function(T)
 		ns:FeatAward("char_level_20", { silent = true, at = 1700200000 })
 	end)
 	return frame, "QuestCompanion : carnet, page Hauts faits"
+end) end
+
+-- 3.7.0 : page Communauté (JournalCommunity.lua). Le banc n'a pas de champ
+-- sur plusieurs lignes : le temps de la scène, CreateFrame donne aux champs
+-- SetMultiLine (l'aperçu fait alors revenir leur texte à la ligne).
+local function WithMultiLine(scene)
+	local create = _G.CreateFrame
+	_G.CreateFrame = function(kind, ...)
+		local frame = create(kind, ...)
+		if kind == "EditBox" and frame.SetMultiLine == nil then
+			function frame:SetMultiLine(on) self.multiLine = on and true or nil end
+		end
+		return frame
+	end
+	local ok, frame, title = pcall(scene)
+	_G.CreateFrame = create
+	if not ok then error(frame, 0) end
+	return frame, title
+end
+
+local function QCCommunity(T, tab, prepare)
+	local frame, ns = QCJournal(T, "community", function(ns)
+		ns:DB().community = nil
+		ns:CommunityResetAnswers()
+		ns:CaptureData().count = 312
+		if prepare then prepare(ns) end
+	end)
+	ns:CommunitySelectTab(tab)
+	return frame, ns
+end
+
+-- onglet Discord : l'invitation à copier, les cinq salons, le mot, cette semaine
+Snap.scenes["qc-journal-community-discord"] = function(T) return OwnDraws(T, function(T)
+	return WithMultiLine(function()
+		local frame = QCCommunity(T, "discord")
+		return frame, "QuestCompanion : carnet, page Communauté (onglet Discord)"
+	end)
+end) end
+
+-- onglet Ton avis : trois réponses, un texte libre, l'avis composé dans la zone à copier
+Snap.scenes["qc-journal-community-avis"] = function(T) return OwnDraws(T, function(T)
+	return WithMultiLine(function()
+		local saved = _G.UnitLevel
+		_G.UnitLevel = function() return 38 end
+		local frame, ns = QCCommunity(T, "avis", function(ns)
+			ns:CommunityAnswer("love", 1)
+			ns:CommunityAnswer("talk", 2)
+			ns:CommunityAnswer("fav", 1)
+			ns:CommunitySetFree("Pouvoir trier la Réserve par zone de capture. Et une créature de la semaine pour les niveaux 60.")
+		end)
+		ns:CommunityAvisPaint()
+		_G.UnitLevel = saved
+		return frame, "QuestCompanion : carnet, page Communauté (onglet Ton avis)"
+	end)
 end) end
 
 -- 3.1.0 : page Réserve (quelques spécimens, une brillante)

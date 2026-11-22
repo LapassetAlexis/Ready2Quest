@@ -1284,8 +1284,9 @@ do
 			local bottom = top + box:GetHeight()
 			-- en bas : le total
 			local reserved = 18 + 16
-			Check("[J215] " .. style .. " : dix entrées (Réserve puis Échoppe après les Créatures), le résumé tient au-dessus du bas",
-				count == 10 and f.sections.reserve ~= nil and NS.JOURNAL_SECTIONS[3] == "reserve" and NS.JOURNAL_SECTIONS[4] == "shop"
+			-- 3.7.0 : onze (Communauté sous Addons liés)
+			Check("[J215] " .. style .. " : onze entrées (Réserve puis Échoppe après les Créatures), le résumé tient au-dessus du bas",
+				count == 11 and f.sections.reserve ~= nil and NS.JOURNAL_SECTIONS[3] == "reserve" and NS.JOURNAL_SECTIONS[4] == "shop"
 				and f.sections.shop ~= nil and bottom <= navH - reserved, bottom .. " / " .. navH)
 			J.Done()
 		end
