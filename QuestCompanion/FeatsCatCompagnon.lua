@@ -179,7 +179,8 @@ local function Specimens(self)
 	return capture and type(capture.specimens) == "table" and capture.specimens or nil, capture
 end
 local function PlayerName()
-	local name = ns.Plain and ns.Plain(Call(G("UnitName"), "player")) or Call(G("UnitName"), "player")
+	local name = Call(G("UnitName"), "player")
+	if ns.Plain then name = ns.Plain(name) end
 	return type(name) == "string" and name or nil
 end
 local function Fold(text)

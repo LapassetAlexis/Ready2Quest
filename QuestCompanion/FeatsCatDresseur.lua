@@ -140,7 +140,9 @@ local function ScanCreatures(self)
 			if type(e) == "table" then
 				local id = tonumber(npcID) or npcID
 				if e.class == "rareelite" and not seenElite[id] then seenElite[id] = true; s.rareElite = s.rareElite + 1 end
-				local level = tonumber(ns.Plain and ns.Plain(e.level) or e.level)
+				local level = e.level
+				if ns.Plain then level = ns.Plain(level) end
+				level = tonumber(level)
 				if level and level >= ns.FEAT_DRESSEUR.level and not seenLevel[id] then
 					seenLevel[id] = true
 					s.level60 = s.level60 + 1

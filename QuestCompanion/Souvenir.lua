@@ -124,7 +124,10 @@ local function Call(fn, ...)
 end
 local function InCombat()
 	local fn = G("InCombatLockdown")
-	return type(fn) == "function" and (ns.Plain and ns.Plain(fn()) or fn()) == true
+	if type(fn) ~= "function" then return false end
+	local value = fn()
+	if ns.Plain then value = ns.Plain(value) end
+	return value == true
 end
 local function Count(n, stem) return ns.DiscordCount(n, stem) end
 local function Number(n) return ns.OddsNumber and ns.OddsNumber(n) or tostring(n) end

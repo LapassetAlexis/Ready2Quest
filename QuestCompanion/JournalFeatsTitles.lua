@@ -86,7 +86,7 @@ local function PlayerName()
 	local fn = G("UnitName")
 	local ok, name = false, nil
 	if type(fn) == "function" then ok, name = pcall(fn, "player") end
-	name = ok and (ns.Plain and ns.Plain(name) or name) or nil
+	if not ok then name = nil elseif ns.Plain then name = ns.Plain(name) end
 	if type(name) ~= "string" or name == "" then return "?" end
 	return name
 end
