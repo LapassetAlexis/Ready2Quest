@@ -294,4 +294,46 @@ do
 	end
 end
 
+-- ---------------------------------------------------------------------------
+-- 3.7.0 : les hauts faits suivis (trois au plus : Feats.lua, FeatFollow), au
+-- rang 3 (entre les commandes et l'étude), avant les objectifs automatiques
+-- de ce rang ; nom, « cur / max » ; clic : le carnet sur ce haut fait,
+-- déplié. Obtenu : il sort de la liste tout seul (FeatFollowed).
+-- ---------------------------------------------------------------------------
+RANK.feat = 3
+local function FeatGoals(self, list)
+	if not (self.FeatFollowed and self.FeatDef and ns.JournalGoal) then return end
+	for _, id in ipairs(self:FeatFollowed()) do
+		local def = self:FeatDef(id)
+		if def and not (def.hidden and not self:FeatGot(def)) then
+			local cur, max, state = self:FeatProgress(def)
+			local goal = state == "open" and ns.JournalGoal("feat:" .. id, self:FeatName(def), cur, max, nil, "feats")
+			if goal then
+				goal.rank, goal.short, goal.page = RANK.feat, goal.label, "feats"
+				goal.ratio = 1.1 + (cur / max) * 0.05
+				goal.progress = self.FeatCountText and self:FeatCountText(cur, max) or goal.progress
+				goal.hint = { self:FeatDescription(def), L.FEAT_TRK_HINT }
+				local reward = self.FeatRewardText and self:FeatRewardText(def) or ""
+				if reward ~= "" then goal.reward = reward end
+				local featID = id
+				goal.onClick = function() return ns:OpenJournalFeatsAt(featID) end
+				list[#list + 1] = goal
+			end
+		end
+	end
+end
+if ns.RegisterGoalSource then ns.RegisterGoalSource(FeatGoals) end
+if ns.RegisterCallback then ns:RegisterCallback("FEAT_EARNED", function(self) Refresh(self) end) end
+-- une passe du moteur : la ligne d'un haut fait suivi avance (rien s'il n'y en a pas)
+do
+	local evaluate = ns.FeatEvaluate
+	if evaluate then
+		function ns:FeatEvaluate(...)
+			local earned = evaluate(self, ...)
+			if self.journalTracker and self.FeatFollowed and #self:FeatFollowed() > 0 then Refresh(self) end
+			return earned
+		end
+	end
+end
+
 if ns.Mark then ns.Mark("TrackerGoals") end

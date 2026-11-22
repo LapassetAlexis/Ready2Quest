@@ -364,7 +364,7 @@ do
 		local f = NS.journalFrame
 		Check("[JRN] /r2q carnet : ouvert sur le Compagnon, titre, sections, points de hauts faits (2.7.0)", f and f:IsShown()
 			and f.title.text == "Carnet de voyage" and f.sections.progress and f.sections.evolution and f.kind == "evolution"
-			and PointsText(f):find("0 points de hauts faits", 1, true), f and PointsText(f))
+			and (PointsText(f):find("0 points de hauts faits", 1, true) or PointsText(f) == "0 points"), f and PointsText(f))
 		f.sections.evolution:Click()
 		local before = PointsText(f)
 		NS:FeatAward("char_level_10", { silent = true })

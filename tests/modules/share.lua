@@ -322,19 +322,19 @@ do
 	NS:ReserveCancelConfirm()
 	s.ok("Réserve : confirmation annulée, le bouton revient", Shown(p.shareButton))
 	-- Hauts faits : clic droit sur un obtenu
-	NS:FeatAward("men_first", { silent = true })
+	NS:FeatAward("fun_name", { silent = true })
 	NS:DB().featsFilter = "got"
-	local jf = NS:OpenJournalFeats("all")
+	local jf = NS:OpenJournalFeats("fun")
 	local row
-	for _, candidate in ipairs(jf.feats.rows) do
-		if candidate:IsShown() and candidate.def and candidate.def.id == "men_first" then row = candidate end
+	for _, candidate in ipairs(jf.feats.list.rows) do
+		if candidate:IsShown() and candidate.def and candidate.def.id == "fun_name" then row = candidate end
 	end
 	s.ok("Hauts faits : la ligne obtenue", row ~= nil)
 	if row then
 		row:Click("LeftButton")
 		s.ok("clic gauche : rien", not NS.shareMenu:IsShown())
 		row:Click("RightButton")
-		local name = NS:FeatName("men_first")
+		local name = NS:FeatName("fun_name")
 		s.ok("clic droit : le menu, le haut fait", NS.shareMenu:IsShown() and NS.shareMenu.item and NS.shareMenu.item.name == name)
 		SH.Step(11)
 		s.ok("envoi au clic", SH.Pick("GUILD") and #SH.sends == 2 and SH.sends[2].text:find("« " .. name .. " »", 1, true) ~= nil,

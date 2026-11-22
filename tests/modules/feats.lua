@@ -443,98 +443,35 @@ do
 		NS:HandleCommand("hf")
 		local f = NS.journalFrame
 		local pane = f and f.feats
-		Check("[HF] /qc hf : le carnet ouvert sur « Hauts faits » (juste après Créatures), points en sous-titre, totaux",
+		-- 3.7.0 : page refaite (tests/modules/journal_feats.lua pour le détail)
+		Check("[HF] /qc hf : le carnet ouvert sur « Hauts faits » (juste après Créatures), points sur la plaque, Aperçu, compte des comptables",
 			f and f:IsShown() and f.kind == "feats" and pane and pane:IsShown() and f.header.title.text == NS.L.JRN_SEC_feats
 			and f.sections.feats and f.sections.menagerie
 			and select(5, f.sections.feats:GetPoint(1)) < select(5, f.sections.menagerie:GetPoint(1))
-			and ((f.featPlate and f.featPlate.text.text) or f.subtitle.text):find("15 points de hauts faits", 1, true)
-			and pane.totals.text == "Compte : 5 points · Personnage : 10 points"
-			-- 3.7.0 : le total ne compte que les lignes comptables (ni en attente, ni tour de force, ni secret caché)
-			and pane.count.text:find("3 / " .. select(2, NS:FeatCategoryStats("all")), 1, true)
-			and select(2, NS:FeatCategoryStats("all")) == HF.Countable(), pane and pane.totals.text)
-		local rows, firstGot = pane.list, nil
-		for index, entry in ipairs(rows) do if entry.got and not firstGot then firstGot = index end end
-		-- 3.7.0 : Initiation (B2a) passe avant Créatures : la pastille de Créatures par son rang
-		local menAt = 2
-		for index, id in ipairs(NS:FeatCategories()) do if id == "men" then menAt = index + 1 end end
-		Check("[HF] catégories (« Toutes » puis une par catégorie, obtenus et points) ; liste : non obtenus d'abord, "
-			.. "obtenus à la fin du plus récent au plus ancien", #pane.cats == 1 + #NS:FeatCategories()
-			and pane.cats[1].label.text == "Toutes" and pane.cats[menAt].label.text == "Créatures"
-			and pane.cats[menAt].value.text == "1/" .. select(2, NS:FeatCategoryStats("men")) .. " · 5"
-			and pane.rows[1]:IsShown() and pane.rows[1].entry and not pane.rows[1].entry.got
-			and rows[#rows].got and firstGot == #rows - 2 and rows[firstGot].def.id == "men_first", pane.cats[menAt].value.text)
-		-- trouver des lignes précises (pagination)
-		local function Find(id)
-			for offset = 0, #pane.list, pane.perPage do
-				f.featsOffset = offset
-				NS:RefreshJournal()
-				for _, row in ipairs(pane.rows) do if row.def and row.def.id == id and row:IsShown() then return row end end
-			end
-		end
-		-- les lignes sont réutilisées d'une page à l'autre : chacune vérifiée aussitôt trouvée
+			and ((f.featPlate and f.featPlate.text.text) or f.subtitle.text):find("15 points", 1, true)
+			and f.featsTab == "overview" and pane.views.overview:IsShown()
+			and pane.gotText.text == "3 sur " .. select(2, NS:FeatCategoryStats("all")) .. " obtenus"
+			and select(2, NS:FeatCategoryStats("all")) == HF.Countable(), pane and pane.gotText.text)
 		local s = Steps()
-		-- 3.7.0 : une ligne en attente n'est plus listée du tout
-		s.ok("« à vérifier » absente de la liste", Find("char_food_500") == nil and (function()
-			for _, entry in ipairs(pane.list) do if entry.def.pending then return false end end
+		NS:OpenJournalFeats("char")
+		local list = pane.list
+		s.ok("catégorie Personnage : onglet Aventure, sa liste", f.featsTab == "aventure" and list:IsShown() and list.cat == "char"
+			and #list.items > 0)
+		s.ok("une ligne en attente n'est pas listée", (function()
+			for _, item in ipairs(list.items) do if (item.def or {}).pending then return false end end
 			return true
 		end)())
-		local account = Find("men_species_10")
-		s.ok("Compte : barre, x/n, récompense", account and account.scope.label.text == "COMPTE" and account.bar:IsShown()
-			and account.count.text == "0 / 10" and account.reward.text:find("titre « Apprenti dresseur »", 1, true))
-		local earned = Find("char_level_10")
-		s.ok("obtenue : Perso, date, or, pas de barre", earned and earned.scope.label.text == "PERSO"
-			and earned.date.text == "Obtenu le 07/11/2026" and not earned.bar:IsShown() and earned.accentColor == NS.Theme.GOLD)
-		s.ok("Sobre : losange et points", earned and earned.diamond:IsShown() and not earned.shield:IsShown() and earned.pts.text == "5")
-		Mock.InstallAtlas(true)
-		NS:AzerothAtlasOK(true)
-		NS:DB().companionStyle = "azeroth"
-		earned = Find("char_level_10")
-		-- 3.1.0 : le bouclier du client n'est plus que dans le carnet de l'ancien
-		-- habillage (frame.azeroth) ; un carnet qui n'en est pas garde le losange
-		if f.azeroth then
-			s.ok("Azeroth (ancien habillage) : bouclier doré", earned and earned.shield:IsShown()
-				and earned.shield.atlas == "ui-achievement-shield-1" and not earned.diamond:IsShown())
-		else
-			s.ok("choix Azeroth hors ancien habillage : losange, jamais le bouclier du client", earned
-				and earned.diamond:IsShown() and not earned.shield:IsShown())
-		end
-		s.check("[HF] lignes : « à vérifier » hors liste, portée Compte / Perso, barre et récompense, date d'obtention, deux styles")
-		-- 3.1.0 : le carnet de l'ancien habillage (drapeau du module) garde le
-		-- bouclier du client ; le carnet né avant lui garde le losange
-		do
-			f:Hide()
-			NS.journalFrame, NS.uiStyleCache = nil, {}
-			NS:ApplyUIStyle()
-			local legacy = NS:OpenJournalFeats()
-			local row
-			if legacy and legacy.feats then
-				for offset = 0, #legacy.feats.list, legacy.feats.perPage do
-					legacy.featsOffset = offset
-					NS:RefreshJournal()
-					for _, r in ipairs(legacy.feats.rows) do if r.def and r.def.id == "char_level_10" and r:IsShown() then row = row or r end end
-					if row then break end
-				end
-			end
-			legacy:Hide()
-			NS.journalFrame = f
-			legacy.featsOffset = 0
-		end
-		s = Steps()
-		pane.filterChips.got:Click()
-		s.ok("Obtenus (gardé)", #pane.list == 3 and NS:DB().featsFilter == "got")
-		pane.filterChips.open:Click()
-		s.ok("En cours", #pane.list == #NS:FeatDefs() - 3 - HF.Pending() and not pane.list[1].got)
-		pane.filterChips.all:Click()
-		pane.cats[menAt]:Click()
-		s.ok("catégorie : sa liste", f.featsCat == "men" and (function()
-			for _, entry in ipairs(pane.list) do if entry.def.cat ~= "men" then return false end end
-			return #pane.list > 0
-		end)())
-		NS:JournalFeatsPick("all")
+		local levels
+		for _, row in ipairs(list.rows) do if row:IsShown() and row.item and row.item.key == "level" then levels = row end end
+		s.ok("série des niveaux : une ligne, deux paliers obtenus, palier 3 sur 6", levels and levels.item.done == 2
+			and levels.tags[1].label.text == "SÉRIE · PALIER 3 SUR 6", levels and levels.tags[1].label.text)
+		list.filterChips.got:Click()
+		s.ok("Obtenus (gardé)", NS:DB().featsFilter == "got" and #list.items == 0, #list.items)
+		list.filterChips.all:Click()
 		NS:ScrollJournal(-1)
-		s.ok("molette : une ligne, pagination à jour", f.featsOffset == 1 and pane.pager.position.text ~= "")
-		NS:JournalFeatsTip(pane.rows[1])
-		s.check("[HF] filtres Obtenus / En cours (gardés), clic sur une catégorie, molette, infobulle sans erreur")
+		s.ok("molette : une ligne", f.featsOffset == 1 and list.position.text:find("^2 à ") ~= nil, list.position.text)
+		NS:JournalFeatsTip(list.rows[1])
+		s.check("[HF] listes : catégorie et sa famille, pas de ligne en attente, une ligne par série, filtre gardé, molette, infobulle sans erreur")
 		f:Hide()
 		NS.optionsFrame = nil
 		local keys = {}

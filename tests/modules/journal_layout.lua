@@ -183,7 +183,7 @@ do
 	CZ.Reset("sobre")
 	local f = Open("feats")
 	Check("[CZ] Sobre : aucun habit Azeroth", f and not f.azeroth and f.uiStyle == "sobre" and not f.azPlate
-		and f:GetWidth() == NS.JOURNAL_LAYOUT.width and not f.sections.feats.azBg and not f.feats.rows[1].azTitle)
+		and f:GetWidth() == NS.JOURNAL_LAYOUT.width and not f.sections.feats.azBg and not f.feats.list.rows[1].azTitle)
 	Mock.InstallAtlas(true)
 	NS:AzerothAtlasOK(true)
 	NS:SetUIStyle("azeroth")

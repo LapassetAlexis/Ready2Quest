@@ -1489,16 +1489,78 @@ local function OwnDraws(T, scene)
 	return frame, title
 end
 
--- 3.1.0 : page Hauts faits (total sur sa plaque forgée, losanges des lignes)
+-- 3.7.0 : page Hauts faits refaite (maquette carnet-j1 à j3) : une collection
+-- en cours, des hauts faits obtenus et datés, un rattrapage, un suivi ; deux
+-- secrets (un indice connu), un découvert, un tour de force
+local function FeatsWorld(ns)
+	ns:DB().featsFilter = "all"
+	if rawget(_G, "date") == nil then _G.date = os.date end
+	local data = ns:CaptureData()
+	for index = 1, 37 do
+		data.creatures[90000 + index] = { name = "Créature " .. index, normal = true, class = "normal", type = "Bête",
+			shiny = index <= 3 or nil, at = 1793000000 + index }
+	end
+	data.count = 37
+	ns.menagerieStatic = nil
+	local L = ns.L
+	rawset(L, "FEAT_snap_secret_a", "Mon double"); rawset(L, "FEATD_flag_snapA", "Donner ton propre nom à un spécimen")
+	rawset(L, "FEAT_snap_secret_b", "Promeneur"); rawset(L, "FEATH_snap_secret_b", "Il paraît que Lardeur aime les promenades.")
+	rawset(L, "FEAT_snap_secret_c", "Caché"); rawset(L, "FEAT_snap_fos", "Pionnier")
+	rawset(L, "FEATD_flag_snapF", "Avoir fait ta première capture avant le 1er janvier 2027")
+	ns.FeatAdd({ "snap_secret_a", 991, "fun", 5, "account", crit = { "flag", "snapA" }, hidden = true })
+	ns.FeatAdd({ "snap_secret_b", 992, "fun", 5, "account", crit = { "flag", "snapB" }, hidden = true })
+	ns.FeatAdd({ "snap_secret_c", 993, "fun", 5, "account", crit = { "flag", "snapC" }, hidden = true })
+	ns.FeatAdd({ "snap_fos", 994, "fos", 0, "account", crit = { "flag", "snapF" }, reward = { title = 2 } })
+	ns:FeatStore("account").hints = { snap_secret_b = 1793000000 }
+	local at = 1793500000
+	for index, id in ipairs({ "men_first", "men_species_10", "men_species_25", "char_level_10", "char_level_20", "zone_visit_10",
+		"day_mission_1", "shiny_found_5", "men_rare_1", "snap_secret_a", "snap_fos" }) do
+		ns:FeatAward(id, { silent = true, at = at + index * 86400 })
+	end
+	ns:FeatStore("account").catchup = { v = 1, ids = { "men_first", "men_species_10", "men_species_25", "char_level_10",
+		"char_level_20", "zone_visit_10" }, pts = 40, glitter = 22 }
+	ns:FeatFollow("men_species_50", true)
+end
+
 Snap.scenes["qc-journal-feats"] = function(T) return OwnDraws(T, function(T)
-	local frame = QCJournal(T, "feats", function(ns)
-		ns:DB().featsFilter = "all"
-		ns:FeatAward("men_first", { silent = true, at = 1700000000 })
-		ns:FeatAward("char_level_10", { silent = true, at = 1700100000 })
-		ns:FeatAward("char_level_20", { silent = true, at = 1700200000 })
-	end)
-	return frame, "QuestCompanion : carnet, page Hauts faits"
+	local frame = QCJournal(T, "feats", FeatsWorld)
+	return frame, "QuestCompanion : carnet, page Hauts faits (Aperçu)"
 end) end
+
+-- une catégorie avec des séries et une ligne dépliée (Dresseur › Créatures)
+Snap.scenes["qc-journal-feats-list"] = function(T) return OwnDraws(T, function(T)
+	local frame, ns = QCJournal(T, "feats", FeatsWorld)
+	ns:OpenJournalFeatsAt("men_types_master")
+	return frame, "QuestCompanion : carnet, Hauts faits › Créatures (séries, ligne dépliée)"
+end) end
+
+-- Insolite : secrets (indice connu ou non), secret découvert, la note
+Snap.scenes["qc-journal-feats-secrets"] = function(T) return OwnDraws(T, function(T)
+	local frame, ns = QCJournal(T, "feats", FeatsWorld)
+	ns:JournalFeatsPick("fun")
+	ns.journalFrame.featsOffset = 99      -- la fin de la liste : secrets, découvert, la note
+	ns:RefreshJournal()
+	return frame, "QuestCompanion : carnet, Hauts faits › Insolite (secrets)"
+end) end
+
+-- tours de force : leur catégorie à eux
+Snap.scenes["qc-journal-feats-fos"] = function(T) return OwnDraws(T, function(T)
+	local frame, ns = QCJournal(T, "feats", FeatsWorld)
+	ns:JournalFeatsPick("fos")
+	return frame, "QuestCompanion : carnet, Hauts faits › Tours de force"
+end) end
+
+-- le suivi à l'écran avec un haut fait suivi
+Snap.scenes["qc-tracker-feat"] = function(T)
+	local ns = QCWorld(T)
+	ns:DB().journalTracker = true
+	FeatsWorld(ns)
+	ns:RefreshJournalTracker()
+	local tracker = ns.journalTracker
+	tracker:ClearAllPoints()
+	tracker:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	return tracker, "QuestCompanion : suivi à l'écran, un haut fait suivi"
+end
 
 -- 3.7.0 : page Communauté (JournalCommunity.lua). Le banc n'a pas de champ
 -- sur plusieurs lignes : le temps de la scène, CreateFrame donne aux champs

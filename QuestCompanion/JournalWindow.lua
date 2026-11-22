@@ -3260,7 +3260,8 @@ function ns:RefreshJournal()
 		if frame.featPlate then
 			-- 3.1.0 (forgé) : les points sur la plaque, la colonne ne dit plus
 			-- que « module coupé »
-			frame.featPlate.text:SetText(total)
+			-- 3.7.0 : « <points> points · <rang> », ajusté à la plaque (JournalFeats.lua)
+			if self.FeatPlateSet then self:FeatPlateSet(frame.featPlate) else frame.featPlate.text:SetText(total) end
 			frame.subtitle:SetText(ModuleOn() and "" or (Theme.T_GREY .. L.MODULE_OFF .. "|r"))
 		else
 			frame.subtitle:SetText(total

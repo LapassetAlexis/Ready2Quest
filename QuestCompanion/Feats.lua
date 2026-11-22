@@ -1322,7 +1322,42 @@ function ns:FeatLogin()
 	local okPay, glitter, paid = pcall(self.FeatGlitterCatchUp, self)
 	if not okPay and self.RecordError then self:RecordError("feats:glitter", glitter) end
 	if okPay and paid > 0 then self:Print(self:F("FEAT_GLITTER_CATCHUP", glitter, paid)) end
+	-- 3.7.0 (page, « Rattrapés avec cette version ») : le relevé du premier
+	-- rattrapage, gardé une fois au compte
+	local okNote, err2 = pcall(ns.FeatCatchUpNote, self, found, okPay and glitter or 0)
+	if not okNote and self.RecordError then self:RecordError("feats:catchup", err2) end
 	return found
+end
+
+-- 3.7.0 : relevé du rattrapage de la mise à jour, au compte (db.feats.catchup =
+-- { v = 1, at, ids = { id… }, pts, glitter }). Posé une seule fois, à la
+-- première connexion qui passe par FeatLogin : les hauts faits trouvés
+-- (migration et rattrapage), leurs points comptables, les paillettes versées
+-- pour eux et celles du rattrapage des paillettes. Rend le relevé posé (nil :
+-- il existait déjà).
+function ns:FeatCatchUpNote(found, glitter)
+	local account = self:FeatStore("account")
+	if account.catchup ~= nil then return nil end
+	local ids, pts, total = {}, 0, tonumber(glitter) or 0
+	for _, def in ipairs(found or {}) do
+		ids[#ids + 1] = def.id
+		if self:FeatCountable(def) then pts = pts + (tonumber(def.pts) or 0) end
+		local got = self:FeatGot(def)
+		total = total + (type(got) == "table" and tonumber(got.g) or 0)
+	end
+	account.catchup = { v = 1, at = Time(), ids = ids, pts = pts, glitter = total }
+	return account.catchup
+end
+
+-- Le relevé, s'il a donné au moins un haut fait encore au catalogue :
+-- { ids, pts, glitter } ; nil sinon
+function ns:FeatCatchUp()
+	local note = self:FeatStore("account").catchup
+	if type(note) ~= "table" or type(note.ids) ~= "table" then return nil end
+	local ids = {}
+	for _, id in ipairs(note.ids) do if Index().byId[id] then ids[#ids + 1] = id end end
+	if #ids == 0 then return nil end
+	return { ids = ids, pts = tonumber(note.pts) or 0, glitter = tonumber(note.glitter) or 0, at = tonumber(note.at) or 0 }
 end
 
 -- ---------------------------------------------------------------------------
@@ -1536,12 +1571,14 @@ end
 -- secrets, pas encore atteints, les plus proches du but (cur / max décroissant ; à égalité le
 -- moins de points, puis le code). Chacun : { def, cur, max }. Calculé à la
 -- demande seulement (une passe sur le catalogue).
-function ns:FeatNearest(count)
+-- 3.7.0 (page) : `pick(def)` facultatif ne garde que les lignes qu'il accepte
+-- (« Récompenses proches » : celles qui donnent un titre, un cosmétique, une aide).
+function ns:FeatNearest(count, pick)
 	count = math.max(0, math.floor(tonumber(count) or 4))
 	self:FeatCacheReset()
 	local list = {}
 	for _, def in ipairs(Index().list) do
-		if not def.hidden and self:FeatCountable(def) and not self:FeatGot(def) then
+		if not def.hidden and self:FeatCountable(def) and not self:FeatGot(def) and (pick == nil or pick(def)) then
 			local cur, max, state = self:FeatProgress(def)
 			-- (but déjà atteint : la prochaine passe l'attribue, il n'est plus « à portée »)
 			if state == "open" and max > 0 and cur < max then list[#list + 1] = { def = def, cur = cur, max = max, ratio = cur / max } end

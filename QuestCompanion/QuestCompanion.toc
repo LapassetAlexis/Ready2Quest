@@ -94,6 +94,7 @@ FeatsCatCompagnon.lua
 Feats.lua
 FeatsCosmetics.lua
 JournalFeats.lua
+JournalFeatsList.lua
 FeatsTitles.lua
 JournalAzeroth.lua
 WinterVeil.lua
