@@ -83,6 +83,16 @@ local TITLES = {
 	-- 3.6.0 : étude (50 espèces maîtrisées) et lien Inséparable
 	[48] = { pos = "suf", src = "men_study_50",     m = "%s le Savant", f = "%s la Savante", en = "%s the Scholar" },
 	[49] = { pos = "suf", src = "men_bond_inseparable", m = "%s l'Inséparable", en = "%s the Inseparable" },
+	-- 3.7.0 : famille « dresseur » (FeatsCatDresseur.lua), codes 50 à 58
+	[50] = { pos = "pre", src = "init_all",         m = "Dresseur en herbe %s", f = "Dresseuse en herbe %s", en = "Budding Trainer %s" },
+	[51] = { pos = "suf", src = "men_caught_10000", m = "%s au filet d'or", en = "%s of the Golden Net" },
+	[52] = { pos = "suf", src = "men_elite_150",    m = "%s le Dompteur d'élites", f = "%s la Dompteuse d'élites", en = "%s the Elite Tamer" },
+	[53] = { pos = "suf", src = "men_medal5_all",   m = "%s, Grand maître des huit familles", f = "%s, Grande maîtresse des huit familles", en = "%s, Grand Master of the Eight Families" },
+	[54] = { pos = "suf", src = "spec_study_250",   m = "%s le Naturaliste", f = "%s la Naturaliste", en = "%s the Naturalist" },
+	[55] = { pos = "suf", src = "spec_bond_10",     m = "%s au grand cœur", en = "%s the Big-Hearted" },
+	[56] = { pos = "suf", src = "shiny_found_250",  m = "%s l'Étincelant", f = "%s l'Étincelante", en = "%s the Sparkling" },
+	[57] = { pos = "suf", src = "shiny_cap_100",    m = "%s, Gardien du trésor", f = "%s, Gardienne du trésor", en = "%s, Keeper of the Hoard" },
+	[58] = { pos = "suf", src = "shop_order_150",   m = "%s le Fournisseur", f = "%s la Fournisseuse", en = "%s the Purveyor" },
 	-- 3.6.0 : le mécénat de l'Échoppe (ShopWeek.lua), codes 61 à 63
 	[61] = { pos = "suf", src = "men_patron_10",   m = "%s le Mécène", f = "%s la Mécène", en = "%s the Patron" },
 	[62] = { pos = "suf", src = "men_patron_50",   m = "%s le Grand Mécène", f = "%s la Grande Mécène", en = "%s the Great Patron" },

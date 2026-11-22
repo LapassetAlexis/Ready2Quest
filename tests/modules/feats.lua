@@ -454,12 +454,15 @@ do
 			and select(2, NS:FeatCategoryStats("all")) == HF.Countable(), pane and pane.totals.text)
 		local rows, firstGot = pane.list, nil
 		for index, entry in ipairs(rows) do if entry.got and not firstGot then firstGot = index end end
+		-- 3.7.0 : Initiation (B2a) passe avant Créatures : la pastille de Créatures par son rang
+		local menAt = 2
+		for index, id in ipairs(NS:FeatCategories()) do if id == "men" then menAt = index + 1 end end
 		Check("[HF] catégories (« Toutes » puis une par catégorie, obtenus et points) ; liste : non obtenus d'abord, "
 			.. "obtenus à la fin du plus récent au plus ancien", #pane.cats == 1 + #NS:FeatCategories()
-			and pane.cats[1].label.text == "Toutes" and pane.cats[2].label.text == "Créatures"
-			and pane.cats[2].value.text == "1/" .. select(2, NS:FeatCategoryStats("men")) .. " · 5"
+			and pane.cats[1].label.text == "Toutes" and pane.cats[menAt].label.text == "Créatures"
+			and pane.cats[menAt].value.text == "1/" .. select(2, NS:FeatCategoryStats("men")) .. " · 5"
 			and pane.rows[1]:IsShown() and pane.rows[1].entry and not pane.rows[1].entry.got
-			and rows[#rows].got and firstGot == #rows - 2 and rows[firstGot].def.id == "men_first", pane.cats[2].value.text)
+			and rows[#rows].got and firstGot == #rows - 2 and rows[firstGot].def.id == "men_first", pane.cats[menAt].value.text)
 		-- trouver des lignes précises (pagination)
 		local function Find(id)
 			for offset = 0, #pane.list, pane.perPage do
@@ -522,7 +525,7 @@ do
 		pane.filterChips.open:Click()
 		s.ok("En cours", #pane.list == #NS:FeatDefs() - 3 - HF.Pending() and not pane.list[1].got)
 		pane.filterChips.all:Click()
-		pane.cats[2]:Click()
+		pane.cats[menAt]:Click()
 		s.ok("catégorie : sa liste", f.featsCat == "men" and (function()
 			for _, entry in ipairs(pane.list) do if entry.def.cat ~= "men" then return false end end
 			return #pane.list > 0
@@ -1471,7 +1474,14 @@ do
 		local bad = {}
 		for key, ids in pairs(NS.FEAT_SERIES) do
 			local members = NS:FeatSeries(key) or {}
-			if #members ~= #ids then bad[#bad + 1] = key .. " : " .. #members .. "/" .. #ids end
+			-- 3.7.0 : une échelle déclarée peut être prolongée par une ligne nouvelle (code 244 ou plus)
+			local declared = {}
+			for _, id in ipairs(ids) do declared[id] = true end
+			local own = 0
+			for _, def in ipairs(members) do
+				if declared[def.id] then own = own + 1 elseif def.n < 244 then bad[#bad + 1] = def.id .. " hors série" end
+			end
+			if own ~= #ids then bad[#bad + 1] = key .. " : " .. own .. "/" .. #ids end
 			local first = members[1]
 			for i, def in ipairs(members) do
 				if def.series ~= key then bad[#bad + 1] = def.id .. " clé" end

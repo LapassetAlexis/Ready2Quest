@@ -149,11 +149,10 @@ do
 			-- 2.14.0 : « Joyeux Voile d'hiver » (code 175) ; 3.1.0 : tailles rares (176, 177) ;
 			-- 3.0.0 : échanges de spécimens (178 à 180), venus après l'intégration ;
 			-- 3.4.0 : étude et lien (181 à 187) ; 3.6.0 : rangs longs (188 à 194)
-			if not (before and (def.id == "fun_unlucky" or def.id == "fun_winter_veil" or def.id == "men_size_giant"
+			-- 3.7.0 : la deuxième édition (codes 244 et plus) a ses propres contrôles (feats_cat_*)
+			if def.n < 244 and not (before and (def.id == "fun_unlucky" or def.id == "fun_winter_veil" or def.id == "men_size_giant"
 				or def.id == "men_size_tiny" or def.id == "soc_trade_1" or def.id == "soc_trade_10"
-				or def.id == "soc_trade_new" or def.n >= 181))
-				-- 3.7.0 : les lignes de la deuxième édition (codes 244 et suivants) ont leurs propres tests
-				and def.n < 244 then defs[#defs + 1] = def end
+				or def.id == "soc_trade_new" or def.n >= 181)) then defs[#defs + 1] = def end
 		end
 		table.sort(defs, function(a, b) return a.n < b.n end)
 		local lines = {}
@@ -389,7 +388,7 @@ do
 			end
 		end
 	end
-	Check("[TIT] titres du registre (52 en 3.6.0 ; 3.7.0 : + T59, T60, T64 à T72), formes FR m/f et EN conformes au document (§4.1)", rows >= 63 and rows == (function() local n = 0; for _ in pairs(T_) do n = n + 1 end; return n end)() and #bad == 0,
+	Check("[TIT] 72 titres (52 en 3.6.0 ; 3.7.0 : + T50 à T60 et T64 à T72), formes FR m/f et EN conformes au document (§4.1)", rows == 72 and rows == (function() local n = 0; for _ in pairs(T_) do n = n + 1 end; return n end)() and #bad == 0,
 		rows .. " lignes ; " .. table.concat(bad, ", "))
 	local count, shape = 0, {}
 	for code, t in pairs(T_) do
@@ -408,8 +407,8 @@ do
 		-- anglais genré seulement pour Seigneur / Dame et Héros / Héroïne
 		if t.enf and code ~= 35 and code ~= 37 then shape[#shape + 1] = code .. " enf" end
 	end
-	Check("[TIT] codes 1 à 49 et 61 à 63 uniques, un seul %s par forme, place cohérente, source citée, anglais genré pour 35 et 37 seulement",
-		count >= 63 and #shape == 0 and T_[35].enf and T_[37].enf, table.concat(shape, ", "))
+	Check("[TIT] codes 1 à 72 uniques, un seul %s par forme, place cohérente, source citée, anglais genré pour 35 et 37 seulement",
+		count == 72 and #shape == 0 and T_[35].enf and T_[37].enf, table.concat(shape, ", "))
 	-- chaque titre d'une ligne existe une fois au registre, et chaque titre a sa ligne (sa source)
 	local used, missing = {}, {}
 	for _, d in ipairs(NS:FeatDefs()) do

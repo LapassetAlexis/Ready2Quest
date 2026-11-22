@@ -730,6 +730,15 @@ Retour en 2.6 possible : la 2.6 relit `journal.stamps` intact et ignore `feats`.
 | T47 | `men_species_all` | %s, Dresseur de tout Azeroth | %s, Dresseuse de tout Azeroth | %s, Trainer of All Azeroth | S |
 | T48 | `men_study_50` | %s le Savant | %s la Savante | %s the Scholar | S |
 | T49 | `men_bond_inseparable` | %s l'Inséparable | — | %s the Inseparable | S |
+| T50 | `init_all` | Dresseur en herbe %s | Dresseuse en herbe %s | Budding Trainer %s | P |
+| T51 | `men_caught_10000` | %s au filet d'or | — | %s of the Golden Net | S |
+| T52 | `men_elite_150` | %s le Dompteur d'élites | %s la Dompteuse d'élites | %s the Elite Tamer | S |
+| T53 | `men_medal5_all` | %s, Grand maître des huit familles | %s, Grande maîtresse des huit familles | %s, Grand Master of the Eight Families | S |
+| T54 | `spec_study_250` | %s le Naturaliste | %s la Naturaliste | %s the Naturalist | S |
+| T55 | `spec_bond_10` | %s au grand cœur | — | %s the Big-Hearted | S |
+| T56 | `shiny_found_250` | %s l'Étincelant | %s l'Étincelante | %s the Sparkling | S |
+| T57 | `shiny_cap_100` | %s, Gardien du trésor | %s, Gardienne du trésor | %s, Keeper of the Hoard | S |
+| T58 | `shop_order_150` | %s le Fournisseur | %s la Fournisseuse | %s the Purveyor | S |
 | T59 | `zone_seal_all` | %s, Gardien d'Azeroth | %s, Gardienne d'Azeroth | %s, Guardian of Azeroth | S |
 | T60 | `comp_radiant_3000` | %s le Rayonnant | %s la Rayonnante | %s the Radiant | S |
 | T64 | `comp_wish_250` | %s l'Attentionné | %s l'Attentionnée | %s the Thoughtful | S |
@@ -741,6 +750,8 @@ Retour en 2.6 possible : la 2.6 relit `journal.stamps` intact et ignore `feats`.
 | T70 | `meta_soc` | %s le Sociable | %s la Sociable | %s the Sociable | S |
 | T71 | `meta_fun` | %s l'Original | %s l'Originale | %s the Eccentric | S |
 | T72 | `meta_all` | Dresseur accompli %s | Dresseuse accomplie %s | Accomplished Trainer %s | P |
+
+T50 à T60 et T64 à T72 : 3.7.0, deuxième édition (§7).
 
 T41 à T49 : 3.6.0 (rangs de dresseur au-delà de 500 espèces, étude, lien). Les codes 61 à 63 sont pris par la 3.6 (mécénat).
 
@@ -880,6 +891,122 @@ Une ligne se libère en retirant son `pending` quand sa statistique est confirm�
 - Les paliers 2 à 4 de donjons comptent l'entrée (relevé) pour les donjons sans boss connu (Site de fouilles des Paluns, Cité engloutie, Bastion de Krol'dok, Blackmaw Hold), comme prévu au §2.7.
 
 ## 7. Deuxième édition (3.7.0)
+
+### 7.1 Famille « dresseur » (chantier B2a, `FeatsCatDresseur.lua`)
+
+99 lignes, au compte, codes 244 à 323 et 378 à 396, 1 780 points ; titres T50 à T58 (§4.1). Calcul : rétroactif (donnée déjà dans la sauvegarde, rattrapée à la connexion), état (vrai en ce moment : au rattrapage et en direct), compteur (`Tally.lua`, non rétroactif). Les paillettes de chaque ligne viennent du moteur, selon ses points ; les cosmétiques « à créer » attendent en `reward.soon` (étape 2).
+
+Relevés posés par ce fichier, faute de donnée complète dans la sauvegarde (la source y ajoute les preuves déjà gardées : fiches d'espèce, spécimens possédés) : `captureZones` (ensemble des zones de capture), `shinyCapZone:<zone>` et `shinyZoneBest` (brillantes capturées par zone), `shinyDayBest` (brillantes capturées le même jour ; le jour en cours dans `db.feats.dresseurShinyDay`). La zone d'une espèce maîtrisée (`spec_study_zone`) est celle de sa première capture. `men_elite_1`, `shiny_seen_1` et `shiny_zones_10` rejoignent les séries `elite`, `shinySeen` et `shinyZones` (identifiant, code et points inchangés).
+
+#### Initiation (`init`)
+
+- `init_meet` (code 244) — Faisons connaissance / Nice to Meet You — Finir la présentation du compagnon — 5 points — `count, tourMeet, 1`
+- `init_net` (code 245) — Leçon de filet / Net Practice — Finir la visite de la capture — 5 points — `count, tourCapture, 1` — récompense : appât ×2
+- `init_partner` (code 246) — En route ensemble / Off We Go — Partir avec une créature que tu as capturée — 5 points — `count, partnerCaptured, 1`
+- `init_journal` (code 247) — Carnet ouvert / Open Book — Finir la visite du carnet — 5 points — `count, tourJournal, 1`
+- `init_study` (code 248) — Première leçon / First Lesson — Finir une tâche d'étude — 5 points — `count, studyTasks, 1`
+- `init_radiant` (code 249) — Rayonnant ! / All Aglow! — Rendre ton compagnon Rayonnant — 5 points — `tally, radiant, 1, char`
+- `init_wish` (code 250) — À tes souhaits / Wish Granted — Combler une envie du compagnon — 5 points — `tally, wish, 1, char`
+- `init_treat` (code 251) — Petite douceur / Sweet Tooth — Donner une friandise — 5 points — `tally, treat, 1, char`
+- `init_hunt` (code 252) — Ouverture de la chasse / Open Season — Lancer le mode chasse — 5 points — `tally, huntStart, 1`
+- `init_release` (code 253) — Rendu à la nature / Back to the Wild — Relâcher un spécimen — 5 points — `tally, release, 1`
+- `init_shop` (code 254) — Premier achat / First Purchase — Acheter un article à l'Échoppe — 5 points — `count, shopBought, 1`
+- `init_order` (code 255) — Bon de livraison / Special Delivery — Livrer une commande — 5 points — `tally, orderDone, 1`
+- `init_aid` (code 256) — Coup de pouce / A Helping Hand — Capturer une créature avec une aide — 5 points — `tally, captureAided, 1`
+- `init_pin` (code 257) — Avis de recherche / Wanted Poster — Ajouter une espèce à ta liste de chasse — 5 points — `count, huntPins, 1`
+- `init_follow` (code 258) — Cap fixé / Eyes on the Prize — Suivre un haut fait à l'écran — 5 points — `tally, follow, 1`
+- `init_all` (code 259) — Dresseur diplômé / Graduate Trainer — Obtenir tous les hauts faits d'Initiation — 10 points — `meta, INIT` — récompense : titre « Dresseur en herbe », lasso ×2
+#### Créatures (`men`)
+
+- `men_caught_100` (code 260) — Cent prises / A Hundred Catches — Capturer 100 créatures (tous spécimens) — 5 points — `count, caught, 100`
+- `men_caught_500` (code 261) — Cinq cents prises / Five Hundred Catches — Capturer 500 créatures — 10 points — `count, caught, 500` — récompense : lasso ×1
+- `men_caught_2000` (code 262) — Deux mille prises / Two Thousand Catches — Capturer 2 000 créatures — 10 points — `count, caught, 2000` — récompense : sifflet ×1
+- `men_caught_5000` (code 263) — Le filet ne chôme pas / The Net Never Rests — Capturer 5 000 créatures — 25 points — `count, caught, 5000`
+- `men_caught_10000` (code 264) — Dix mille prises / Ten Thousand Catches — Capturer 10 000 créatures — 25 points — `count, caught, 10000` — récompense : titre « au filet d'or »
+- `men_elite_10` (code 265) — Dix gros gibiers / Ten Trophies — Capturer 10 élites différentes — 10 points — `count, elite, 10` — récompense : lasso ×1
+- `men_elite_50` (code 266) — Tableau de chasse / Trophy Wall — Capturer 50 élites différentes — 25 points — `count, elite, 50`
+- `men_elite_150` (code 267) — La fine fleur / Cream of the Crop — Capturer 150 élites différentes — 50 points — `count, elite, 150` — récompense : titre « le Dompteur d'élites »
+- `men_rare_25` (code 268) — Galerie des raretés / Gallery of Rarities — Capturer 25 rares ou rares élites — 25 points — `count, rare, 25` — récompense : sifflet ×1
+- `men_rare_50` (code 269) — L'œil du collectionneur / A Collector's Eye — Capturer 50 rares ou rares élites — 50 points — `count, rare, 50` — récompense : ornement (à créer)
+- `men_rareelite_1` (code 270) — Rare et coriace / Rare and Tough — Capturer une rare élite — 10 points — `count, rareElite, 1`
+- `men_medal4_1` (code 271) — Spécialiste / Specialist — Atteindre le palier 4 dans un type de créature — 10 points — `count, medal4, 1`
+- `men_medal4_all` (code 272) — Huit spécialités / Eight Specialties — Atteindre le palier 4 dans les 8 types — 25 points — `count, medal4, 8` — récompense : cadre de fiche (à créer)
+- `men_medal5_1` (code 273) — Sommité / Leading Authority — Atteindre le palier 5 dans un type de créature — 25 points — `count, medal5, 1`
+- `men_medal5_all` (code 274) — Les huit sommets / The Eight Summits — Atteindre le palier 5 dans les 8 types — 50 points — `count, medal5, 8` — récompense : titre « Grand maître des huit familles »
+- `men_zones_10` (code 275) — Dix terrains de chasse / Ten Hunting Grounds — Capturer des créatures dans 10 zones différentes — 10 points — `count, captureZones, 10`
+- `men_zones_25` (code 276) — Chasseur itinérant / Roaming Hunter — Capturer des créatures dans 25 zones différentes — 25 points — `count, captureZones, 25`
+- `men_zones_all` (code 277) — Partout chez soi / At Home Everywhere — Capturer des créatures dans les 40 zones à sceau — 25 points — `list, captureSealZones`
+- `men_level60` (code 278) — Gibier de taille / Prime Quarry — Capturer une créature de niveau 60 ou plus — 10 points — `count, level60, 1`
+- `men_streak_10` (code 279) — Main chaude / Hot Hand — Réussir 10 captures de suite — 10 points — `tallymax, captureStreak, 10`
+- `men_streak_25` (code 280) — Rien ne m'échappe / Nothing Gets Away — Réussir 25 captures de suite — 25 points — `tallymax, captureStreak, 25`
+- `men_batch_10` (code 281) — Grande volée / Mighty Haul — Prendre 10 créatures en une seule volée « Tout capturer » — 25 points — `tallymax, batch, 10`
+- `men_hunt_100` (code 282) — Saison de chasse / Hunting Season — Capturer 100 créatures en mode chasse — 10 points — `tally, captureHunt, 100`
+- `men_hunt_1000` (code 283) — Grand veneur / Master of the Hunt — Capturer 1 000 créatures en mode chasse — 25 points — `tally, captureHunt, 1000`
+- `men_aid_50` (code 284) — Trousse bien remplie / Well-Stocked Kit — Utiliser 50 aides de capture — 5 points — `tally, aidUsed, 50`
+- `men_whistle_10` (code 285) — Maître siffleur / Whistle Master — Capturer 10 créatures au Sifflet — 10 points — `tally, captureWhistle, 10`
+- `men_noaid_rare` (code 286) — À mains nues / Bare-Handed — Capturer une rare ou une rare élite sans aide — 10 points — `tally, rareNoAid, 1`
+- `men_fail_100` (code 287) — Persévérant / If at First You Don't Succeed — Rater 100 captures (au total) — 5 points — `tally, captureFail, 100`
+#### Spécimens (`spec`)
+
+- `spec_stars3_250` (code 288) — Voûte étoilée / Starry Vault — Avoir 250 espèces capturées à 3 étoiles — 50 points — `count, stars3, 250` — récompense : cadre du compagnon (à créer)
+- `spec_giant_10` (code 289) — Dix géants / Ten Giants — Capturer un Géant de 10 espèces différentes — 25 points — `count, studyGiant, 10`
+- `spec_tiny_10` (code 290) — Dix minuscules / Ten Tiny Ones — Capturer un Minuscule de 10 espèces différentes — 25 points — `count, studyTiny, 10`
+- `spec_sizes_species` (code 291) — La gamme complète / The Full Range — Capturer les 5 tailles d'une même espèce — 25 points — `count, studyAllSizes, 1`
+- `spec_twins` (code 292) — David et Goliath / Little and Large — Capturer un Minuscule et un Géant de la même espèce — 10 points — `count, studyTwins, 1`
+- `spec_index_max` (code 293) — Hors gabarit / Off the Charts — Capturer un spécimen d'indice de taille 125 — 10 points — `count, studyIndexMax, 1`
+- `spec_index_min` (code 294) — Poids plume / Featherweight — Capturer un spécimen d'indice de taille 75 — 10 points — `count, studyIndexMin, 1`
+- `spec_trait_rare` (code 295) — Perle rare / A Rare Gem — Capturer un Zen ou un Espiègle (1 sur 10) — 5 points — `count, studyTraitRare, 1`
+- `spec_traits_species` (code 296) — Tous les tempéraments / Every Temperament — Capturer les 8 caractères d'une même espèce — 25 points — `count, studyAllTraits, 1`
+- `spec_contest` (code 297) — Bête de concours / Best in Show — Un spécimen à 3 étoiles et de taille rare (1 sur 357) — 25 points — `tally, contest, 1` — récompense : ornement (à créer)
+- `spec_tasks_50` (code 298) — Bon élève / Star Pupil — Finir 50 tâches d'étude — 5 points — `count, studyTasks, 50`
+- `spec_study_250` (code 299) — Bibliothèque vivante / Living Library — Maîtriser l'étude de 250 espèces — 50 points — `count, studyMastered, 250` — récompense : titre « le Naturaliste »
+- `spec_study_500` (code 300) — Somme zoologique / Zoological Compendium — Maîtriser l'étude de 500 espèces — 50 points — `count, studyMastered, 500` — récompense : fond de fiche (à créer)
+- `spec_study_zone` (code 301) — Monographie / Monograph — Maîtriser 25 espèces d'une même zone — 25 points — `count, studyZone, 25`
+- `spec_bond_3` (code 302) — Trois inséparables / Three Inseparables — Avoir 3 spécimens au lien Inséparable — 25 points — `count, bond5, 3`
+- `spec_bond_10` (code 303) — Cercle d'amis / Circle of Friends — Avoir 10 spécimens au lien Inséparable — 50 points — `count, bond5, 10` — récompense : titre « au grand cœur »
+- `spec_bond_1000` (code 304) — Kilomètres d'amitié / Miles of Friendship — Gagner 1 000 points de lien (au total) — 10 points — `tally, bondPoints, 1000`
+- `spec_nick_1` (code 305) — Petit nom / Pet Name — Donner un surnom à un spécimen — 5 points — `count, nicks, 1`
+- `spec_nick_10` (code 306) — Chacun son nom / A Name for Everyone — Avoir 10 spécimens surnommés — 10 points — `count, nicks, 10`
+- `spec_lock_10` (code 307) — Sous bonne garde / Under Lock and Key — Protéger 10 spécimens — 5 points — `count, locks, 10`
+- `spec_same_25` (code 308) — Idée fixe / One-Track Mind — Capturer 25 fois la même espèce — 10 points — `count, studySame, 25`
+- `spec_same_100` (code 309) — Monomanie / Obsession — Capturer 100 fois la même espèce — 25 points — `count, studySame, 100`
+#### Brillantes (`shiny`)
+
+- `shiny_seen_25` (code 310) — Œil exercé / Trained Eye — Repérer 25 brillantes — 5 points — `count, shinySeen, 25`
+- `shiny_seen_100` (code 311) — Rien ne t'échappe / Hawk-Eyed — Repérer 100 brillantes — 10 points — `count, shinySeen, 100`
+- `shiny_found_100` (code 312) — Cent éclats / A Hundred Sparkles — Trouver 100 brillantes — 25 points — `count, shinyFound, 100` — récompense : fond du compagnon (à créer)
+- `shiny_found_250` (code 313) — Pluie d'étoiles / Shower of Stars — Trouver 250 brillantes — 50 points — `count, shinyFound, 250` — récompense : titre « l'Étincelant »
+- `shiny_cap_50` (code 314) — Salle du trésor / Treasure Room — Capturer 50 brillantes — 50 points — `count, shinyCap, 50` — récompense : cadre de fiche (à créer)
+- `shiny_cap_100` (code 315) — Cent trésors / A Hundred Treasures — Capturer 100 brillantes — 50 points — `count, shinyCap, 100` — récompense : titre « Gardien du trésor »
+- `shiny_types` (code 316) — Huit éclats / Eight Gleams — Capturer une brillante de chacun des 8 types — 25 points — `list, shinyTypes`
+- `shiny_zone_5` (code 317) — Filon / Mother Lode — Capturer 5 brillantes dans une même zone — 10 points — `count, shinyZoneBest, 5`
+- `shiny_day_2` (code 318) — Jour de chance / Lucky Day — Capturer 2 brillantes le même jour — 10 points — `count, shinyDayBest, 2`
+- `shiny_chain` (code 319) — Au bout de la série / End of the Chain — Trouver une brillante avec la série de chasse au maximum (50 abattus) — 10 points — `tallymax, shinyChain, 50`
+- `shiny_zones_25` (code 320) — Azeroth scintille / Azeroth Sparkles — Trouver des brillantes dans 25 zones différentes — 25 points — `count, shinyZones, 25`
+- `shiny_partner` (code 321) — Compagnon de gala / Dressed to Dazzle — Partir avec une créature brillante — 5 points — `count, partnerShiny, 1`
+- `shiny_rare_size` (code 322) — Brillante hors norme / Sparkling Oddity — Capturer une brillante Géante ou Minuscule (1 sur 3 750) — 25 points — `tally, shinyRareSize, 1` — récompense : ornement (à créer)
+- `shiny_study_10` (code 323) — Étude en or / A Study in Gold — Finir la tâche « brillante » de 10 espèces — 10 points — `count, studyShiny, 10`
+#### Réserve et Échoppe (`shop`)
+
+- `shop_slots_max` (code 378) — Réserve comble / Packed to the Rafters — Agrandir la Réserve jusqu'à 150 places — 25 points — `count, reserveSlots, 150`
+- `shop_full` (code 379) — Plus une place / No Vacancy — Remplir la Réserve — 5 points — `count, reserveFull, 1`
+- `shop_release_50` (code 380) — Retour aux champs / Back to the Fields — Relâcher 50 spécimens — 5 points — `tally, release, 50`
+- `shop_release_500` (code 381) — Grand lâcher / The Great Release — Relâcher 500 spécimens — 10 points — `tally, release, 500`
+- `shop_release_2500` (code 382) — Repeupleur d'Azeroth / Repopulating Azeroth — Relâcher 2 500 spécimens — 25 points — `tally, release, 2500`
+- `shop_tidy` (code 383) — Grand ménage / Spring Cleaning — Relâcher 10 spécimens d'un coup — 5 points — `tallymax, releaseBatch, 10`
+- `shop_glitter_500` (code 384) — Premières paillettes / First Glitter — Gagner 500 paillettes (au total) — 5 points — `count, glitterEarned, 500`
+- `shop_glitter_5000` (code 385) — Bourse scintillante / Glittering Purse — Gagner 5 000 paillettes — 10 points — `count, glitterEarned, 5000`
+- `shop_glitter_25000` (code 386) — Coffre scintillant / Glittering Chest — Gagner 25 000 paillettes — 25 points — `count, glitterEarned, 25000`
+- `shop_glitter_100000` (code 387) — Pluie de paillettes / Raining Glitter — Gagner 100 000 paillettes — 50 points — `count, glitterEarned, 100000` — récompense : ornement (à créer)
+- `shop_spent_1000` (code 388) — Panier percé / Spendthrift — Dépenser 1 000 paillettes — 10 points — `tally, glitterSpent, 1000`
+- `shop_spent_10000` (code 389) — Grand train / Living Large — Dépenser 10 000 paillettes — 25 points — `tally, glitterSpent, 10000`
+- `shop_order_10` (code 390) — Dix livraisons / Ten Deliveries — Livrer 10 commandes — 10 points — `tally, orderDone, 10`
+- `shop_order_50` (code 391) — Cinquante livraisons / Fifty Deliveries — Livrer 50 commandes — 25 points — `tally, orderDone, 50`
+- `shop_order_150` (code 392) — Cent cinquante livraisons / A Hundred and Fifty Deliveries — Livrer 150 commandes — 50 points — `tally, orderDone, 150` — récompense : titre « le Fournisseur »
+- `shop_order_week` (code 393) — Semaine pleine / A Week's Work — Livrer les 3 commandes d'une même semaine — 10 points — `tally, orderWeek, 1`
+- `shop_order_week_10` (code 394) — Dix semaines pleines / Ten Weeks' Work — Livrer les 3 commandes de 10 semaines — 25 points — `tally, orderWeek, 10`
+- `shop_arrivals_all` (code 395) — Client fidèle / Loyal Customer — Posséder les 8 cosmétiques d'arrivage — 25 points — `count, arrivalsOwned, 8`
+- `shop_aids_100` (code 396) — Bon client / Valued Customer — Acheter 100 aides à l'Échoppe — 10 points — `tally, aidBought, 100`
 
 ### 7.2 Compagnon et voyage, Entre dresseurs, Insolite, Tours de force, Grands hauts faits
 
