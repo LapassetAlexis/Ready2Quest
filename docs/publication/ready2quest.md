@@ -15,6 +15,11 @@ For **WoW Forever** (1.60). English, French and Spanish.
 
 ![Pre-departure check: a readiness score out of 100 with tips](https://media.forgecdn.net/attachments/2147/118/r2q-1-png.png)
 
+## New in 2.1: Shadow Word: Death with no backlash
+- **Priests**: the Shadow Word: Death icon takes the skull's place above your target when the spell surely kills it, so it never hits you back (30% of your health). On cooldown or out of range, the check and the skull come back.
+- **Calm target frame**: no more big icons on the portrait; the icon above the monster is enough (Combat › Lethal DoTs to bring them back).
+- **Fix**: the "aggro:link … secret string value" error is gone.
+
 ## New in 2.0: a clearer settings menu
 - **Six families** in the left column: Home, Departure check, Bags & loot, Travel, Quests & spells, Combat. Their pages become tabs.
 - **One switch per feature**, right in its head; **Home › Overview** shows every feature with its switch on one screen.
@@ -93,6 +98,11 @@ Free software, **GPL-3.0**. Source code: https://github.com/LapassetAlexis/Ready
 **Prépare ta sortie avant de quitter la ville.** Quand tu quittes un village, une capitale ou un camp, Ready2Quest vérifie que tu es prêt : vivres, place dans les sacs, équipement en état, tes buffs habituels, ta pierre de foyer… et te le dit au bon moment, pas quand il est trop tard.
 
 Pour **WoW Forever** (1.60). En français, en anglais et en espagnol.
+
+## Nouveau en 2.1 : Mot de l'ombre : Mort sans retour
+- **Prêtre** : l'icône de Mot de l'ombre : Mort prend la place du crâne au-dessus de ta cible quand le sort la tue à coup sûr, donc sans retour (30 % de ta vie). En recharge ou hors de portée, la coche et le crâne reviennent.
+- **Cadre de la cible apaisé** : plus de grandes icônes sur le portrait ; l'icône au-dessus du monstre suffit (Combat › DoT mortels pour les retrouver).
+- **Correctif** : l'erreur « aggro:link … secret string value » ne revient plus.
 
 ## Nouveau en 2.0 : un menu des réglages plus clair
 - **Six familles** dans la colonne de gauche : Accueil, Check avant le départ, Sacs & butin, Voyage, Quêtes & sorts, Combat. Leurs pages deviennent des onglets.
