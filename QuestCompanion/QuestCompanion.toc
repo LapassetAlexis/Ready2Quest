@@ -82,6 +82,7 @@ MenagerieView.lua
 TrainerCard.lua
 TrainerCardStyle.lua
 GuildFeats.lua
+TrainerCompare.lua
 AzerothStyle.lua
 ForgeCompanion.lua
 ForgeBanners.lua

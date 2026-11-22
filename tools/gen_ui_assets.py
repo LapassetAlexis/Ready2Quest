@@ -41,6 +41,20 @@ de la fiche reste lisible : point le plus clair de chaque fond mesuré, contrast
   fiche_blason_kalimdor.tga 64x64 idem, ambre et brique
   fiche_lauriers.tga       64x64 cadre en 9 tranches (marge 24) : filet d'or,
                            deux rameaux de laurier dans chaque coin
+QuestCompanion 3.7.0 : neuf habillages de plus (récompenses de hauts faits).
+Cadres en 9 tranches (marge 24), rien de peint au-delà de 12 px du bord hors
+du carré de coin (19 px) : le texte de la fiche ne se pose jamais dessus.
+
+  fiche_rang_bronze.tga / _argent / _or  64x64 cadre de rang : filet de métal,
+                           losange de coin à chevron gravé, clou ; même dessin
+  fiche_rang_lueur.tga     64x64 le cadre d'or et un liseré lumineux intérieur
+  fiche_huit.tga           64x64 filet d'or, huit pierres de couleur (deux par coin)
+  fiche_prisme.tga         64x64 filet irisé, étincelle à quatre branches aux coins
+  fiche_zoologie.tga   256x128 fond : planche de naturaliste (filets, étiquettes,
+                           plume et feuille gravées)
+  fiche_zones_or.tga   256x128 fond : carte dorée (courbes de niveau, route, zones)
+  fiche_repertoire.tga 256x128 fond : carnet d'adresses (lignes, reliure, onglets)
+
 Les fonds sont étirés sur la fiche (environ 780 x 470 px) : les formes sont
 dessinées en coordonnées d'écran (sx, sy) pour ne pas être déformées.
 
@@ -499,11 +513,216 @@ def fiche_lauriers():
     return card_frame(GOLD, GOLD_LO, (96, 146, 70), GOLD_HI, laurel=True)
 
 
+# ---------------------------------------------------------------------------
+# QuestCompanion 3.7.0 : neuf habillages de fiche de plus (récompenses des
+# hauts faits). Cadres : rien de peint au-delà de FRAME_DEPTH px du bord,
+# sauf dans le carré de coin (FRAME_CORNER px) : le texte de la fiche ne se
+# pose jamais dessus (tests/modules/trainer_37.lua). Fonds : sombres, point
+# le plus clair mesuré (contraste du texte estompé ≥ 4,5).
+# ---------------------------------------------------------------------------
+FRAME_DEPTH, FRAME_CORNER = 12.0, 19.0
+
+
+def hsv(h, s, v):
+    """Teinte, saturation, valeur (0..1) -> (r, g, b) en 0..255."""
+    h = (h % 1.0) * 6.0
+    i, f = int(h), h - int(h)
+    p, q, t = v * (1 - s), v * (1 - s * f), v * (1 - s * (1 - f))
+    r, g, b = [(v, t, p), (q, v, p), (p, v, t), (p, q, v), (t, p, v), (v, p, q)][i % 6]
+    return (r * 255, g * 255, b * 255)
+
+
+def frame_base(size, band, inner, depth, band_at=None):
+    """Liseré noir, filet en relief de la couleur `band` (ou band_at(depth, x, y)),
+    filet intérieur `inner` : (couleur, alpha) d'un pixel à `depth` du bord."""
+    if depth < 1.0:
+        return (0, 0, 0), 0.9
+    if depth < 4.0:
+        c = band_at(depth) if band_at else band
+        t = (depth - 1.0) / 3.0
+        return mix(mix(c, (255, 255, 255), 0.25), mix(c, (0, 0, 0), 0.45), t), 1.0
+    if depth < 5.0:
+        return (0, 0, 0), 0.55
+    if 6.0 <= depth < 7.2:
+        return inner, 0.9
+    return (0, 0, 0), 0.0
+
+
+def blend(colour, alpha, over, m):
+    """Pose `over` (couverture m) sur (colour, alpha)."""
+    return mix(colour, over, m), max(alpha, m)
+
+
+def frame_pixels(size, paint):
+    pixels = []
+    for y in range(size):
+        for x in range(size):
+            ex, ey = min(x + 0.5, size - x - 0.5), min(y + 0.5, size - y - 0.5)
+            colour, alpha = paint(x, y, ex, ey, min(ex, ey))
+            pixels.append((clamp(colour[0]), clamp(colour[1]), clamp(colour[2]), clamp(alpha * 255)))
+    return size, size, pixels
+
+
+def rank_frame(metal, hi, lo, glow=None, size=64):
+    """Cadre de rang : même dessin pour les quatre métaux. Filet de métal en
+    relief, losange de coin à chevron gravé, clou ; `glow` : un liseré
+    lumineux qui s'estompe vers l'intérieur (de 7 à 11 px du bord)."""
+    def paint(x, y, ex, ey, depth):
+        colour, alpha = frame_base(size, metal, lo, depth)
+        if glow and 7.2 <= depth < 11.5:
+            m = max(0.0, 1.0 - (depth - 7.2) / 4.3) ** 1.6
+            colour, alpha = glow, max(alpha, 0.85 * m)
+        d = abs(ex - 10.0) + abs(ey - 10.0)                       # losange de coin
+        m = max(0.0, min(1.0, 8.6 - d))
+        if m > 0:
+            shade = mix(hi, lo, max(0.0, min(1.0, (ex + ey - 12.0) / 10.0)))
+            colour, alpha = blend(colour, alpha, (0, 0, 0) if d > 7.4 else shade, m)
+            v = abs((ex - ey)) * 0.9 - (ex + ey - 20.0) * 0.6    # chevron gravé, pointe vers le coin
+            if d < 6.4 and abs(v - 1.2) < 0.9:
+                colour = mix(colour, (0, 0, 0), 0.55)
+        s = math.hypot(ex - 4.5, ey - 4.5)                         # clou au coin
+        m = max(0.0, min(1.0, 2.6 - s))
+        if m > 0:
+            colour, alpha = blend(colour, alpha, hi, m)
+        return colour, alpha
+    return frame_pixels(size, paint)
+
+
+def card_rank_bronze():
+    return rank_frame((196, 124, 70), (238, 178, 122), (104, 58, 28))
+
+
+def card_rank_silver():
+    return rank_frame((186, 194, 204), (238, 242, 248), (96, 104, 116))
+
+
+def card_rank_gold():
+    return rank_frame(GOLD, GOLD_HI, GOLD_LO)
+
+
+def card_rank_glow():
+    return rank_frame(GOLD, GOLD_HI, GOLD_LO, glow=(255, 236, 178))
+
+
+EIGHT_HUES = [(214, 128, 66), (88, 140, 222), (158, 118, 196), (206, 64, 56),
+              (66, 186, 178), (98, 178, 86), (168, 160, 150), (226, 196, 84)]
+
+
+def card_eight(size=64):
+    """Huit spécialités : filet d'or, une pierre de couleur de chaque côté de
+    chaque coin (deux par coin, huit en tout), nœud d'or au coin."""
+    def paint(x, y, ex, ey, depth):
+        colour, alpha = frame_base(size, GOLD, GOLD_LO, depth)
+        corner = (0 if x < size / 2 else 1) + (0 if y < size / 2 else 2)
+        for k, (px, py) in enumerate(((16.5, 6.0), (6.0, 16.5))):
+            g = math.hypot(ex - px, ey - py)
+            m = max(0.0, min(1.0, 4.2 - g))
+            if m > 0:
+                hue = EIGHT_HUES[corner * 2 + k]
+                ink = (0, 0, 0) if g > 3.2 else (mix(hue, (255, 255, 255), 0.45) if g < 1.2 else hue)
+                colour, alpha = blend(colour, alpha, ink, m)
+        d = abs(ex - 6.0) + abs(ey - 6.0)
+        m = max(0.0, min(1.0, 5.0 - d))
+        if m > 0:
+            colour, alpha = blend(colour, alpha, (0, 0, 0) if d > 4.0 else GOLD_HI, m)
+        return colour, alpha
+    return frame_pixels(size, paint)
+
+
+def card_prism(size=64):
+    """Reflets irisés : le filet change de teinte du bord vers l'intérieur et
+    le long du cadre ; une étincelle à quatre branches dans chaque coin."""
+    def band_hue(depth, x, y):
+        return hsv(0.08 * depth + (x + y) / (2.0 * size) * 0.6, 0.45, 0.95)
+
+    def paint(x, y, ex, ey, depth):
+        colour, alpha = frame_base(size, None, (220, 230, 255), depth, band_at=lambda d: band_hue(d, x, y))
+        if 7.2 <= depth < 9.0:
+            colour, alpha = band_hue(depth + 4, x, y), max(alpha, 0.55 * (9.0 - depth) / 1.8)
+        dx, dy = abs(ex - 10.0), abs(ey - 10.0)                     # étincelle
+        star = min(dx / 1.3 + dy / 7.5, dx / 7.5 + dy / 1.3)
+        m = max(0.0, min(1.0, (1.0 - star) * 3.0))
+        if m > 0:
+            colour, alpha = blend(colour, alpha, mix(band_hue(2, x, y), (255, 255, 255), 0.6), m)
+        return colour, alpha
+    return frame_pixels(size, paint)
+
+
+def card_zoology():
+    """Planche de naturaliste : papier brun sombre, double filet de planche,
+    étiquettes de spécimen, plume et feuille gravées en filigrane."""
+    def shade(sx, sy, u, v):
+        c = mix((27, 24, 16), (15, 13, 9), v)
+        c = add(c, 9 * max(line(sx, 26, 2.4), line(sx, 754, 2.4), line(sy, 70, 2.4), line(sy, 452, 2.4)), (1.0, 0.9, 0.65))
+        c = add(c, 6 * max(line(sx, 33, 1.6), line(sx, 747, 1.6), line(sy, 77, 1.6), line(sy, 445, 1.6)), (1.0, 0.9, 0.65))
+        for lx, ly in ((560, 300), (640, 400), (120, 405)):                             # étiquettes
+            if abs(sx - lx) < 46 and abs(sy - ly) < 13:
+                c = add(c, 5 + 7 * max(line(abs(sx - lx), 45, 2.0), line(abs(sy - ly), 12, 2.0)), (1.0, 0.92, 0.7))
+        fx, fy = sx - 650.0, sy - 200.0                                                # plume : rachis et barbes
+        along, across = (fx * 0.6 + fy * 0.8), (-fx * 0.8 + fy * 0.6)
+        if -120 < along < 120:
+            width = 34 * math.cos(along / 120.0 * math.pi / 2)
+            c = add(c, 10 * line(across, 0, 4.0), (1.0, 0.9, 0.7))
+            if abs(across) < width:
+                c = add(c, 7 * line((along - abs(across) * 0.8) % 16, 0, 4.5), (1.0, 0.9, 0.7))
+        lx, ly = sx - 220.0, sy - 250.0                                                # feuille : contour et nervures
+        r = math.hypot(lx / 2.2, ly)
+        c = add(c, 9 * line(r, 70, 4.5), (0.85, 1.0, 0.7))
+        if r < 70:
+            c = add(c, 8 * line(ly, 0, 4.0) + 6 * line((lx - abs(ly) * 1.6) % 34, 0, 4.0), (0.85, 1.0, 0.7))
+        return c
+    return card_pixels(shade)
+
+
+def card_gold_zones():
+    """Carte dorée : fond brun-or, courbes de niveau, routes pointillées d'or,
+    zones cerclées."""
+    def shade(sx, sy, u, v):
+        c = mix((30, 23, 9), (15, 11, 5), v)
+        h = math.sin(sx / 70.0) * 1.3 + math.cos(sy / 55.0 + sx / 160.0) * 1.1 + math.sin((sx + sy) / 110.0)
+        c = add(c, 7 * line((h * 6.0) % 3.0, 0, 0.5), (1.0, 0.8, 0.4))                # courbes de niveau
+        route = sy - (300 + 90 * math.sin(sx / 130.0))
+        if abs(route) < 3 and (sx % 18) < 10:
+            c = add(c, 12, (1.0, 0.78, 0.35))
+        for zx, zy, zr in ((160, 380, 34), (420, 250, 28), (690, 140, 40), (600, 410, 24)):
+            d = math.hypot(sx - zx, sy - zy)
+            c = add(c, 10 * line(d, zr, 2.4) + 5 * line(d, zr - 7, 1.6), (1.0, 0.8, 0.4))
+        return c
+    return card_pixels(shade)
+
+
+def card_directory():
+    """Carnet d'adresses : cuir bleu nuit, lignes réglées, trous de reliure à
+    gauche, onglets alphabétiques au bord droit."""
+    def shade(sx, sy, u, v):
+        c = mix((17, 22, 33), (9, 12, 19), v)
+        if sy > 70:
+            c = add(c, 8 * line((sy - 76) % 30, 0, 5.0), (0.7, 0.85, 1.0))           # lignes
+        c = add(c, 7 * line(sx, 64, 2.4), (1.0, 0.55, 0.5))                           # marge
+        for k in range(6):                                                              # reliure
+            hy = 100 + k * 64
+            d = math.hypot(sx - 30, sy - hy)
+            if d < 9:
+                c = mix(c, (4, 5, 8), 0.8 * min(1.0, 9 - d))
+            c = add(c, 7 * line(d, 9.5, 1.8), (0.8, 0.9, 1.0))
+        if sx > 738:                                                                    # onglets
+            k = int((sy - 74) // 38)
+            if sy > 74 and 0 <= k < 10:
+                c = add(c, 5 + 3 * (k % 2) + 8 * line((sy - 74) % 38, 0, 2.0) + 8 * line(sx, 739, 2.0), (0.75, 0.88, 1.0))
+        return c
+    return card_pixels(shade)
+
+
 ASSETS = [("cadre", cadre), ("ombre", ombre), ("coin", coin), ("plaque", plaque), ("creux", creux),
           ("lueur_ligne", lueur_ligne), ("lueur_point", lueur_point), ("vignette", vignette), ("anneau", anneau),
           ("fiche_registre", fiche_registre), ("fiche_atlas", fiche_atlas), ("fiche_renom", fiche_renom),
           ("fiche_pantheon", fiche_pantheon), ("fiche_blason_est", fiche_blason_est),
-          ("fiche_blason_kalimdor", fiche_blason_kalimdor), ("fiche_lauriers", fiche_lauriers)]
+          ("fiche_blason_kalimdor", fiche_blason_kalimdor), ("fiche_lauriers", fiche_lauriers),
+          # 3.7.0
+          ("fiche_rang_bronze", card_rank_bronze), ("fiche_rang_argent", card_rank_silver),
+          ("fiche_rang_or", card_rank_gold), ("fiche_rang_lueur", card_rank_glow),
+          ("fiche_huit", card_eight), ("fiche_prisme", card_prism),
+          ("fiche_zoologie", card_zoology), ("fiche_zones_or", card_gold_zones), ("fiche_repertoire", card_directory)]
 
 
 def main(argv=None):

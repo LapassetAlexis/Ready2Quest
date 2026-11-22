@@ -122,8 +122,11 @@ do
 	Fresh()
 	local BG, FR = NS.TRAINER_CARD_BACKGROUNDS, NS.TRAINER_CARD_FRAMES
 	local bad = {}
+	-- (3.7.0 : les habillages neufs, après les sept de la 3.6, ont leur test : trainer_37.lua)
+	local V36 = { cardbg = 4, cardframe = 3 }
 	for kind, list in pairs({ cardbg = BG, cardframe = FR }) do
-		for _, def in ipairs(list) do
+		for index, def in ipairs(list) do
+			if index > V36[kind] then break end
 			local fd = NS:FeatDef(def.unlock.feat)
 			local c = fd and fd.reward and fd.reward.cosmetic
 			if not (c and c[1] == kind and c[2] == def.id) then bad[#bad + 1] = def.id .. " haut fait" end
@@ -134,17 +137,21 @@ do
 			if not def.file:find("Libs\\Socle\\Media\\" .. def.tex, 1, true) then bad[#bad + 1] = def.id .. " chemin" end
 		end
 	end
-	local soon = 0   -- (3.7.0 : hors deuxième édition, dont les cosmétiques viennent à l'étape 2)
-	for _, def in ipairs(NS:FeatDefs()) do if def.reward and def.reward.soon and def.n < 244 and def.id ~= "meta_points_500" then soon = soon + 1 end end
-	Check("[L36B] 4 fonds et 3 cadres de fiche : donnés par les 7 hauts faits promis, nommés FR/EN, textures dans le socle des deux addons",
-		#BG == 4 and #FR == 3 and #bad == 0 and soon == 0, table.concat(bad, ", "))
+	local soon = 0
+	for _, def in ipairs(NS:FeatDefs()) do
+		local pair = def.reward and def.reward.soon
+		if pair and (pair[1] == "cardbg" or pair[1] == "cardframe") and NS.TrainerCardStyleDef(pair[1], pair[2]) then soon = soon + 1 end
+	end
+	Check("[L36B] 4 fonds et 3 cadres de fiche (3.6) : donnés par les 7 hauts faits promis, nommés FR/EN, textures dans le socle des deux addons",
+		#BG >= 4 and #FR >= 3 and BG[4].id == "card_pantheon" and FR[3].id == "card_laurels" and #bad == 0 and soon == 0,
+		table.concat(bad, ", "))
 	local src = (Read("tools/gen_ui_assets.py") or "")
 	Check("[L36B] textures générées par tools/gen_ui_assets.py (aucune image du jeu)", src:find("def fiche_registre", 1, true) ~= nil
 		and src:find("def fiche_lauriers", 1, true) ~= nil and src:find("Interface", 1, true) == nil)
 	-- liste : grisée tant que pas gagné ; choix refusé
 	local options = NS:TrainerCardStyleOptions("cardbg")
 	local refused = NS:TrainerCardStyleSet("cardbg", "card_census") == false
-	Check("[L36B] fond pas gagné : grisé avec sa condition, refusé", #options == 5 and options[1].value == "none"
+	Check("[L36B] fond pas gagné : grisé avec sa condition, refusé", #options == #BG + 1 and options[1].value == "none"
 		and options[2].disabled and (options[2].hint or ""):find("Le grand recensement", 1, true) ~= nil and refused
 		and options[1].label == "Fond : aucun", tostring(options[2].hint))
 	-- gagné par le haut fait : débloqué, choisi, sur ma fiche
