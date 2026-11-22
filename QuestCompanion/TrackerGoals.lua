@@ -213,7 +213,11 @@ local function ZoneGoal(self, list)
 	if self.MenagerieSealProgress then have, need = self:MenagerieSealProgress(zoneID) end
 	local left = need - have
 	local sealed = self.MenagerieSealed and self:MenagerieSealed(zoneID)
-	if need > 0 and not sealed and left > 0 and left <= ns.TRACKER_SEAL_NEAR then
+	-- 3.7.0 : la prochaine médaille de la zone, puis le sceau (ZoneMedals.lua)
+	goal = self.ZoneMedalGoal and self:ZoneMedalGoal(zoneID, zoneName) or nil
+	if goal then
+		goal.unit = nil
+	elseif need > 0 and not sealed and left > 0 and left <= ns.TRACKER_SEAL_NEAR then
 		goal = ns.JournalGoal("seal:" .. zoneID, self:F("JRN_GOAL_ZONE_SEAL", zoneName, left), have, need, nil, "menagerie")
 		if goal then
 			goal.brief = self:F("JRN_GOAL_ZONE_SEAL_BRIEF", zoneName, left)
