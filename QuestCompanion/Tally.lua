@@ -50,10 +50,6 @@ ns.TALLY_SMALL_PLAYER = 60      -- niveau du joueur pour smallGame
 ns.TALLY_SMALL_LEVEL = 5        -- niveau de la créature (ou moins) pour smallGame
 ns.TALLY_PARTNER_MIN = 10       -- minutes emmenée pour compter une créature (partners)
 ns.TALLY_JUKE_HEARD = 30        -- s d'écoute d'un morceau (jukeHeard)
--- Morceaux du Voile d'hiver (FileDataID = true) : le catalogue du juke-box
--- (MusicData.lua) n'en a aucun ; tant que la liste est vide, winterSong ne
--- bouge pas
-ns.JUKE_WINTER_TRACKS = ns.JUKE_WINTER_TRACKS or {}
 
 local function G(name) return rawget(_G, name) end
 local function Call(fn, ...)
@@ -251,7 +247,9 @@ local function JukeHeard()
 	local juke = ns.juke
 	if type(juke) ~= "table" or juke.id == nil or juke.id ~= heard.id or juke.token ~= heard.token then return end
 	ns:TallyMark("jukeHeard", juke.id, A, 500)
-	if ns.JUKE_WINTER_TRACKS[juke.id] and ns.WinterVeilSeason and Call(ns.WinterVeilSeason, ns) then
+	-- winterSong : un morceau écouté la nuit (heure du jeu) pendant le Voile
+	-- d'hiver. Le juke-box n'a aucun morceau propre à la fête : n'importe lequel compte.
+	if ns.WinterVeilSeason and Call(ns.WinterVeilSeason, ns) and ns.WinterNight and Call(ns.WinterNight, ns) then
 		ns:TallyAdd("winterSong", 1, A)
 	end
 end

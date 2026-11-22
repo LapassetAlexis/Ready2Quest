@@ -12,9 +12,8 @@ local GLOBALS = { "IsInGroup", "GetNumGroupMembers", "UnitLevel", "UnitName", "C
 for _, name in ipairs(GLOBALS) do TL.saved[name] = rawget(_G, name) end
 -- champs de NS remplacés le temps d'un scénario (remis à la fin)
 local FIELDS = { "ShinySpeciesKills", "ReserveSelectReleasable", "ShareText", "ShareAllowed", "ShareCopy", "WeeklyId",
-	"WinterVeilSeason", "CompanionWinterKey", "FeatTouch", "CaptureRollQuality", "SpecimenRollSize", "SpecimenRollTrait" }
+	"WinterVeilSeason", "WinterNight", "CompanionWinterKey", "FeatTouch", "CaptureRollQuality", "SpecimenRollSize", "SpecimenRollTrait" }
 for _, name in ipairs(FIELDS) do TL.saved["ns:" .. name] = rawget(NS, name) end
-TL.winterTracks = NS.JUKE_WINTER_TRACKS
 
 local A, CH = "account", "char"
 
@@ -30,7 +29,6 @@ end
 local function Restore()
 	for _, name in ipairs(GLOBALS) do _G[name] = TL.saved[name] end
 	for _, name in ipairs(FIELDS) do NS[name] = TL.saved["ns:" .. name] end
-	NS.JUKE_WINTER_TRACKS = TL.winterTracks
 	math.random = TL.random
 end
 
@@ -553,20 +551,25 @@ do
 	NS:JukeStop(true)
 	Mock:Advance(40)
 	s.ok("arrêté avant 30 s : rien", not NS:TallyHas("jukeHeard", b))
-	-- morceau du Voile d'hiver (liste vide en vrai : aucun dans le catalogue)
-	NS.JUKE_WINTER_TRACKS = { [b] = true }
-	local season = false
+	-- un morceau écouté la nuit pendant le Voile d'hiver (n'importe lequel : le
+	-- catalogue n'a aucun morceau propre à la fête)
+	local season, night = false, true
 	NS.WinterVeilSeason = function() return season end
+	NS.WinterNight = function() return night end
 	NS:JukePlay(b, nil, nil, true)
 	Mock:Advance(31)
-	s.ok("hors saison : pas de morceau de saison", NS:TallyGet("winterSong") == 0 and NS:TallyHas("jukeHeard", b))
-	season = true
+	s.ok("hors saison, de nuit : rien", NS:TallyGet("winterSong") == 0 and NS:TallyHas("jukeHeard", b))
+	season, night = true, false
 	NS:JukePlay(a, nil, nil, true); Mock:Advance(31)
-	NS:JukePlay(b, nil, nil, true); Mock:Advance(31)
-	s.ok("en saison : compté", NS:TallyGet("winterSong") == 1)
+	s.ok("en saison, de jour : rien", NS:TallyGet("winterSong") == 0)
+	night = true
+	NS:JukePlay(b, nil, nil, true); Mock:Advance(10)
+	s.ok("en saison, de nuit, avant 30 s : pas encore", NS:TallyGet("winterSong") == 0)
+	Mock:Advance(21)
+	s.ok("en saison, de nuit, 30 s : compté", NS:TallyGet("winterSong") == 1)
 	s.ok("absente refusée : rien", (function() _G.PlayMusic = function() return false end; return NS:JukePlay(c, nil, nil, true) end)() == false)
 	NS:JukeStop(true)
-	s.check("[TAL] jukeHeard (30 s d'écoute), winterSong (liste de saison, pendant la saison)")
+	s.check("[TAL] jukeHeard (30 s d'écoute), winterSong (de nuit, pendant le Voile d'hiver)")
 end
 
 -- ---------------------------------------------------------------------------
