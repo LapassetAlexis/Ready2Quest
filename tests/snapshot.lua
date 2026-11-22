@@ -1559,6 +1559,31 @@ Snap.scenes["qc-journal-feats-titles"] = function(T) return OwnDraws(T, function
 	return frame, "QuestCompanion : carnet, Hauts faits › Titres"
 end) end
 
+-- 3.7.0 (C1b) : onglet Statistiques (maquette carnet-j5) : la sauvegarde
+-- d'une collection en cours et des compteurs depuis la 3.7
+local function StatsWorld(ns)
+	FeatsWorld(ns)
+	local data = ns:CaptureData()
+	data.caught, data.tries, data.paillettesEarned = 1412, 2655, 6240
+	data.study = data.study or {}
+	data.studyV = ns.STUDY_SCHEMA
+	data.study[90001] = { n = 37, z = 0, t = 0, paid = 0, lo = 88, hi = 124 }
+	data.study[90002] = { n = 12, z = 0, t = 0, paid = 0, lo = 76, hi = 101 }
+	data.creatures[90001].name, data.creatures[90002].name = "Raptor de Strangleronce", "Lapin"
+	ns:CompanionData().travel = 412000
+	for key, value in pairs({ captureHunt = 640, glitterSpent = 1180, release = 212, orderDone = 8 }) do ns:TallyAdd(key, value) end
+	ns:TallyMax("captureStreak", 17)
+	ns:TallyMax("shinyChain", 50)
+	for key, value in pairs({ radiantMin = 560, wish = 23, treat = 61 }) do ns:TallyAdd(key, value, "char") end
+	ns:FeatStore("account").ctr.trades = 3
+end
+
+Snap.scenes["qc-journal-feats-stats"] = function(T) return OwnDraws(T, function(T)
+	local frame, ns = QCJournal(T, "feats", StatsWorld)
+	ns:JournalFeatsTab("stats")
+	return frame, "QuestCompanion : carnet, Hauts faits › Statistiques"
+end) end
+
 -- le suivi à l'écran avec un haut fait suivi
 Snap.scenes["qc-tracker-feat"] = function(T)
 	local ns = QCWorld(T)
