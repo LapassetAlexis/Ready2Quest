@@ -2,7 +2,7 @@
 
 ## 2.1.0 — Mot de l'ombre : Mort sans retour
 
-- **Prêtre** : l'icône de **Mot de l'ombre : Mort** remplace le crâne au-dessus de la cible quand le sort la tue à coup sûr. S'il ne la tue pas, il te renvoie 30 % de ta vie : l'icône dit quand ce risque n'existe pas. En recharge (18 s) ou hors de portée, le crâne revient. Elle est un peu plus grande que le crâne et la coche de portée et passe au-dessus d'eux : rien ne dépasse derrière.
+- **Prêtre** : l'icône de **Mot de l'ombre : Mort** remplace le crâne au-dessus de la cible quand le sort la tue à coup sûr. S'il ne la tue pas, il te renvoie 30 % de ta vie : l'icône dit quand ce risque n'existe pas. En recharge (18 s) ou hors de portée, le crâne revient. Quand elle s'allume, la coche de portée et le crâne s'effacent : rien ne reste derrière. La recharge est comptée par Ready2Quest à chaque lancer (le jeu la cache souvent).
 - Le calcul suit les rangs de Forever (niveaux 32, 40, 48, 56), ton niveau et ta puissance des sorts d'Ombre, au bas de la fourchette, avec la marge des DoT mortels (90 % par défaut) pour les résistances. Talents et Forme d'Ombre ne sont pas comptés : l'icône vient un peu tard plutôt que trop tôt.
 - Réglage : Combat › DoT mortels › « Prêtre : Mot de l'ombre : Mort sans retour » (actif par défaut). Il demande les barres de nom.
 - **Plus de grandes icônes sur le cadre de la cible** : le crâne des DoT (et son arme) et l'icône du sort qui tue ne s'affichent plus en grand sur le portrait ; l'icône au-dessus du monstre suffit. Pour les retrouver : Combat › DoT mortels › « Grandes icônes sur le cadre de la cible ». La ligne « Crâne quand c'est mortel » part avec elles.

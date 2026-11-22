@@ -286,7 +286,8 @@ do
 	load5(ReadFile("Ready2Quest/CombatDeath.lua"), "CombatDeath.lua")("Ready2Quest", ns)
 	local saved = {}
 	for _, k in ipairs({ "IsPlayerSpell", "UnitLevel", "GetSpellBonusDamage", "UnitExists", "UnitIsDead", "UnitCanAttack",
-		"C_NamePlate", "UnitHealth", "C_Spell", "Ready2QuestCombat_DoTInfoDB", "CreateFrame" }) do saved[k] = rawget(_G, k) end
+		"C_NamePlate", "UnitHealth", "C_Spell", "Ready2QuestCombat_DoTInfoDB", "CreateFrame", "Ready2QuestCombat_RangeIcon",
+		"GetTime", "hooksecurefunc" }) do saved[k] = rawget(_G, k) end
 	local known = {}
 	_G.IsPlayerSpell = function(id) return known[id] == true end
 	_G.UnitLevel = function() return 44 end
@@ -319,6 +320,8 @@ do
 		function f:SetSize(w, h) self.w, self.h = w, h end
 		function f:SetFrameStrata(s) self.strata = s end
 		function f:SetFrameLevel(l) self.level = l end
+		function f:SetParent(p) self.parent = p end
+		function f:GetParent() return self.parent end
 		function f:SetStatusBarTexture() end
 		function f:SetStatusBarColor() end
 		function f:GetStatusBarTexture() return {} end
@@ -343,8 +346,29 @@ do
 	_G.UnitHealth = function() return 300 end
 	_G.C_NamePlate = { GetNamePlateForUnit = function() return plate end }
 	_G.C_Spell = { GetSpellCooldown = function() return { startTime = 0, duration = 0 } end }
+	-- la coche de portée (nom global donné à l'import) : un cadre à cacher
+	local check = { parent = plate }
+	function check:SetParent(p) self.parent = p; for _, h in ipairs(self.hooks or {}) do h(self, p) end end
+	function check:GetParent() return self.parent end
+	_G.Ready2QuestCombat_RangeIcon = check
+	_G.hooksecurefunc = function(obj, method, fn)
+		if obj == check and method == "SetParent" then check.hooks = check.hooks or {}; table.insert(check.hooks, fn) end
+	end
+	local now = 100
+	_G.GetTime = function() return now end
 	local shown = ns:ShadowDeathTick()
-	local window, statusBar = frames[1], frames[2]
+	local window, statusBar, curtain = frames[1], frames[2], frames[3]
+	local held = check.parent == curtain and curtain ~= nil and window.parent == plate and curtain.parent == plate
+	check:SetParent(plate)          -- le moteur la replace : elle revient derrière le rideau
+	local heldAgain = check.parent == curtain
+	-- la recharge comptée par Ready2Quest : un lancer réussi, 18 s (le jeu la cache)
+	local castOk = ns:ShadowDeathCast("player", "x", 1309633)
+	local castOther = ns:ShadowDeathCast("player", "x", 589)
+	local selfCooling = ns:ShadowDeathTick()
+	local released = check.parent == plate
+	now = 119
+	local afterCd = ns:ShadowDeathTick()
+	ns.shadowDeathCastAt = nil
 	_G.C_Spell = { GetSpellCooldown = function() return { startTime = 10, duration = 18 } end }
 	local cooling = ns:ShadowDeathTick()
 	local hiddenCooling = window and window.shown
@@ -363,12 +387,13 @@ do
 	known = {}
 	local notPriest = ns:ShadowDeathTick()
 	for k, v in pairs(saved) do _G[k] = v end
-	Check("[COMBAT] Mot de l'ombre : Mort : à la place du crâne au-dessus de la cible, deux strates au-dessus de la barre, 4 px de plus pour couvrir crâne et coche (vie en max, dégâts sûrs en valeur) ; en recharge (pas le temps global), hors de portée, sans barre de nom, coupée ou sans le sort : cachée",
+	Check("[COMBAT] Mot de l'ombre : Mort : à la place du crâne, rattachée à la barre de nom, la coche derrière un rideau (et y revient), rendue en recharge ; recharge comptée au lancer (18 s) ; deux strates au-dessus de la barre, 4 px de plus (vie en max, dégâts sûrs en valeur) ; en recharge (pas le temps global), hors de portée, sans barre de nom, coupée ou sans le sort : cachée",
 		shown == "shown" and window and statusBar and statusBar.max == 300 and math.abs(statusBar.value - lethal) < 0.01
 		and window.points[1] and window.points[1][1] == "BOTTOM" and window.points[1][3] == "TOP" and window.points[1][5] == 56
 		and window.w == 32 and window.strata == "HIGH" and window.level == 50 and statusBar.icon.texture == 136149
 		and cooling == "cooling" and hiddenCooling == false and gcd == "shown" and out == "hidden" and noPlate == "hidden" and hiddenNoPlate == false
-		and off == "hidden" and notPriest == "hidden",
+		and off == "hidden" and notPriest == "hidden" and held and heldAgain and castOk and not castOther
+		and selfCooling == "cooling" and released and afterCd == "shown",
 		tostring(shown) .. " " .. tostring(cooling) .. " " .. tostring(gcd) .. " " .. tostring(noPlate))
 end
 

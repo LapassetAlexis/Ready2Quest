@@ -28,7 +28,7 @@ ns.SHADOW_DEATH_RANKS = {
 	{ id = 1309595, base = 32, max = 37, points = 295, perLevel = 1.5 },
 }
 ns.SHADOW_DEATH = { variance = 0.0605, coefficient = 0.429, icon = 136149, school = 6, cooldown = 18,
-	backlash = 30, size = 28, cover = 4, length = 10000 }
+	backlash = 30, size = 28, cover = 4, curtain = 12, length = 10000 }
 
 local function Plain(value)
 	if ns.Plain then return ns.Plain(value) end
@@ -78,8 +78,23 @@ function ns:ShadowDeathLethal()
 	return self:ShadowDeathDamage(rank, level, power) * self:ShadowDeathMargin(), rank
 end
 
--- En recharge (lisible) : l'icône se retire ; illisible : elle reste
+-- La recharge : le jeu la cache souvent (valeur secrète, bêta 4 : l'icône
+-- restait). Ready2Quest note donc lui-même le dernier lancer réussi
+-- (UNIT_SPELLCAST_SUCCEEDED) et compte les 18 s ; la recharge lisible du
+-- jeu compte aussi quand elle existe.
+ns.shadowDeathIds = {}
+for _, rank in ipairs(ns.SHADOW_DEATH_RANKS) do ns.shadowDeathIds[rank.id] = true end
+
+function ns:ShadowDeathCast(unit, _, spellID)
+	if Plain(unit) ~= "player" or not ns.shadowDeathIds[Plain(spellID)] then return false end
+	self.shadowDeathCastAt = Ask(rawget(_G, "GetTime"))
+	return true
+end
+
 function ns:ShadowDeathCooling(rank)
+	local now = Ask(rawget(_G, "GetTime"))
+	local at = self.shadowDeathCastAt
+	if type(now) == "number" and type(at) == "number" and now - at < ns.SHADOW_DEATH.cooldown then return true end
 	local api = rawget(_G, "C_Spell")
 	local start, duration
 	if api and type(api.GetSpellCooldown) == "function" then
@@ -96,6 +111,13 @@ end
 -- ---------------------------------------------------------------------------
 -- L'icône : fenêtre découpée + barre invisible, comme le crâne
 -- ---------------------------------------------------------------------------
+-- 2.1.0 bêta 5 : elle REMPLACE la coche de portée et le crâne des DoT. Les
+-- deux passent dans un cadre découpé (« rideau ») qui va du bout du
+-- remplissage de notre barre au bord droit de la fenêtre : tant que le sort
+-- ne tue pas, ce bout est loin à gauche et le rideau couvre l'endroit (coche
+-- et crâne visibles) ; quand il tue, le bout touche le bord droit, le rideau
+-- n'a plus de largeur et eux disparaissent, au moment même où notre icône
+-- entre. Le client fait la comparaison (vie secrète), pas nous.
 local widget
 
 local function Build()
@@ -114,12 +136,65 @@ local function Build()
 	icon:SetTexture(ns.SHADOW_DEATH.icon)
 	-- sans le liseré gris des icônes de sort : un carré plein
 	if type(icon.SetTexCoord) == "function" then icon:SetTexCoord(0.07, 0.93, 0.07, 0.93) end
-	widget = { window = window, bar = bar, icon = icon }
+	-- le rideau : du bout du remplissage au bord droit de la fenêtre (+ marge)
+	local curtain = CreateFrame("Frame", nil, UIParent)
+	curtain:SetClipsChildren(true)
+	local margin = ns.SHADOW_DEATH.curtain
+	curtain:SetPoint("TOPLEFT", bar:GetStatusBarTexture(), "TOPRIGHT", 0, margin)
+	curtain:SetPoint("BOTTOMRIGHT", window, "BOTTOMRIGHT", margin, -margin)
+	widget = { window = window, bar = bar, icon = icon, curtain = curtain, held = {} }
 	return widget
 end
 
+-- Les cadres cachés par notre icône : la coche de portée (nom global donné à
+-- l'import) et la fenêtre du crâne de la barre de nom de la cible
+local function Covered(e, plate, healthBar)
+	local list = {}
+	local check = rawget(_G, "Ready2QuestCombat_RangeIcon")
+	if type(check) == "table" then list[#list + 1] = check end
+	local dots = e.modules and e.modules.DoTInfo
+	local marker = dots and dots.barMarker
+	if marker and type(marker.widgetsFor) == "function" then
+		local ok, w = pcall(marker.widgetsFor, plate, healthBar)
+		if ok and type(w) == "table" and type(w.iconWindow) == "table" then list[#list + 1] = w.iconWindow end
+	end
+	return list
+end
+
+-- Un cadre passe derrière le rideau ; s'il change de parent (le moteur le
+-- replace sur sa barre de nom), il y revient aussitôt. Release le rend.
+local function Hold(w, frame)
+	local entry = w.held[frame]
+	if not entry then
+		local parent = type(frame.GetParent) == "function" and frame:GetParent() or nil
+		entry = { parent = parent, on = true }
+		w.held[frame] = entry
+		if type(rawget(_G, "hooksecurefunc")) == "function" and type(frame.SetParent) == "function" then
+			hooksecurefunc(frame, "SetParent", function(f, p)
+				if p == w.curtain then return end
+				entry.parent = p
+				if entry.on then f:SetParent(w.curtain) end
+			end)
+		end
+	end
+	entry.on = true
+	if frame:GetParent() ~= w.curtain then frame:SetParent(w.curtain) end
+end
+
+local function Release(w)
+	for frame, entry in pairs(w.held) do
+		if entry.on then
+			entry.on = false
+			if entry.parent then frame:SetParent(entry.parent) end
+		end
+	end
+end
+
 local function Hide()
-	if widget then widget.window:Hide() end
+	if widget then
+		widget.window:Hide()
+		Release(widget)
+	end
 	return "hidden"
 end
 
@@ -142,25 +217,28 @@ function ns:ShadowDeathTick()
 	local healthBar = type(plate) == "table" and e.Plate and type(e.Plate.HealthBar) == "function"
 		and Ask(e.Plate.HealthBar, plate) or nil
 	if not healthBar then return Hide() end
-	local w = Build()
-	if not w then return "hidden" end
-	-- hors de portée (lisible), le sort ne part pas : rien
+	-- hors de portée (lisible), le sort ne part pas : rien, la croix rouge reste
 	local range = e.modules and e.modules.Range
 	if range and type(range.Check) == "function" and Ask(range.Check) == "out" then return Hide() end
-	-- en recharge (lisible) : rien, le crâne des DoT reprend sa place
+	-- en recharge : rien, la coche et le crâne reviennent
 	if self:ShadowDeathCooling(rank) then Hide(); return "cooling" end
 	local w = Build()
 	if not w then return "hidden" end
-	-- 2.1.0 bêta 2 : à la place du crâne des DoT (même endroit, même taille,
-	-- au-dessus de lui) ; seul le crâne reste quand le sort ne tue pas encore
+	-- à la place du crâne des DoT (même endroit), un peu plus grande
 	local dots = rawget(_G, "Ready2QuestCombat_DoTInfoDB")
 	dots = type(dots) == "table" and dots or {}
-	-- 2.1.0 bêta 4 : un peu plus grande que le crâne et la coche de portée,
-	-- pour les couvrir en entier (elle les remplace, rien ne dépasse)
 	local size = (tonumber(dots.nameplateIconSize) or ns.SHADOW_DEATH.size) + ns.SHADOW_DEATH.cover
 	w.window:SetSize(size, size)
 	w.bar:SetSize(ns.SHADOW_DEATH.length, size)
 	w.icon:SetSize(size, size)
+	-- bêta 5 : rattachée à la barre de nom (son échelle : avant, elle était à
+	-- celle de l'écran et la coche, à celle de la barre, dépassait)
+	if w.plate ~= plate then
+		w.plate = plate
+		w.window:SetParent(plate)
+		w.curtain:SetParent(plate)
+		w.anchor = nil
+	end
 	local where, x, y = dots.nameplateIconPosition or "above", tonumber(dots.plateIconOffsetX) or 0,
 		tonumber(dots.plateIconOffsetY) or 0
 	local signature = tostring(healthBar) .. where .. x .. "," .. y
@@ -177,9 +255,7 @@ function ns:ShadowDeathTick()
 			w.window:SetPoint("BOTTOM", healthBar, "TOP", x, 4 + y)
 		end
 	end
-	-- deux strates au-dessus de la barre : la coche de portée est dans la
-	-- strate de la barre, le crâne une au-dessus ; strate illisible (Forever) :
-	-- HIGH, au-dessus du repli des deux (LOW, MEDIUM)
+	-- deux strates au-dessus de la barre (strate illisible : HIGH)
 	local strata = Ask(healthBar.GetFrameStrata, healthBar)
 	strata = type(strata) == "string" and NEXT_STRATA[NEXT_STRATA[strata]] or "HIGH"
 	w.window:SetFrameStrata(strata)
@@ -194,6 +270,8 @@ function ns:ShadowDeathTick()
 	end)
 	if not ok then return Hide() end
 	w.window:Show()
+	-- la coche et le crâne derrière le rideau : ils s'effacent quand l'icône entre
+	for _, frame in ipairs(Covered(e, plate, healthBar)) do Hold(w, frame) end
 	return "shown"
 end
 
@@ -202,6 +280,9 @@ if ns.combat and ns.Every then
 		local ok, err = pcall(ns.ShadowDeathTick, ns)
 		if not ok and ns.RecordError then ns:RecordError("combat:death", err) end
 	end)
+end
+if ns.combat and ns.On then
+	ns.On("UNIT_SPELLCAST_SUCCEEDED", "combat", function(...) ns:ShadowDeathCast(...) end, "combat:death")
 end
 
 if ns.Mark then ns.Mark("CombatDeath") end
