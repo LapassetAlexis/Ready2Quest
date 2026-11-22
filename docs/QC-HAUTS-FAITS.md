@@ -1104,8 +1104,8 @@ Choix faits au codage :
 - `soc_mentor_1` (code 410) — Passeur / Word of Mouth — Faire découvrir Quest Companion à un joueur, 5 points, calcul `fonction` ; en attente (`pending`, étape suivante).
 - `soc_mentor_5` (code 411) — Cinq filleuls / Five Protégés — Faire découvrir Quest Companion à 5 joueurs, 10 points, calcul `fonction` ; en attente (`pending`, étape suivante).
 - `soc_mentor_10` (code 412) — Dix filleuls / Ten Protégés — Faire découvrir Quest Companion à 10 joueurs, 25 points, calcul `fonction` ; en attente (`pending`, étape suivante) ; récompense : titre « le Passeur ».
-- `soc_discord` (code 414) — Porte ouverte / Open Door — Saisir le mot de la version trouvé sur le Discord (page Communauté), 10 points, calcul `fonction` ; en attente (`pending`, étape suivante) ; récompense : ornement « Explorateur des mondes » (à créer).
-- `soc_feedback` (code 415) — Mon grain de sel / My Two Cents — Composer un avis sur la page Communauté, 5 points, calcul `fonction` ; en attente (`pending`, étape suivante).
+- `soc_discord` (code 414) — Porte ouverte / Open Door — Saisir le mot de la version trouvé sur le Discord (page Communauté), 10 points, calcul `fonction` (page Communauté, livrée) ; récompense : ornement « Explorateur des mondes » (`feat_worlds`).
+- `soc_feedback` (code 415) — Mon grain de sel / My Two Cents — Composer un avis sur la page Communauté, 5 points, calcul `fonction` (page Communauté, livrée).
 
 **Insolite (`fun`, compte)**
 

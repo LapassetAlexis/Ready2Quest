@@ -453,9 +453,9 @@ ns.FeatCatalog(function()
 		{ "soc_mentor_10",        412, "soc", 25, A, crit = TS("mentees", 10), desc = "FEATD_soc_mentor", series = "mentees", pending = true,
 			reward = { title = 67 } },
 		-- (code 413 réservé : soc_pack_25, pas dans ce lot)
-		{ "soc_discord",          414, "soc", 10, A, crit = T("discordWord", 1), desc = "FEATD_soc_discord", pending = true,
+		{ "soc_discord",          414, "soc", 10, A, crit = T("discordWord", 1), desc = "FEATD_soc_discord",
 			reward = { soon = { "orn", "feat_worlds" } } },
-		{ "soc_feedback",         415, "soc", 5,  A, crit = T("feedback", 1), desc = "FEATD_soc_feedback", pending = true },
+		{ "soc_feedback",         415, "soc", 5,  A, crit = T("feedback", 1), desc = "FEATD_soc_feedback" },
 		-- Insolite (compte ; dix secrets)
 		{ "fun_critters_10",    416, "fun", 10, A, crit = { "count", "critter", 10 }, desc = "FEATD_fun_critters_10", series = "critters" },
 		{ "fun_murlocs_10",     417, "fun", 10, A, crit = { "count", "murlocs", 10 }, series = "murlocs" },
