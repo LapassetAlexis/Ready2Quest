@@ -2128,6 +2128,47 @@ Snap.scenes["qc-feat-big-forge"] = function(T)
 	return toast, "QuestCompanion : gros haut fait (« Nouveau titre », 25 points, ailes et éclat forgés)"
 end
 
+-- 3.7.0 : fêtes à la taille de l'exploit, signature, cote d'une prise rare (Quiet.lua)
+Snap.scenes["qc-feat-pill"] = function(T)
+	local ns = QCBannerWorld(T)
+	ns.featPills, ns.featPillHideAt = {}, nil
+	if ns.featPill then ns.featPill:Hide() end
+	ns.featPill = nil
+	ns:FeatPillPush({ kind = "feat", name = "Petite douceur", points = 5, size = "small" })
+	return Centered(ns.featPill), "QuestCompanion : pastille muette d'un petit haut fait (5 points, 3.7)"
+end
+
+Snap.scenes["qc-feat-medium"] = function(T)
+	local ns = QCBannerWorld(T)
+	ns:JournalToastPush({ kind = "feat", title = ns.L.FEAT_TOAST_TITLE, name = "Cinq cents prises", size = "medium",
+		icon = "Interface\\Icons\\INV_Misc_Map_01", points = 10, sub = ns:F("FEAT_GLITTER_N", 5) .. " · Lasso ×1" })
+	return Centered(ns.journalToast), "QuestCompanion : bandeau moyen (10 points, ligne de récompense, 3.7)"
+end
+
+Snap.scenes["qc-feat-big-sig"] = function(T)
+	local ns = QCBannerWorld(T)
+	ns:JournalToastPush({ kind = "feat", id = "day_rare_50", title = ns.L.FEAT_TOAST_TITLE, name = "Bibliothèque vivante",
+		icon = "Interface\\Icons\\Ability_Hunter_BeastTaming", points = 50, size = "big" })
+	local toast = Centered(ns.journalToast)
+	local fx = toast.azReward
+	if fx and fx.at and ns.AzerothFxStep then ns.AzerothFxStep(fx.at + 0.9) end
+	return toast, "QuestCompanion : grand bandeau signé (titre et paillettes, grand effet, 3.7)"
+end
+
+Snap.scenes["qc-result-rare-odds"] = function(T)
+	local ns = QCBannerWorld(T)
+	ns.SHINY_CHANCE = 1 / 150
+	local id = ns:SpecimenAdd({ npc = 3398, stars = 3, name = "Raptor de Strangleronce", origin = "capture", zone = 1413,
+		size = "giant", shiny = true, trait = "curious" })
+	local frame = ns:CaptureResultShow({ name = "Raptor de Strangleronce", shiny = true, stars = 3, npcID = 3398, level = 38,
+		type = "Beast", class = "normal", specimen = id })
+	return Centered(frame), "QuestCompanion : « Brillant capturé ! », cote de base et signature (3.7)"
+end
+
+Snap.scenes["qc-options-quiet"] = function(T)
+	return Options(T, T.QNS, "companionQuiet"), "QuestCompanion : réglages, Compagnon de route > Discrétion (mode discret, 3.7)"
+end
+
 Snap.scenes["qc-guild-forge"] = function(T)
 	local ns = QCBannerWorld(T)
 	ns:GuildFeatsShowToast({ key = "x", sender = "Xan-Royaume", feat = { kind = "h" }, score = 1000, at = Mock.now,
