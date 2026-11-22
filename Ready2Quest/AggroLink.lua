@@ -58,7 +58,10 @@ for _, page in ipairs(ns.OPTION_PAGES or {}) do
 	end
 end
 
-local function Plain(value) return ns.Plain and ns.Plain(value) or value end
+local function Plain(value)
+	if ns.Plain then return ns.Plain(value) end
+	return value
+end
 local function Call(name, ...)
 	local fn = rawget(_G, name)
 	if type(fn) ~= "function" then return nil end

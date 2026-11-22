@@ -286,7 +286,7 @@ end
 M.Update = update
 
 local function start()
-  icon = CreateFrame("Frame", nil, UIParent)
+  icon = CreateFrame("Frame", "Ready2QuestCombat_RangeIcon", UIParent)
   icon:Hide()
   icon.texture = icon:CreateTexture(nil, "OVERLAY")
   icon.texture:SetAllPoints()

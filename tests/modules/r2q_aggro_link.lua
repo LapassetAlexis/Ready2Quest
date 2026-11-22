@@ -205,3 +205,35 @@ do
 		p.point == "BOTTOMLEFT" and p.relPoint == "TOP" and p.x == 17 and p.y == 60,
 		tostring(p.point) .. " " .. tostring(p.relPoint) .. " " .. tostring(p.x) .. " " .. tostring(p.y))
 end
+
+-- 2.1.0 : « ns.Plain and ns.Plain(v) or v » rendait la valeur secrète quand
+-- Plain répond nil (une valeur secrète) : le type de créature secret arrivait
+-- dans une comparaison (AggroLink.lua:176, « attempt to compare local 'utype'
+-- (a secret string value) »). Plus aucun repli de ce genre dans nos fichiers.
+do
+	local ROOT = rawget(_G, "ADDON_ROOT") or "."
+	local found, files = {}, 0
+	for _, pair in ipairs({ { "Ready2Quest", "Ready2Quest/Ready2Quest.toc" }, { "QuestCompanion", "QuestCompanion/QuestCompanion.toc" } }) do
+		local toc = io.open(ROOT .. "/" .. pair[2], "r")
+		for line in toc:lines() do
+			line = line:gsub("\r", ""):gsub("\\", "/")
+			if line:find("%.lua$") and not line:find("^#") and not line:find("^Combat/") then
+				local h = io.open(ROOT .. "/" .. pair[1] .. "/" .. line, "r")
+				if h then
+					files = files + 1
+					local n = 0
+					for text in h:lines() do
+						n = n + 1
+						if text:find("Plain and [%w_%.]*Plain%b()%s*or%s") and not text:find("Plain%b()%s*or%s+nil") then
+							found[#found + 1] = pair[1] .. "/" .. line .. ":" .. n
+						end
+					end
+					h:close()
+				end
+			end
+		end
+		toc:close()
+	end
+	Check("[SECRET] aucun « Plain and Plain(v) or v » (il rend la valeur secrète) dans les deux addons", files > 100 and #found == 0,
+		files .. " fichiers ; " .. table.concat(found, ", "))
+end

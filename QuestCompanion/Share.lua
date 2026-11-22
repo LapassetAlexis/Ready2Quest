@@ -260,7 +260,8 @@ function ns.ShareCut(text, max)
 end
 
 local function Player()
-	local name = ns.Plain and ns.Plain(Call("UnitName", "player")) or Call("UnitName", "player")
+	local name = Call("UnitName", "player")
+	if ns.Plain then name = ns.Plain(name) end
 	if type(name) ~= "string" or name == "" then return nil end
 	return name
 end

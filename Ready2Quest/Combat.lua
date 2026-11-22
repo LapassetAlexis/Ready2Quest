@@ -27,7 +27,8 @@ ns.COMBAT_PARTS = {
 	{ key = "combatBars",  module = "SpellDamageInfo", page = "combatBars" },
 }
 
-ns.RegisterDefaults({ combatRange = true, combatDots = true, combatCast = true, combatBars = true, combatOneIcon = true })
+ns.RegisterDefaults({ combatRange = true, combatDots = true, combatCast = true, combatBars = true, combatOneIcon = true,
+	combatFrameIcons = false })
 
 local FR = {
 	OPT_GROUP_COMBAT        = "COMBAT",
@@ -53,7 +54,6 @@ local FR = {
 	OPT_COMBAT_BESIDE       = "Sans barre de nom : près du cadre de cible",
 	OPT_COMBAT_ICON_SIZE    = "Taille de l'icône",
 	OPT_COMBAT_MARKER       = "Marqueur sur la barre de vie",
-	OPT_COMBAT_SKULL        = "Crâne quand c'est mortel",
 	OPT_COMBAT_SKULL_POS    = "Place du crâne",
 	OPT_COMBAT_SKULL_SIZE   = "Taille du crâne",
 	OPT_COMBAT_PLATES       = "Sur les barres de nom",
@@ -62,6 +62,10 @@ local FR = {
 	OPT_COMBAT_ONE_ICON     = "Une seule icône au-dessus du monstre",
 	OPT_COMBAT_ONE_ICON_DESC = "Le crâne (ou l'arme) prend la place de la coche de portée ; hors de portée, la croix rouge revient.",
 	OPT_COMBAT_INFO_DOTS_3  = "Le crâne : tes DoT suffisent. L'arme (baguette, arc, épée) : tes DoT plus un coup d'arme suffisent.",
+	OPT_COMBAT_DEATH        = "Prêtre : Mot de l'ombre : Mort sans retour",
+	OPT_COMBAT_FRAME_ICONS  = "Grandes icônes sur le cadre de la cible",
+	OPT_COMBAT_FRAME_ICONS_DESC = "Le crâne et l'icône du sort qui tue, en grand sur le portrait.",
+	OPT_COMBAT_DEATH_DESC   = "Son icône remplace le crâne quand il tue à coup sûr (sinon : 30 % de ta vie en retour).",
 	OPT_COMBAT_CAST_MARKER  = "Marqueur pendant l'incantation",
 	OPT_COMBAT_KILL_ICON    = "Icône quand le sort tue",
 	OPT_COMBAT_KILL_SIZE    = "Taille de l'icône",
@@ -122,7 +126,6 @@ local EN = {
 	OPT_COMBAT_BESIDE       = "No nameplate: next to the target frame",
 	OPT_COMBAT_ICON_SIZE    = "Icon size",
 	OPT_COMBAT_MARKER       = "Marker on the health bar",
-	OPT_COMBAT_SKULL        = "Skull when it is lethal",
 	OPT_COMBAT_SKULL_POS    = "Skull position",
 	OPT_COMBAT_SKULL_SIZE   = "Skull size",
 	OPT_COMBAT_PLATES       = "On nameplates",
@@ -131,6 +134,10 @@ local EN = {
 	OPT_COMBAT_ONE_ICON     = "One icon above the monster",
 	OPT_COMBAT_ONE_ICON_DESC = "The skull (or the weapon) takes the range check's place; out of range, the red cross comes back.",
 	OPT_COMBAT_INFO_DOTS_3  = "The skull: your DoTs are enough. The weapon (wand, bow, sword): your DoTs plus one weapon hit are enough.",
+	OPT_COMBAT_DEATH        = "Priest: Shadow Word: Death with no backlash",
+	OPT_COMBAT_FRAME_ICONS  = "Big icons on the target frame",
+	OPT_COMBAT_FRAME_ICONS_DESC = "The skull and the killing spell's icon, big on the portrait.",
+	OPT_COMBAT_DEATH_DESC   = "Its icon replaces the skull when it surely kills (otherwise: 30% of your health back).",
 	OPT_COMBAT_CAST_MARKER  = "Marker while casting",
 	OPT_COMBAT_KILL_ICON    = "Icon when the spell kills",
 	OPT_COMBAT_KILL_SIZE    = "Icon size",
@@ -256,7 +263,6 @@ ns.COMBAT_ROWS = {
 	},
 	combatDots = {
 		Bool("showMarkers", "OPT_COMBAT_MARKER", DOTS),
-		Bool("showSkull", "OPT_COMBAT_SKULL", DOTS),
 		Choice("skullPosition", "OPT_COMBAT_SKULL_POS", DOTS, "COMBAT_POS_", { "portrait", "left", "right", "above", "below" }),
 		Num("skullSize", "OPT_COMBAT_SKULL_SIZE", DOTS, 20, 128, 4, "OPT_PX_UNIT"),
 		Choice("nameplateMode", "OPT_COMBAT_PLATES", DOTS, "COMBAT_PLATE_", { "off", "marker", "markerIcon" }),
@@ -264,6 +270,11 @@ ns.COMBAT_ROWS = {
 		Bool("swingKill", "OPT_COMBAT_SWING", DOTS),
 		{ key = "combatOneIcon", label = "OPT_COMBAT_ONE_ICON", kind = "bool",
 			describe = function() return L.OPT_COMBAT_ONE_ICON_DESC end },
+		{ key = "combatFrameIcons", label = "OPT_COMBAT_FRAME_ICONS", kind = "bool",
+			describe = function() return L.OPT_COMBAT_FRAME_ICONS_DESC end,
+			onChange = function() ns:CombatFrameIcons() end },
+		{ key = "combatDeath", label = "OPT_COMBAT_DEATH", kind = "bool",
+			describe = function() return L.OPT_COMBAT_DEATH_DESC end },
 	},
 	combatCast = {
 		Bool("showMarker", "OPT_COMBAT_CAST_MARKER", CAST),
@@ -366,7 +377,8 @@ local function Ask(fn, ...)
 	if type(fn) ~= "function" then return nil end
 	local ok, a = pcall(fn, ...)
 	if not ok then return nil end
-	return ns.Plain and ns.Plain(a) or a
+	if ns.Plain then return ns.Plain(a) end
+	return a
 end
 
 -- Les réglages de placement des DoT suivent ceux de la portée
@@ -414,6 +426,33 @@ function ns:CombatIconsTick()
 	end
 	return "in"
 end
+
+-- 2.1.0 bêta 3 : les grandes icônes du cadre de la cible (crâne des DoT et
+-- son arme, icône du sort qui tue) se rangent dans un cadre caché ; seule
+-- reste l'icône au-dessus du monstre (barre de nom). Le moteur les montre et
+-- les cache comme avant : sous un parent caché, elles ne s'affichent pas.
+local FRAME_ICONS = { "Ready2QuestCombat_DoTInfoSkull", "Ready2QuestCombat_CastPredictionKill" }
+function ns:CombatFrameIcons()
+	local on = self:DB().combatFrameIcons == true
+	local parent = rawget(_G, "UIParent")
+	if not on then
+		if not self.combatIconHolder and type(rawget(_G, "CreateFrame")) == "function" then
+			self.combatIconHolder = CreateFrame("Frame")
+			self.combatIconHolder:Hide()
+		end
+		parent = self.combatIconHolder
+	end
+	local moved = 0
+	for _, name in ipairs(FRAME_ICONS) do
+		local frame = rawget(_G, name)
+		if type(frame) == "table" and type(frame.SetParent) == "function" and parent then
+			frame:SetParent(parent)
+			moved = moved + 1
+		end
+	end
+	return moved
+end
+if engine then pcall(ns.CombatFrameIcons, ns) end
 
 if engine and ns.Every then
 	ns.Every("combat:icons", 0.1, function()

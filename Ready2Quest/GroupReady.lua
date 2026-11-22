@@ -72,7 +72,10 @@ local function Call(fn, ...)
 	if ok then return a, b end
 	return nil
 end
-local function Plain(value) return ns.Plain and ns.Plain(value) or value end
+local function Plain(value)
+	if ns.Plain then return ns.Plain(value) end
+	return value
+end
 local function Clock() return (ns.Now and ns.Now()) or 0 end
 local function InCombat()
 	if Plain(Call(G("InCombatLockdown"))) then return true end

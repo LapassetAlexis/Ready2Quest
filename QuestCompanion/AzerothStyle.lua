@@ -452,7 +452,14 @@ local function Clamp01(x) if x < 0 then return 0 elseif x > 1 then return 1 end 
 local atlasCache, sceneCache = {}, {}
 local function AtlasMissing(api, name)
 	local done, info = pcall(api.GetAtlasInfo, name)
-	info = done and ns.Plain and ns.Plain(info) or (done and info or nil)
+	if not done then return true end
+	-- une fiche secrète : l'atlas existe (2.1.0 : écrit en clair, sans le
+	-- repli « Plain(v) or v »)
+	local isSecret = rawget(_G, "issecretvalue")
+	if type(isSecret) == "function" then
+		local ok, secret = pcall(isSecret, info)
+		if ok and secret then return false end
+	end
 	return info == nil or info == false
 end
 function ns:AzerothAtlasOK(refresh)

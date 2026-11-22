@@ -973,7 +973,8 @@ ns.CAPTURE_NET_ALONE = { point = "CENTER", x = 0, y = -170 }
 local function NetCrowdsRight(frame, scale)
 	if not (frame.GetRight and UIParent and UIParent.GetWidth) then return false end
 	local ok, right = pcall(frame.GetRight, frame)
-	right = ok and tonumber(ns.Plain and ns.Plain(right) or right) or nil
+	if ns.Plain then right = ns.Plain(right) end
+	right = ok and tonumber(right) or nil
 	if not right then return false end
 	local frameScale = (frame.GetEffectiveScale and frame:GetEffectiveScale()) or 1
 	local screen = (UIParent:GetWidth() or 0) * ((UIParent.GetEffectiveScale and UIParent:GetEffectiveScale()) or 1)

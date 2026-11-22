@@ -249,6 +249,154 @@ do
 		and not ns:CombatPartOn(ns.COMBAT_PARTS[1]), first)
 end
 
+-- 3a. 2.1.0 bêta 3 : plus de grandes icônes sur le cadre de la cible (par défaut)
+do
+	Say("-- combat : grandes icônes du cadre de la cible")
+	local parents = {}
+	local function Icon(name)
+		local f = { name = name }
+		function f:SetParent(p) parents[name] = p end
+		_G[name] = f
+	end
+	Icon("Ready2QuestCombat_DoTInfoSkull"); Icon("Ready2QuestCombat_CastPredictionKill")
+	local engine = { state = {}, ShouldRun = function() return true end }
+	local ns, db = Glue(engine)
+	local skull, kill = parents.Ready2QuestCombat_DoTInfoSkull, parents.Ready2QuestCombat_CastPredictionKill
+	local hidden = skull ~= nil and skull == kill and skull ~= UIParent and not skull:IsShown()
+	local row
+	for _, r in ipairs(ns.COMBAT_ROWS.combatDots) do if r.key == "combatFrameIcons" then row = r end end
+	db.combatFrameIcons = true
+	row.onChange(true)
+	local back = parents.Ready2QuestCombat_DoTInfoSkull == UIParent and parents.Ready2QuestCombat_CastPredictionKill == UIParent
+	_G.Ready2QuestCombat_DoTInfoSkull, _G.Ready2QuestCombat_CastPredictionKill = nil, nil
+	Check("[COMBAT] cadre de la cible : crâne et icône du sort qui tue rangés sous un cadre caché par défaut ; le réglage les rend",
+		db.combatFrameIcons == true and hidden and back)
+end
+
+-- 3b. 2.1.0 : Mot de l'ombre : Mort sans retour (CombatDeath.lua)
+do
+	Say("-- combat : Mot de l'ombre : Mort")
+	local db = { combatDots = true }
+	local plate, bar = {}, nil
+	local rangeState = "in"
+	local engine = { Plate = { HealthBar = function() return { GetFrameStrata = function() return "LOW" end,
+		GetFrameLevel = function() return 10 end } end }, modules = { Range = { Check = function() return rangeState end } } }
+	local ns = { combat = engine, RegisterDefaults = function(d) for k, v in pairs(d) do if db[k] == nil then db[k] = v end end end }
+	function ns:DB() return db end
+	load5(ReadFile("Ready2Quest/CombatDeath.lua"), "CombatDeath.lua")("Ready2Quest", ns)
+	local saved = {}
+	for _, k in ipairs({ "IsPlayerSpell", "UnitLevel", "GetSpellBonusDamage", "UnitExists", "UnitIsDead", "UnitCanAttack",
+		"C_NamePlate", "UnitHealth", "C_Spell", "Ready2QuestCombat_DoTInfoDB", "CreateFrame", "Ready2QuestCombat_RangeIcon",
+		"GetTime", "hooksecurefunc" }) do saved[k] = rawget(_G, k) end
+	local known = {}
+	_G.IsPlayerSpell = function(id) return known[id] == true end
+	_G.UnitLevel = function() return 44 end
+	_G.GetSpellBonusDamage = function(school) return school == 6 and 100 or 0 end
+	-- le rang : aucun, puis le plus haut appris
+	local none = ns:ShadowDeathRank()
+	known[1309595], known[1309633] = true, true
+	local rank = ns:ShadowDeathRank()
+	-- rang 2 au niveau 44 : (370 + 1,9 × 4) × (1 - 0,0605) + 0,429 × 100 ; puis plafonné au niveau 45
+	local want = (370 + 1.9 * 4) * (1 - 0.0605) + 42.9
+	local damage = ns:ShadowDeathDamage(rank, 44, 100)
+	local capped = ns:ShadowDeathDamage(rank, 60, 0)
+	_G.Ready2QuestCombat_DoTInfoDB = { killMargin = 80, nameplateIconPosition = "above", plateIconOffsetX = 0, plateIconOffsetY = 52,
+		nameplateIconSize = 28 }
+	local lethal = ns:ShadowDeathLethal()
+	Check("[COMBAT] Mot de l'ombre : Mort : rang appris le plus haut, dégâts au bas de la fourchette (niveau plafonné), marge des DoT",
+		none == nil and rank and rank.id == 1309633 and math.abs(damage - want) < 0.01
+		and math.abs(capped - (370 + 1.9 * 5) * (1 - 0.0605)) < 0.01 and math.abs(lethal - want * 0.8) < 0.01,
+		tostring(damage) .. " / " .. tostring(lethal))
+
+	-- le passage : une barre invisible reçoit max = vie (secrète), valeur = dégâts sûrs
+	local frames = {}
+	_G.CreateFrame = function(kind)
+		local f = { kind = kind, shown = false, points = {} }
+		function f:SetClipsChildren() end
+		function f:Hide() self.shown = false end
+		function f:Show() self.shown = true end
+		function f:SetPoint(...) self.points[#self.points + 1] = { ... } end
+		function f:ClearAllPoints() self.points = {} end
+		function f:SetSize(w, h) self.w, self.h = w, h end
+		function f:SetFrameStrata(s) self.strata = s end
+		function f:SetFrameLevel(l) self.level = l end
+		function f:SetParent(p) self.parent = p end
+		function f:GetParent() return self.parent end
+		function f:SetStatusBarTexture() end
+		function f:SetStatusBarColor() end
+		function f:GetStatusBarTexture() return {} end
+		function f:SetMinMaxValues(a, b) self.min, self.max = a, b end
+		function f:SetValue(v) self.value = v end
+		function f:CreateTexture()
+			local t = {}
+			function t:SetPoint() end
+			function t:SetTexture(x) self.texture = x end
+			function t:SetSize() end
+			function t:SetDesaturated(d) self.desaturated = d end
+			function t:SetAlpha(a) self.alpha = a end
+			f.icon = t
+			return t
+		end
+		frames[#frames + 1] = f
+		return f
+	end
+	_G.UnitExists = function() return true end
+	_G.UnitIsDead = function() return false end
+	_G.UnitCanAttack = function() return true end
+	_G.UnitHealth = function() return 300 end
+	_G.C_NamePlate = { GetNamePlateForUnit = function() return plate end }
+	_G.C_Spell = { GetSpellCooldown = function() return { startTime = 0, duration = 0 } end }
+	-- la coche de portée (nom global donné à l'import) : un cadre à cacher
+	local check = { parent = plate }
+	function check:SetParent(p) self.parent = p; for _, h in ipairs(self.hooks or {}) do h(self, p) end end
+	function check:GetParent() return self.parent end
+	_G.Ready2QuestCombat_RangeIcon = check
+	_G.hooksecurefunc = function(obj, method, fn)
+		if obj == check and method == "SetParent" then check.hooks = check.hooks or {}; table.insert(check.hooks, fn) end
+	end
+	local now = 100
+	_G.GetTime = function() return now end
+	local shown = ns:ShadowDeathTick()
+	local window, statusBar, curtain = frames[1], frames[2], frames[3]
+	local held = check.parent == curtain and curtain ~= nil and window.parent == plate and curtain.parent == plate
+	check:SetParent(plate)          -- le moteur la replace : elle revient derrière le rideau
+	local heldAgain = check.parent == curtain
+	-- la recharge comptée par Ready2Quest : un lancer réussi, 18 s (le jeu la cache)
+	local castOk = ns:ShadowDeathCast("player", "x", 1309633)
+	local castOther = ns:ShadowDeathCast("player", "x", 589)
+	local selfCooling = ns:ShadowDeathTick()
+	local released = check.parent == plate
+	now = 119
+	local afterCd = ns:ShadowDeathTick()
+	ns.shadowDeathCastAt = nil
+	_G.C_Spell = { GetSpellCooldown = function() return { startTime = 10, duration = 18 } end }
+	local cooling = ns:ShadowDeathTick()
+	local hiddenCooling = window and window.shown
+	_G.C_Spell = { GetSpellCooldown = function() return { startTime = 10, duration = 1.5 } end }
+	local gcd = ns:ShadowDeathTick()
+	rangeState = "out"
+	local out = ns:ShadowDeathTick()
+	rangeState = "in"
+	_G.C_NamePlate = { GetNamePlateForUnit = function() return nil end }
+	local noPlate = ns:ShadowDeathTick()
+	local hiddenNoPlate = window and window.shown
+	_G.C_NamePlate = { GetNamePlateForUnit = function() return plate end }
+	db.combatDeath = false
+	local off = ns:ShadowDeathTick()
+	db.combatDeath = true
+	known = {}
+	local notPriest = ns:ShadowDeathTick()
+	for k, v in pairs(saved) do _G[k] = v end
+	Check("[COMBAT] Mot de l'ombre : Mort : à la place du crâne, rattachée à la barre de nom, la coche derrière un rideau (et y revient), rendue en recharge ; recharge comptée au lancer (18 s) ; deux strates au-dessus de la barre, 4 px de plus (vie en max, dégâts sûrs en valeur) ; en recharge (pas le temps global), hors de portée, sans barre de nom, coupée ou sans le sort : cachée",
+		shown == "shown" and window and statusBar and statusBar.max == 300 and math.abs(statusBar.value - lethal) < 0.01
+		and window.points[1] and window.points[1][1] == "BOTTOM" and window.points[1][3] == "TOP" and window.points[1][5] == 56
+		and window.w == 32 and window.strata == "HIGH" and window.level == 50 and statusBar.icon.texture == 136149
+		and cooling == "cooling" and hiddenCooling == false and gcd == "shown" and out == "hidden" and noPlate == "hidden" and hiddenNoPlate == false
+		and off == "hidden" and notPriest == "hidden" and held and heldAgain and castOk and not castOther
+		and selfCooling == "cooling" and released and afterCd == "shown",
+		tostring(shown) .. " " .. tostring(cooling) .. " " .. tostring(gcd) .. " " .. tostring(noPlate))
+end
+
 -- 4. Dans le vrai Ready2Quest : les pages et la commande sont là
 do
 	local ids = {}

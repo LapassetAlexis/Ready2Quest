@@ -673,7 +673,10 @@ Wrap("CaptureResolve", function(self, success, rolling)
 	-- la série atteinte attend son évaluation (une réussite dans la même volée)
 	if self:FeatCount("capFail", nil, A) < 10 or self:FeatGot("men_bad_luck") then self:FeatCountReset("capFail", A) end
 	local target = type(rolling.target) == "table" and rolling.target or {}
-	local level, mine = tonumber(ns.Plain and ns.Plain(target.level) or target.level), tonumber(Call(G("UnitLevel"), "player"))
+	local level = target.level
+	if ns.Plain then level = ns.Plain(level) end
+	level = tonumber(level)
+	local mine = tonumber(Call(G("UnitLevel"), "player"))
 	if level and mine and level > 0 and level - mine >= 5 then self:FeatFlag("levelGap", A) end
 	if Call(G("IsInGroup")) == true then self:FeatFlag("groupCapture", A) end
 	local hour = tonumber(Call(G("date"), "%H"))
