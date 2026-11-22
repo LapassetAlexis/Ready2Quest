@@ -14,8 +14,9 @@
 -- un relevé à nous pour les records de spécimens (fiches d'étude et
 -- spécimens, gardé tant que la collection ne bouge pas).
 -- Rien n'est calculé tant que l'onglet est fermé, ni à la molette.
--- Le bouton « Copier pour Discord » n'existe que si ns.DiscordCopyShow
--- existe (étape 3) : ns:DiscordCopyShow("stats", ns:FeatStatsBlocks()).
+-- Le bouton « Copier pour Discord » n'existe que si la copie existe
+-- (DiscordCopy.lua) : ns.DiscordCopyShow(ns:DiscordText("stats")), le texte
+-- étant composé de ns:FeatStatsBlocks().
 local ADDON, ns = ...
 if ns.blocked then return end
 local L = ns.L
@@ -407,7 +408,10 @@ local function Build(self, frame, view, ui, Place)
 	view.legend:SetText(L.FEAT_ST_LEGEND)
 	Place(view.legend, 11, S.legendY + 1)
 	view.copy = Theme.CreateButton(view, S.copyW, "sm", L.FEAT_ST_COPY, function()
-		if type(ns.DiscordCopyShow) == "function" then ns:DiscordCopyShow("stats", ns:FeatStatsBlocks()) end
+		if type(ns.DiscordCopyShow) == "function" and type(ns.DiscordText) == "function" then
+			local text = ns:DiscordText("stats")
+			if type(text) == "string" and text ~= "" then ns.DiscordCopyShow(text) end
+		end
 	end, "normal")
 	local w = math.max(S.copyW, math.ceil(Theme.TextWidth(view, L.FEAT_ST_COPY, Theme.F_LABEL) + 24))
 	view.copy:SetWidth(w)
@@ -451,7 +455,7 @@ local function Refresh(self, frame, view)
 			end
 		end
 	end
-	if type(ns.DiscordCopyShow) == "function" then view.copy:Show() else view.copy:Hide() end
+	if type(ns.DiscordCopyShow) == "function" and type(ns.DiscordText) == "function" then view.copy:Show() else view.copy:Hide() end
 end
 
 ns.JOURNAL_FEATS_VIEWS = ns.JOURNAL_FEATS_VIEWS or {}

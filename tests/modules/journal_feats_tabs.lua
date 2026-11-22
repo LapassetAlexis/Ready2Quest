@@ -342,14 +342,20 @@ do
 	s.ok("l'écran est dessiné depuis ns:FeatStatsBlocks", same)
 	s.ok("point bleu après le libellé, seulement sur ce qui vient de Tally.lua", dots)
 	s.ok("légende", view.legend:GetText() == "compté depuis la 3.7 : rien n'était noté avant" and view.legendDot:IsShown(), tostring(view.legend:GetText()) .. "/" .. tostring(view.legendDot:IsShown()))
+	-- sans la copie pour Discord (DiscordCopy.lua) : pas de bouton ; avec : le bouton, et le clic
+	-- compose le texte des statistiques (ns:DiscordText("stats"), fait de ns:FeatStatsBlocks)
+	local realShow = NS.DiscordCopyShow
+	NS.DiscordCopyShow = nil
+	NS:RefreshJournal()
 	s.ok("pas de « Copier pour Discord » sans ns.DiscordCopyShow", not view.copy:IsShown())
 	local got
-	NS.DiscordCopyShow = function(self, kind, b) got = { kind, b } end
+	NS.DiscordCopyShow = function(text) got = text end
 	NS:RefreshJournal()
 	s.ok("ns.DiscordCopyShow présente : le bouton", view.copy:IsShown() and view.copy:GetText() == "Copier pour Discord")
 	view.copy:Click("LeftButton")
-	s.ok("clic : ns:DiscordCopyShow(\"stats\", blocs)", got and got[1] == "stats" and type(got[2]) == "table" and #got[2] == 6)
-	NS.DiscordCopyShow = nil
+	s.ok("clic : le texte des statistiques, prêt à copier", type(got) == "string" and got:find("curseforge.com", 1, true) ~= nil
+		and got:find("**", 1, true) ~= nil, tostring(got))
+	NS.DiscordCopyShow = realShow
 	NS.FeatStatsBlocks = base
 	s.check("[JFT] Statistiques : écran depuis FeatStatsBlocks, point bleu, légende, bouton Discord seulement s'il existe, coût")
 	f:Hide()
