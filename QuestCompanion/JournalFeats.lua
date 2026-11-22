@@ -73,46 +73,29 @@ end
 -- Lignes d'une catégorie ("all" : toutes) selon un filtre : non obtenus par
 -- progression décroissante (grisés à la fin), puis obtenus du plus récent au
 -- plus ancien. Chaque ligne : { def, cur, max, state, got, at }
+-- (3.7.0 : une ligne en attente n'est plus listée ; ordre et lignes : Feats.lua)
 function ns:FeatRows(cat, filter)
 	cat, filter = cat or "all", filter or "all"
 	if self.FeatCacheReset then self:FeatCacheReset() end
 	local rows = {}
 	for _, def in ipairs(self:FeatDefs()) do
-		if cat == "all" or def.cat == cat then
+		if (cat == "all" or def.cat == cat) and not def.pending then
 			local got = self:FeatGot(def)
 			local wanted = filter == "all" or (filter == "got" and got) or (filter == "open" and not got)
-			if wanted then
-				local cur, max, state = self:FeatProgress(def)
-				rows[#rows + 1] = { def = def, cur = cur, max = max, state = state, got = got,
-					at = got and tonumber(got.at) or 0 }
-			end
+			if wanted then rows[#rows + 1] = self:FeatEntry(def) end
 		end
 	end
-	local function Rank(row)
-		if row.got then return 3 end
-		if row.state == "pending" then return 2 end
-		return 1
-	end
-	table.sort(rows, function(a, b)
-		local ra, rb = Rank(a), Rank(b)
-		if ra ~= rb then return ra < rb end
-		if ra == 1 then
-			local pa = a.max > 0 and a.cur / a.max or 0
-			local pb = b.max > 0 and b.cur / b.max or 0
-			if pa ~= pb then return pa > pb end
-		elseif ra == 3 and a.at ~= b.at then
-			return a.at > b.at
-		end
-		return (tonumber(a.def.n) or 0) < (tonumber(b.def.n) or 0)
-	end)
+	table.sort(rows, ns.FeatEntryBefore)
 	return rows
 end
 
 -- Obtenus, total, points gagnés, points en jeu d'une catégorie ("all" : tout)
+-- (3.7.0 : lignes comptables seulement : ni en attente, ni tour de force, ni
+-- secret pas encore obtenu)
 function ns:FeatCategoryStats(cat)
 	local got, total, pts, ptsMax = 0, 0, 0, 0
 	for _, def in ipairs(self:FeatDefs()) do
-		if cat == "all" or def.cat == cat then
+		if (cat == "all" or def.cat == cat) and self:FeatCountable(def) then
 			total, ptsMax = total + 1, ptsMax + (tonumber(def.pts) or 0)
 			if self:FeatGot(def) then got, pts = got + 1, pts + (tonumber(def.pts) or 0) end
 		end

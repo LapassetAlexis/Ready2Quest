@@ -507,9 +507,9 @@ ns.FeatCatalog(function()
 		{ "men_types_master", 21, "men", 25, A, crit = { "meta", { "men_type_beast", "men_type_humanoid", "men_type_undead",
 			"men_type_elemental", "men_type_dragonkin", "men_type_demon", "men_type_giant", "men_type_mechanical" } },
 			reward = { title = 10, soon = { "frame", "feat_eight" } }, desc = "FEATD_typesMaster" },
-		{ "men_stars3_1",   22, "men", 5,  A, crit = { "count", "stars3", 1 } },
-		{ "men_stars3_25",  23, "men", 10, A, crit = { "count", "stars3", 25 },  reward = { aids = Aids("appat", 2) } },
-		{ "men_stars3_100", 24, "men", 25, A, crit = { "count", "stars3", 100 }, reward = { title = 11, soon = { "orn", "feat_goldstars" } } },
+		{ "men_stars3_1",   22, "spec", 5,  A, crit = { "count", "stars3", 1 } },
+		{ "men_stars3_25",  23, "spec", 10, A, crit = { "count", "stars3", 25 },  reward = { aids = Aids("appat", 2) } },
+		{ "men_stars3_100", 24, "spec", 25, A, crit = { "count", "stars3", 100 }, reward = { title = 11, soon = { "orn", "feat_goldstars" } } },
 		{ "men_batch_5",    25, "men", 10, A, crit = { "flag", "batch5" } },
 		{ "men_bad_luck",   26, "men", 5,  A, crit = { "streak", "capFail", 10 }, reward = { title = 40, aids = Aids("appat", 3) } },
 		{ "men_level_gap",  27, "men", 10, A, crit = { "flag", "levelGap" } },
@@ -517,17 +517,17 @@ ns.FeatCatalog(function()
 		{ "men_companion_boss",  29, "men", 10, A, crit = { "flag", "companionBoss" } },
 		-- 3.1.0 : tailles rares des spécimens (hors numérotation, codes 176 et 177) ;
 		-- le drapeau est posé à la capture (SpecimenTraits.lua, SpecimenSizeFeat)
-		{ "men_size_giant",      176, "men", 10, A, crit = { "flag", "sizeGiant" } },
-		{ "men_size_tiny",       177, "men", 10, A, crit = { "flag", "sizeTiny" } },
+		{ "men_size_giant",      176, "spec", 10, A, crit = { "flag", "sizeGiant" } },
+		{ "men_size_tiny",       177, "spec", 10, A, crit = { "flag", "sizeTiny" } },
 		-- 3.4.0 : étude d'espèce et lien (SpecimenStudy.lua, SpecimenBond.lua), codes 181 à 187
 		-- 3.6.0 : leurs récompenses (aide, titre, ornement ; titre ; cadre et fond du compagnon)
-		{ "men_study_10",        181, "men", 10, A, crit = { "count", "studyMastered", 10 }, reward = { aids = Aids("sifflet") } },
-		{ "men_study_50",        182, "men", 25, A, crit = { "count", "studyMastered", 50 }, reward = { title = 48 } },
-		{ "men_study_100",       183, "men", 50, A, crit = { "count", "studyMastered", 100 }, reward = { cosmetic = { "orn", "feat_scholar" } } },
-		{ "men_bond_familiar",   184, "men", 10, A, crit = { "flag", "bondFamiliar" } },
-		{ "men_bond_inseparable", 185, "men", 25, A, crit = { "flag", "bondInseparable" }, reward = { title = 49 } },
-		{ "men_traits_all",      186, "men", 25, A, crit = { "flag", "traitsAll" }, reward = { cosmetic = { "frame", "feat_traits" } } },
-		{ "men_sizes_all",       187, "men", 25, A, crit = { "flag", "sizesAll" }, reward = { cosmetic = { "bg", "feat_sizes" } } },
+		{ "men_study_10",        181, "spec", 10, A, crit = { "count", "studyMastered", 10 }, reward = { aids = Aids("sifflet") } },
+		{ "men_study_50",        182, "spec", 25, A, crit = { "count", "studyMastered", 50 }, reward = { title = 48 } },
+		{ "men_study_100",       183, "spec", 50, A, crit = { "count", "studyMastered", 100 }, reward = { cosmetic = { "orn", "feat_scholar" } } },
+		{ "men_bond_familiar",   184, "spec", 10, A, crit = { "flag", "bondFamiliar" } },
+		{ "men_bond_inseparable", 185, "spec", 25, A, crit = { "flag", "bondInseparable" }, reward = { title = 49 } },
+		{ "men_traits_all",      186, "spec", 25, A, crit = { "flag", "traitsAll" }, reward = { cosmetic = { "frame", "feat_traits" } } },
+		{ "men_sizes_all",       187, "spec", 25, A, crit = { "flag", "sizesAll" }, reward = { cosmetic = { "bg", "feat_sizes" } } },
 		-- 3.6.0 : rangs de dresseur au-delà de 500 espèces, puis « tout Azeroth »
 		-- (toutes les espèces de ta faction), codes 188 à 194 ; un titre chacun
 		{ "men_species_750",  188, "men", 50, A, crit = { "count", "species", 750 },  reward = { title = 41 } },
@@ -539,9 +539,9 @@ ns.FeatCatalog(function()
 		{ "men_species_all",  194, "men", 50, A, crit = { "count", "azeroth", 100 }, reward = { title = 47 },
 			desc = "FEATD_azeroth" },
 		-- 3.6.0 : mécénat de l'Échoppe (ShopWeek.lua), codes 241 à 243 (titres 61 à 63)
-		{ "men_patron_10",       241, "men", 10, A, crit = { "count", "patron", 10 },  reward = { title = 61 } },
-		{ "men_patron_50",       242, "men", 25, A, crit = { "count", "patron", 50 },  reward = { title = 62 } },
-		{ "men_patron_100",      243, "men", 50, A, crit = { "count", "patron", 100 }, reward = { title = 63 } },
+		{ "men_patron_10",       241, "shop", 10, A, crit = { "count", "patron", 10 },  reward = { title = 61 } },
+		{ "men_patron_50",       242, "shop", 25, A, crit = { "count", "patron", 50 },  reward = { title = 62 } },
+		{ "men_patron_100",      243, "shop", 50, A, crit = { "count", "patron", 100 }, reward = { title = 63 } },
 		-- Brillantes
 		{ "shiny_seen_1",   30, "shiny", 5,  A, crit = { "count", "shinySeen", 1 } },
 		{ "shiny_found_5",  31, "shiny", 10, A, crit = { "count", "shinyFound", 5 },  reward = { cosmetic = { "frame", "sparkle" } } },
@@ -579,11 +579,11 @@ ns.FeatCatalog(function()
 		{ "day_perfect_10",  68, "day", 10, CH, crit = { "count", "perfect", 10 } },
 		{ "day_weekly_all",  69, "day", 10, CH, crit = { "flag", "weeklyAll" } },
 		{ "day_inn_30",      70, "day", 10, CH, crit = { "count", "innDays", 30 } },
-		{ "day_travel_100",  74, "day", 10, CH, crit = { "count", "travelKm", 100 } },
-		{ "day_travel_1000", 75, "day", 25, CH, crit = { "count", "travelKm", 1000 }, reward = { soon = { "orn", "feat_compass" } } },
-		{ "day_days_30",     76, "day", 10, CH, crit = { "count", "daysTogether", 30 } },
-		{ "day_days_365",    77, "day", 25, CH, crit = { "count", "daysTogether", 365 }, reward = { title = 20, soon = { "orn", "feat_anniversary" } } },
-		{ "day_pets_100",    78, "day", 10, CH, crit = { "streak", "pets", 100 } },
+		{ "day_travel_100",  74, "comp", 10, CH, crit = { "count", "travelKm", 100 } },
+		{ "day_travel_1000", 75, "comp", 25, CH, crit = { "count", "travelKm", 1000 }, reward = { soon = { "orn", "feat_compass" } } },
+		{ "day_days_30",     76, "comp", 10, CH, crit = { "count", "daysTogether", 30 } },
+		{ "day_days_365",    77, "comp", 25, CH, crit = { "count", "daysTogether", 365 }, reward = { title = 20, soon = { "orn", "feat_anniversary" } } },
+		{ "day_pets_100",    78, "comp", 10, CH, crit = { "streak", "pets", 100 } },
 		-- Guilde et entraide
 		{ "soc_card_1",        79, "soc", 5,  A, crit = { "streak", "cards", 1 }, desc = "FEATD_card1" },
 		{ "soc_card_10",       80, "soc", 10, A, crit = { "streak", "cards", 10 } },
@@ -730,7 +730,8 @@ Wrap("TreatCheckZone", function(self, _, zoneID)
 		self:FeatFlag("questZone", CH)
 	end
 end)
--- Fiche d'un autre dresseur consultée (10 noms gardés au plus)
+-- Fiche d'un autre dresseur consultée (3.7.0 : 50 noms gardés au plus, 10 avant)
+ns.FEAT_CARDS_MAX = 50
 Wrap("TrainerOpen", function(self, frame, name)
 	if not (frame and name) then return end
 	local full = self.TrainerFullName and self:TrainerFullName(name)
@@ -739,7 +740,7 @@ Wrap("TrainerOpen", function(self, frame, name)
 	if not key or (me and key == self:TrainerKey(me)) then return end
 	local store = self:FeatStore(A)
 	if type(store.cards) ~= "table" then store.cards = {} end
-	if store.cards[key] or Keys(store.cards) >= 10 then return end
+	if store.cards[key] or Keys(store.cards) >= ns.FEAT_CARDS_MAX then return end
 	store.cards[key] = true
 	self:FeatCount("cards", 1, A)
 end)

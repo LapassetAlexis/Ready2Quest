@@ -54,6 +54,17 @@ Trois fichiers neufs, déclarés dans le `.toc` après `GuildFeats.lua` (les cro
 | `streak` | `{ "streak", clé, n }` | compteur qui repart à zéro (échecs de capture de suite) |
 | `meta` | `{ "meta", { ids } }` ou `{ "meta", cat, n }` | hauts faits obtenus parmi une liste, ou N dans une catégorie |
 | `points` | `{ "points", n }` | total de points ≥ n |
+| `tally` / `tallymax` / `tallyset` | `{ "tally", clé, n, magasin }` | 3.7.0 : compteur de `Tally.lua` (`ns:TallyGet`, `ns:TallyBest`, `ns:TallySize`, magasin `"account"` par défaut ou `"char"`) ≥ n ; sujet `tally` ; **jamais rétroactif** ; « à vérifier » tant que `Tally.lua` n'est pas chargé ; description `FEATD_tally_<clé>` |
+
+**Champs 3.7.0** (deuxième édition) :
+
+- `hidden = true` : **secret**. Tant qu'il n'est pas obtenu : nom « Un secret du compagnon », description = son indice (`FEATH_<id>`) s'il a été révélé, sinon une phrase d'attente ; hors des totaux. `ns:FeatHintNext()` révèle l'indice d'un secret tiré au hasard parmi ceux qui restent (rend le texte et l'identifiant, rien s'il n'en reste pas) ; `ns:FeatHintKnown(id)`.
+- `series = "<clé>"` : paliers d'une même échelle, repliés en une ligne à l'écran. Déclarés à part dans `ns.FEAT_SERIES` (`FeatsData.lua`, clé → identifiants), posés par le moteur à la construction de l'index ; une ligne peut aussi l'écrire elle-même. Une série reste dans une catégorie, un type de critère et une source. `ns:FeatSeriesList(cat, filtre)` rend, dans l'ordre de la page, des groupes `{ key, defs (seuil croissant), index (palier en cours), cur, max, def, done, got }` et les lignes sans série telles quelles (`{ def, cur, max, state, got, at }`).
+- `pts = 0` : admis pour un **tour de force** (catégorie `fos`) seulement (`ns.FeatPointsOK(def)`).
+
+**Lignes comptables** (`ns:FeatCountable(def)`) : ni en attente (`pending`), ni tour de force, ni secret pas encore obtenu. Les totaux, pourcentages, comptes par catégorie (`ns:FeatCategoryStats`) et le nombre obtenu de `ns:FeatPoints` n'utilisent qu'elles ; une ligne en attente n'est plus listée du tout.
+
+**API de la page** (3.7.0, rien calculé tant que la page ne demande pas) : `ns:FeatNearest(n)` (les n plus proches du but, comptables, non obtenus, non secrets, pas encore atteints : `cur / max` décroissant, à égalité le moins de points ; chacun `{ def, cur, max }`) ; `ns:FeatChecklist(def)` (critère `list` ou `meta` d'identifiants : `{ label, done }` dans l'ordre ; rien pour les autres, un méta « n d'une catégorie » ou un secret caché ; une liste peut fournir `label(self, élément, i, total)`) ; `ns:FeatRank(points)` (rang de renommée, §1.4) ; `ns:FeatBits()` / `ns:FeatBitsDecode(texte)` (comparaison : un bit par code `n`, six par caractère `A-Z a-z 0-9 - _`, zéros de queue retirés) ; `ns:FeatFollow(id, on)` / `ns:FeatFollowed()` (3 suivis au plus par personnage, `CharData().feats.follow` ; ni obtenu, ni en attente, ni secret ; obtenus retirés à la lecture ; au premier suivi `ns:TallyAdd("follow")` si `Tally.lua` est là).
 
 **Sources** : petites fonctions nommées (`species`, `shinyCap`, `seals`, `level`, `goldMax`…), enregistrées dans `ns.FEAT_SOURCES[nom] = { get = function(self) … end, topics = { … }, retro = true|false }`. `retro = true` : la valeur se recalcule à partir des données (captures, relevés, statistiques), donc le rattrapage peut l'attribuer après coup. `retro = false` : compteur d'événements tenu par nous depuis l'installation de la 2.7, sans rien avant.
 
@@ -82,7 +93,7 @@ Trois fichiers neufs, déclarés dans le `.toc` après `GuildFeats.lua` (les cro
 | `minute` | horloge d'une minute existante (temps ensemble, km parcourus) |
 | `feat` | un haut fait vient d'être obtenu (métas, points) |
 
-**Évaluation** : on marque les sujets à revoir, puis une seule passe au plus toutes les 0,5 s (horloge `OnUpdate` du moteur, retirée quand rien n'attend). Le calcul se fait même en combat (lectures seulement) ; le bandeau et le chat attendent la sortie de combat (même file que le carnet, `JournalFlush`). Les sources coûteuses sont gardées en cache : `MenagerieTypeCounts` et les comptes d'étoiles par `capture.serial` et `capture.count`, les statistiques 60 s.
+**Évaluation** : on marque les sujets à revoir, puis une seule passe au plus toutes les 0,5 s (3.7.0 : la passe ne lit que les lignes abonnées aux sujets touchés, par l'index sujet → lignes construit avec le catalogue) (horloge `OnUpdate` du moteur, retirée quand rien n'attend). Le calcul se fait même en combat (lectures seulement) ; le bandeau et le chat attendent la sortie de combat (même file que le carnet, `JournalFlush`). Les sources coûteuses sont gardées en cache : `MenagerieTypeCounts` et les comptes d'étoiles par `capture.serial` et `capture.count`, les statistiques 60 s.
 
 ### 1.2 Statistiques natives (`GetStatistic`)
 
@@ -111,9 +122,14 @@ Les deux tables ont la même forme :
 ```lua
 feats = {
   v = 1,                      -- version du format (migration faite)
-  got = { [id] = { at, lvl, r } },  -- at = time(), lvl = niveau, r = true si rattrapé ou migré (pas de bandeau)
+  got = { [id] = { at, lvl, r, g } },  -- at = time(), lvl = niveau, r = true si rattrapé ou migré (pas de bandeau),
+                              -- g = paillettes versées (3.7.0 ; absent = pas encore payé)
   ctr = { [clé] = n },        -- compteurs d'événements tenus par nous (alt des stats, streaks)
   flag = { [clé] = at },      -- faits ponctuels
+  -- compte seulement (3.7.0) :
+  hints = { [id] = at },      -- indices de secrets révélés
+  -- personnage seulement (3.7.0) :
+  follow = { id, … },         -- hauts faits suivis (3 au plus)
   -- personnage seulement (lot D) :
   title = 12,                 -- code du titre affiché ; nil = automatique ; 0 = aucun titre
   form = "auto",              -- forme des titres : auto (UnitSex) | m | f
@@ -132,21 +148,38 @@ Une ligne peut déroger à la règle de sa catégorie en l'écrivant (`scope`), 
 
 ### 1.4 Catégories et points
 
-| Code | Catégorie (FR / EN) | Portée |
-|---|---|---|
-| `men` | Créatures / Creatures | compte |
-| `shiny` | Brillantes / Shinies | compte |
-| `zone` | Zones et sceaux / Zones and Seals | personnage |
-| `day` | Au jour le jour / Day by Day | personnage |
-| `soc` | Guilde et entraide / Guild and Friends | compte |
-| `char` | Personnage / Character | personnage |
-| `dng` | Donjons et raids / Dungeons and Raids | personnage |
-| `prof` | Métiers / Professions | personnage |
-| `quest` | Quêtes, réputations et honneur / Quests, Reputation and Honor | personnage |
-| `fun` | Insolite / Oddities | compte |
-| `meta` | Grands hauts faits / Feats of Feats | compte |
+3.7.0 : 16 catégories en trois familles (`family` : `dresseur`, `voyage`, `aventure`), dans l'ordre de la page ; chacune a son icône du client (par référence). Une catégorie sans ligne n'est pas listée.
 
-**Points**, sur l'échelle de retail : **5** (premier pas, fait amusant), **10** (étape normale), **25** (gros objectif), **50** (sommet, méta). Total affiché sur la page, la fiche de dresseur et les bandeaux de guilde.
+| Code | Catégorie (FR / EN) | Famille | Portée |
+|---|---|---|---|
+| `init` | Initiation / Getting Started (3.7.0) | Dresseur | compte |
+| `men` | Créatures / Creatures | Dresseur | compte |
+| `spec` | Spécimens / Specimens (3.7.0) | Dresseur | compte |
+| `shiny` | Brillantes / Shinies | Dresseur | compte |
+| `shop` | Réserve et Échoppe / Reserve and Shop (3.7.0) | Dresseur | compte |
+| `soc` | Entre dresseurs / Trainer to Trainer (« Guilde et entraide » avant la 3.7.0) | Dresseur | compte |
+| `fun` | Insolite / Oddities | Dresseur | compte |
+| `meta` | Grands hauts faits / Feats of Feats | Dresseur | compte |
+| `fos` | Tours de force / Feats of Strength (3.7.0 ; 0 point, hors des totaux) | Dresseur | compte |
+| `comp` | Compagnon / Companion (3.7.0) | Compagnon et voyage | personnage |
+| `zone` | Zones et sceaux / Zones and Seals | Compagnon et voyage | personnage |
+| `day` | Au jour le jour / Day by Day | Compagnon et voyage | personnage |
+| `char` | Personnage / Character | Aventure | personnage |
+| `dng` | Donjons et raids / Dungeons and Raids | Aventure | personnage |
+| `prof` | Métiers / Professions | Aventure | personnage |
+| `quest` | Quêtes, réputations et honneur / Quests, Reputation and Honor | Aventure | personnage |
+
+**Changements de catégorie (3.7.0)** : 20 lignes changent de catégorie sans changer d'identifiant, de code ni de points ; elles restent à leur place dans le §2 (leur code est leur rang), ce qui est obtenu reste obtenu, et les grands hauts faits par catégorie gardent leurs seuils (`meta_menagerie` : 20 hauts faits « Créatures ») :
+
+- vers `spec` (12) : `men_stars3_1`, `men_stars3_25`, `men_stars3_100`, `men_size_giant`, `men_size_tiny`, `men_sizes_all`, `men_traits_all`, `men_study_10`, `men_study_50`, `men_study_100`, `men_bond_familiar`, `men_bond_inseparable` ;
+- vers `shop` (3) : `men_patron_10`, `men_patron_50`, `men_patron_100` ;
+- vers `comp` (5) : `day_days_30`, `day_days_365`, `day_travel_100`, `day_travel_1000`, `day_pets_100`.
+
+**Points**, sur l'échelle de retail : **5** (premier pas, fait amusant), **10** (étape normale), **25** (gros objectif), **50** (sommet, méta) ; **0** pour un tour de force. Total affiché sur la page, la fiche de dresseur et les bandeaux de guilde.
+
+**Paillettes (3.7.0)** : tout haut fait en donne à l'obtention, selon ses points (`ns.FEAT_GLITTER`) : 2, 5, 15, 40 (0 pour un tour de force), par `ns:PaillettesAdd(n, "feat")` ; la marque `g` dans `got[id]` empêche tout second paiement.
+
+**Rangs de renommée (3.7.0)** : `ns.FEAT_RANKS` = 100, 250, 500, 1 000, 1 500, 2 000, 3 000, 4 000 points (compte + personnage connecté), nommés « Connu au village », « Connu du comté », « Un nom qui circule », « Réputé », « De grande renommée », « Illustre », « Célèbre dans tout Azeroth », « Légende vivante ». `ns:FeatRank(points)` rend l'indice du rang (0 : aucun), son nom, le seuil suivant et son nom, le total.
 
 ### 1.5 Rattrapage à la connexion
 
@@ -154,6 +187,7 @@ Une ligne peut déroger à la règle de sa catégorie en l'écrivant (`scope`), 
 - **Première passe** (`feats.v == nil`) : migration (§3) puis rattrapage, **en silence** (`r = true`, aucun bandeau, aucun exploit de guilde), puis **une seule ligne** de chat : « Hauts faits : 47 obtenus d'après ta progression (385 points). Ouvre le carnet pour les voir. »
 - **Passes suivantes** : ce qui est trouvé à la connexion (réputation montée pendant que l'addon était coupé, statistique qui a bougé) est attribué de la même façon : en silence, une ligne de chat récapitulative et **au plus un bandeau** (groupé dès 2). Fait au lot A.
 - Tant que le rattrapage de la connexion n'a pas eu lieu, les sujets touchés attendent (le carnet rattrape ses paliers de niveau à l'entrée dans le monde : ils ne doivent pas sortir en bandeaux un par un).
+- **Paillettes (3.7.0)** : à chaque connexion, les hauts faits du compte et du personnage connecté obtenus sans marque `g` (avant la 3.7.0, sauvegarde ancienne comprise) sont payés en une fois, avec une seule ligne de chat ; ceux d'un autre personnage le sont à sa connexion. Chaque haut fait n'est payé qu'une fois.
 - Les compteurs `retro = false` (danses, caresses depuis la 2.7…) démarrent à zéro, sauf quand une donnée existante sert d'amorce : `missionsDone`, `inn.total`, `daily.perfect`, `travel`, `ShinyData().count`, `CaptureData().count`, relevés du carnet, `GatheringData`.
 
 ### 1.6 Bandeau « Haut fait obtenu » et regroupement
@@ -162,6 +196,7 @@ Une ligne peut déroger à la règle de sa catégorie en l'écrivant (`scope`), 
 - Hors combat seulement, un à la fois, 4 s. **À partir de 3 en attente** : un seul bandeau « 3 hauts faits obtenus · +45 points » (même règle que `TOAST_COLLAPSE`).
 - Un haut fait qui donne un titre : la sous-ligne dit « Nouveau titre : … » ; un clic sur le bandeau ouvre la page, sur ce haut fait.
 - Son : `CAPTURE_SOUNDS` du client (un nouveau kit `feat`, à choisir : 12891 est la fanfare des hauts faits sur le moteur récent, ⚠️ à écouter en jeu ; repli 17316).
+- **Taille de la fête (3.7.0)** : `ns:FeatSize(def)` = `small` (5 points), `medium` (10), `big` (25, 50, un titre ou un tour de force). Fanfare (`FEAT_SOUND`) pour `big` seulement, son court (`FEAT_SOUND_FALLBACK`) pour `medium`, aucun son pour `small`. La taille part avec le bandeau (`size`) ; un bandeau groupé prend la taille du plus gros. Le regroupement à partir de 3 ne change pas ; le dessin de la pastille vient avec la page.
 - Le compagnon réagit (`CompanionSay("UNLOCK")`) pour les hauts faits à 25 points ou plus, et pour ceux qui donnent un titre.
 - Le bandeau « Nouveau tampon » **disparaît** (§3).
 
@@ -241,7 +276,7 @@ Fenêtre 980 × 680 (contenu `INNER`), mise en page :
 
 - **Colonne de gauche** (180 px) : « Résumé » puis les 11 catégories, chacune avec obtenus/total et une fine barre ; pastille dorée sur une catégorie qui a du neuf depuis `feats.seen`.
 - **Résumé** : total de points, grande barre globale, les 5 derniers obtenus (date), les 3 plus proches d'être finis (« presque »), le titre affiché et un bouton « Choisir mon titre ».
-- **Liste** (lignes de 58 px, paginée par `Pager` et la molette comme le Guide) : bouclier avec les points (atlas Azeroth si dispo, sinon losange du thème), nom, description générée, barre x/n (ou « 5/8 » pour une liste, détail au survol), date et niveau si obtenu, ligne de récompense (titre / cosmétique / aides, avec icône). Une ligne ⚠️ « à vérifier en jeu » sans source lisible est grisée avec la mention « détection pas encore disponible sur ce client ».
+- **Liste** (lignes de 58 px, paginée par `Pager` et la molette comme le Guide) : bouclier avec les points (atlas Azeroth si dispo, sinon losange du thème), nom, description générée, barre x/n (ou « 5/8 » pour une liste, détail au survol), date et niveau si obtenu, ligne de récompense (titre / cosmétique / aides, avec icône). Une ligne ⚠️ « à vérifier en jeu » sans source lisible est grisée avec la mention « détection pas encore disponible sur ce client ». (3.7.0 : une ligne `pending` n'est plus listée du tout ; seule une ligne dont la source est illisible sur ce client reste grisée. La page sera refaite d'après une maquette validée.)
 - **Filtres** : Tous / En cours (progression > 0) / Obtenus / À faire (0). Tri : non obtenus par progression décroissante, puis obtenus du plus récent au plus ancien. Filtre gardé dans `db.featsFilter`.
 - **Onglet Titres** : les titres gagnés (boutons radio, rendus avec le nom du joueur et la forme choisie), puis les titres pas encore gagnés en gris avec leur haut fait source ; « Automatique » et « Aucun titre » en tête ; choix de la forme (auto / masculin / féminin).
 - Ligne d'aperçu pour les tests : scène `qc-journal-feats` (et `qc-journal-feats-titles`).

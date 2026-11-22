@@ -17,6 +17,15 @@ local function Read(path)
 	return text
 end
 local DOC = Read("docs/QC-HAUTS-FAITS.md") or ""
+-- 3.7.0 : les 20 lignes qui changent de catégorie (contrat, chantier B1 §1) :
+-- identifiant, code et points inchangés, place inchangée dans le §2 du document
+local MOVED = {
+	men_stars3_1 = "spec", men_stars3_25 = "spec", men_stars3_100 = "spec", men_size_giant = "spec", men_size_tiny = "spec",
+	men_sizes_all = "spec", men_traits_all = "spec", men_study_10 = "spec", men_study_50 = "spec", men_study_100 = "spec",
+	men_bond_familiar = "spec", men_bond_inseparable = "spec",
+	men_patron_10 = "shop", men_patron_50 = "shop", men_patron_100 = "shop",
+	day_days_30 = "comp", day_days_365 = "comp", day_travel_100 = "comp", day_travel_1000 = "comp", day_pets_100 = "comp",
+}
 local CATALOGUE = DOC:sub(DOC:find("## 2. Catalogue", 1, true) or 1, DOC:find("### 2.12", 1, true) or #DOC)
 
 -- 1. Définitions ----------------------------------------------------------------------------------------
@@ -35,7 +44,8 @@ do
 		if codes[def.n] then Bad("code en double") end
 		codes[def.n] = true
 		if type(def.n) ~= "number" or def.n < 1 or def.n > 999 then Bad("code") end
-		if not NS.FEAT_POINTS[def.pts] then Bad("points") end
+		-- (3.7.0 : 0 point pour un tour de force, catégorie fos, seulement)
+		if not NS.FeatPointsOK(def) then Bad("points") end
 		if def.scope ~= "account" and def.scope ~= "char" then Bad("portée") end
 		if catScope[def.cat] == nil then Bad("catégorie") end
 		if catScope[def.cat] ~= def.scope then Bad("portée ≠ règle de la catégorie") end
@@ -160,7 +170,9 @@ do
 				copy.soon, copy.cosmetic = copy.cosmetic, nil
 				reward = copy
 			end
-			lines[#lines + 1] = table.concat({ def.id, def.n, def.cat, def.pts, def.scope, I.Ser(crit), I.Ser(reward),
+			-- 3.7.0 : une ligne déplacée est relue dans sa catégorie d'origine (seule la catégorie a changé)
+			local cat = MOVED[def.id] and def.id:match("^(%a+)_") or def.cat
+			lines[#lines + 1] = table.concat({ def.id, def.n, cat, def.pts, def.scope, I.Ser(crit), I.Ser(reward),
 				tostring(def.desc), tostring(pending), type(def.paid) }, "|")
 		end
 		return table.concat(lines, "\n"), #defs
@@ -176,6 +188,16 @@ do
 	-- fonds et cadres de fiche livrés, mécénat (241 à 243) (afe95ed8 et 187 lignes avant)
 	Check("[HF] catalogue actuel : 197 lignes (173 + « La poisse » + « Joyeux Voile d'hiver » + tailles 3.1 + échanges 3.0 + étude et lien 3.4 + rangs et mécénat 3.6), empreinte",
 		hash == "796473a7" and count == 197, "empreinte " .. hash .. " (" .. count .. " lignes)")
+	-- 3.7.0 : exactement les 20 lignes du contrat ont changé de catégorie
+	local moved, count20 = {}, 0
+	for _, d in ipairs(NS:FeatDefs()) do
+		local prefix = d.id:match("^(%a+)_")
+		local want = MOVED[d.id] or ((prefix == "pvp" or prefix == "rep") and "quest") or prefix
+		if MOVED[d.id] then count20 = count20 + 1 end
+		if d.cat ~= want then moved[#moved + 1] = d.id .. " " .. tostring(d.cat) end
+	end
+	Check("[HF] 3.7.0 : 20 lignes changent de catégorie (12 vers Spécimens, 3 vers Réserve et Échoppe, 5 vers Compagnon), "
+		.. "aucune autre", count20 == 20 and #moved == 0, table.concat(moved, ", "))
 	local def = NS:FeatDef("men_species_10")
 	local added = NS.FeatAdd({ id = "test_compact", n = 990, cat = "fun", pts = 5, scope = "account",
 		crit = { "flag", "x" }, extra = "gardé" })
@@ -227,7 +249,7 @@ do
 			else
 				counts[cat] = (counts[cat] or 0) + 1
 				if def.pts ~= row.pts then Bad("points") end
-				if def.cat ~= cat then Bad("catégorie") end
+				if def.cat ~= (MOVED[row.id] or cat) then Bad("catégorie") end
 				if def.scope ~= ((cat == "zone" or cat == "day") and "char" or "account") then Bad("portée") end
 				if (def.pending == true) ~= (row.feas:find("⚠", 1, true) ~= nil) then Bad("à vérifier") end
 				local reward = def.reward or {}

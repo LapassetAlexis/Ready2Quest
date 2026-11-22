@@ -40,7 +40,15 @@ local FLUSH_DELAY = 1       -- les obtentions d'une même seconde partent ensemb
 local TOAST_COLLAPSE = 3    -- à partir de 3 : un seul bandeau groupé
 local MAX_LOOPS = 6         -- métas en chaîne dans une même passe
 ns.FEAT_POINTS = { [5] = true, [10] = true, [25] = true, [50] = true }
+ns.FEAT_FOS = "fos"         -- 3.7.0 : tours de force, 0 point, hors des totaux
+-- 3.7.0 : paillettes données par tout haut fait, selon ses points
+ns.FEAT_GLITTER = { [0] = 0, [5] = 2, [10] = 5, [25] = 15, [50] = 40 }
+-- 3.7.0 : rangs de renommée (points de compte et du personnage connecté)
+ns.FEAT_RANKS = { 100, 250, 500, 1000, 1500, 2000, 3000, 4000 }
+ns.FEAT_FOLLOW_MAX = 3      -- hauts faits suivis par personnage
 ns.FEAT_GUILD_MIN = 25      -- annonce de guilde (lot D) : 25 points ou plus, ou un titre
+-- 3.7.0 : la fanfare pour une grande fête (25, 50 points ou un titre), le son
+-- court pour une moyenne (10 points), rien pour une petite (5 points)
 ns.FEAT_SOUND, ns.FEAT_SOUND_FALLBACK = 12891, 17316
 ns.FEAT_STAT_PROBE = 107    -- « créatures tuées », vérifiée en jeu (rend 780)
 ns.FEAT_TOAST_COLLAPSE = TOAST_COLLAPSE
@@ -82,6 +90,18 @@ local FR = {
 	FEAT_DIAG_COUNTS     = "Définitions : %d · obtenus : %d compte, %d personnage · en attente : %d · sans source lisible : %d.",
 	FEAT_DIAG_POINTS     = "Points : %d compte · %d personnage.",
 	HELP_FEATS           = "/qc hf -- tes hauts faits (page du carnet) ; /qc hf diag : sources lisibles",
+	FEAT_SECRET_NAME     = "Un secret du compagnon",
+	FEAT_SECRET_WAIT     = "Ton compagnon garde ce secret pour lui… pour l'instant.",
+	FEAT_GLITTER_CATCHUP = "Hauts faits : +%d paillettes pour %d haut(s) fait(s) déjà obtenu(s).",
+	FEAT_CHECK_STEP      = "%d sur %d",
+	FEAT_RANK_1          = "Connu au village",
+	FEAT_RANK_2          = "Connu du comté",
+	FEAT_RANK_3          = "Un nom qui circule",
+	FEAT_RANK_4          = "Réputé",
+	FEAT_RANK_5          = "De grande renommée",
+	FEAT_RANK_6          = "Illustre",
+	FEAT_RANK_7          = "Célèbre dans tout Azeroth",
+	FEAT_RANK_8          = "Légende vivante",
 }
 local EN = {
 	OPT_SECTION_FEATS    = "Achievements",
@@ -119,6 +139,18 @@ local EN = {
 	FEAT_DIAG_COUNTS     = "Definitions: %d · earned: %d account, %d character · pending: %d · no readable source: %d.",
 	FEAT_DIAG_POINTS     = "Points: %d account · %d character.",
 	HELP_FEATS           = "/qc hf -- your achievements (journal page); /qc hf diag: readable sources",
+	FEAT_SECRET_NAME     = "A companion's secret",
+	FEAT_SECRET_WAIT     = "Your companion is keeping this one to itself… for now.",
+	FEAT_GLITTER_CATCHUP = "Achievements: +%d glitter for %d achievement(s) already earned.",
+	FEAT_CHECK_STEP      = "%d of %d",
+	FEAT_RANK_1          = "Known in the Village",
+	FEAT_RANK_2          = "Known in the County",
+	FEAT_RANK_3          = "A Name Going Around",
+	FEAT_RANK_4          = "Renowned",
+	FEAT_RANK_5          = "Of Great Renown",
+	FEAT_RANK_6          = "Illustrious",
+	FEAT_RANK_7          = "Famous Across Azeroth",
+	FEAT_RANK_8          = "Living Legend",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.FEAT_STRINGS = { fr = FR, en = EN } end
@@ -202,7 +234,12 @@ local index
 local CRIT_TOPICS = {
 	stat = { "stat", "kill", "death", "quest", "money", "level" },
 	flag = { "flag" }, streak = { "flag" }, meta = { "feat" }, points = { "feat" },
+	-- 3.7.0 : critères sur les compteurs de Tally.lua (sujet posé à chaque écriture)
+	tally = { "tally" }, tallymax = { "tally" }, tallyset = { "tally" },
 }
+-- critères sur compteurs : la fonction de Tally.lua qui les lit
+local TALLY_READ = { tally = "TallyGet", tallymax = "TallyBest", tallyset = "TallySize" }
+ns.FEAT_TALLY_KINDS = TALLY_READ
 
 local topicLists = {}
 local function TopicsOf(def)
@@ -232,12 +269,25 @@ local function TopicsOf(def)
 	return topicLists[key]
 end
 
+-- Seuil d'une ligne (rang dans sa série) : n du critère, ou 1
+function ns.FeatThreshold(def)
+	local crit = type(def) == "table" and def.crit or {}
+	if crit[1] == "points" then return tonumber(crit[2]) or 0 end
+	if crit[1] == "meta" and type(crit[2]) == "table" then return #crit[2] end
+	return tonumber(crit[3]) or 1
+end
+
 local function Index()
 	-- catalogue construit à la première lecture (FeatsData.lua)
 	if ns.FeatLoadCatalog then ns.FeatLoadCatalog() end
 	if index and not ns.featIndexDirty and index.count == #ns.FEAT_DEFS then return index end
-	index = { byId = {}, list = {}, cats = {}, catList = {}, count = #ns.FEAT_DEFS }
+	index = { byId = {}, list = {}, cats = {}, catList = {}, count = #ns.FEAT_DEFS, byTopic = {}, pos = {}, series = {} }
 	for _, cat in ipairs(ns.FEAT_CATEGORIES or {}) do index.cats[cat.id] = cat end
+	-- 3.7.0 : séries déclarées à part (FeatsData.lua) : identifiant -> clé
+	local seriesOf = {}
+	for key, ids in pairs(ns.FEAT_SERIES or {}) do
+		for _, id in ipairs(ids) do seriesOf[id] = key end
+	end
 	for position, def in ipairs(ns.FEAT_DEFS) do
 		if ns.FeatCompact then
 			def = ns.FeatCompact(def)
@@ -246,8 +296,30 @@ local function Index()
 		if def.id and not index.byId[def.id] then
 			index.byId[def.id] = def
 			index.list[#index.list + 1] = def
+			index.pos[def] = #index.list
 			def.topicList = TopicsOf(def)
+			-- index sujet -> lignes (dans l'ordre du catalogue) : une passe ne
+			-- parcourt que les lignes abonnées aux sujets touchés
+			for _, topic in ipairs(def.topicList) do
+				local list = index.byTopic[topic]
+				if not list then list = {}; index.byTopic[topic] = list end
+				list[#list + 1] = def
+			end
+			if def.series == nil and seriesOf[def.id] then def.series = seriesOf[def.id] end
+			if def.series then
+				local members = index.series[def.series]
+				if not members then members = {}; index.series[def.series] = members end
+				members[#members + 1] = def
+			end
 		end
+	end
+	-- paliers d'une série : seuil croissant (à égalité, le code)
+	for _, members in pairs(index.series) do
+		table.sort(members, function(a, b)
+			local x, y = ns.FeatThreshold(a), ns.FeatThreshold(b)
+			if x ~= y then return x < y end
+			return (tonumber(a.n) or 0) < (tonumber(b.n) or 0)
+		end)
 	end
 	-- catégories qui ont au moins une ligne, dans l'ordre de FEAT_CATEGORIES
 	local used = {}
@@ -263,6 +335,16 @@ function ns:FeatIndex() return Index() end
 function ns:FeatDef(id) return Index().byId[id] end
 function ns:FeatDefs() return Index().list end
 function ns:FeatCategories() return Index().catList end
+-- 3.7.0 : une catégorie (table de FEAT_CATEGORIES), les paliers d'une série
+function ns:FeatCategory(id) return Index().cats[id] end
+function ns:FeatSeries(key) return Index().series[key] end
+
+-- 3.7.0 : points admis (5, 10, 25, 50 ; 0 pour un tour de force seulement)
+function ns.FeatPointsOK(def)
+	if type(def) ~= "table" then return false end
+	if def.pts == 0 then return def.cat == ns.FEAT_FOS end
+	return ns.FEAT_POINTS[def.pts] == true
+end
 
 -- ---------------------------------------------------------------------------
 -- Lecture des données existantes (jamais destructive : vieilles sauvegardes)
@@ -585,11 +667,22 @@ function ns:FeatGot(id)
 	return self:FeatStore(def.scope).got[def.id]
 end
 
--- Points obtenus : "account", "char" ou nil (les deux)
+-- 3.7.0 : la ligne compte-t-elle dans les totaux, pourcentages et comptes par
+-- catégorie ? Non pour une ligne en attente (pending), un tour de force et un
+-- secret pas encore obtenu.
+function ns:FeatCountable(def)
+	if type(def) ~= "table" then def = Index().byId[def] end
+	if not def or def.pending or def.cat == ns.FEAT_FOS then return false end
+	if def.hidden and not self:FeatGot(def) then return false end
+	return true
+end
+
+-- Points obtenus : "account", "char" ou nil (les deux) ; rend aussi le nombre
+-- de hauts faits obtenus (3.7.0 : comptables seulement, tours de force à part)
 function ns:FeatPoints(scope)
 	local total, count = 0, 0
 	for _, def in ipairs(Index().list) do
-		if (scope == nil or def.scope == scope) and self:FeatGot(def) then
+		if (scope == nil or def.scope == scope) and self:FeatGot(def) and self:FeatCountable(def) then
 			total, count = total + (tonumber(def.pts) or 0), count + 1
 		end
 	end
@@ -650,6 +743,13 @@ function ns:FeatProgress(def)
 		end
 	elseif kind == "points" then
 		cur, max = self:FeatPoints(nil), tonumber(crit[2]) or 1
+	elseif TALLY_READ[kind] then
+		-- 3.7.0 : compteur de Tally.lua ; sans lui (pas chargé) : en attente
+		max = tonumber(crit[3]) or 1
+		local read = self[TALLY_READ[kind]]
+		if type(read) ~= "function" then return 0, max, got and "done" or "pending" end
+		local ok, value = pcall(read, self, crit[2], crit[4] == "char" and "char" or "account")
+		cur = ok and tonumber(value) or 0
 	else
 		return 0, 1, got and "done" or "pending"
 	end
@@ -665,8 +765,10 @@ local function Retro(def)
 		local source = SOURCES[crit[2]]
 		return source ~= nil and source.retro ~= false
 	end
-	return kind ~= "flag" and kind ~= "streak"
+	-- compteurs de Tally.lua : partis de zéro à la 3.7.0, jamais rétroactifs
+	return kind ~= "flag" and kind ~= "streak" and not TALLY_READ[kind]
 end
+ns.FeatRetro = Retro
 
 -- Les cosmétiques connus du compagnon : libellé d'un id
 -- (3.6.0 : et ceux de la fiche de dresseur, TrainerCardStyle.lua)
@@ -735,8 +837,12 @@ end
 -- ---------------------------------------------------------------------------
 -- Textes d'un haut fait
 -- ---------------------------------------------------------------------------
+-- 3.7.0 : un secret pas encore obtenu garde son nom pour lui
+local function Secret(self, def) return def.hidden and not self:FeatGot(def) end
+
 function ns:FeatName(def)
 	if type(def) ~= "table" then def = Index().byId[def] end
+	if def and Secret(self, def) then return L.FEAT_SECRET_NAME end
 	return def and L["FEAT_" .. def.id] or tostring(def)
 end
 
@@ -748,9 +854,16 @@ end
 function ns:FeatDescription(def)
 	if type(def) ~= "table" then def = Index().byId[def] end
 	if not def then return "" end
+	-- secret : son indice s'il a été révélé, sinon une phrase d'attente
+	if Secret(self, def) then
+		local key = "FEATH_" .. tostring(def.id)
+		if self:FeatHintKnown(def.id) and L[key] ~= key then return L[key] end
+		return L.FEAT_SECRET_WAIT
+	end
 	local crit = def.crit or {}
 	local kind = crit[1]
 	if kind == "count" then return self:F(def.desc or ("FEATD_" .. tostring(crit[2])), tonumber(crit[3]) or 1) end
+	if TALLY_READ[kind] then return self:F(def.desc or ("FEATD_tally_" .. tostring(crit[2])), tonumber(crit[3]) or 1) end
 	if kind == "stat" then return self:F(def.desc or ("FEATD_" .. tostring(crit.alt or "stat")), tonumber(crit[3]) or 1) end
 	if kind == "list" then return self:F(def.desc or ("FEATD_list_" .. tostring(crit[2])), #ListItems(self, crit[2])) end
 	if kind == "points" then return self:F(def.desc or "FEATD_points", tonumber(crit[2]) or 0) end
@@ -801,16 +914,41 @@ local function Wake()
 	ns.FeatClock("engine", EngineClock)
 end
 
-local function PlayFanfare(self)
-	if self:DB().featSound == false then return end
+-- 3.7.0 : la fête à la taille de l'exploit. small (5 points) : sans son ;
+-- medium (10) : son court ; big (25, 50, un titre, un tour de force) : fanfare.
+local SIZE_RANK = { small = 1, medium = 2, big = 3 }
+ns.FEAT_SIZE_RANK = SIZE_RANK
+function ns:FeatSize(def)
+	if type(def) ~= "table" then def = Index().byId[def] end
+	if not def then return "small" end
+	local pts = tonumber(def.pts) or 0
+	if (type(def.reward) == "table" and def.reward.title ~= nil) or pts >= 25 or def.cat == ns.FEAT_FOS then return "big" end
+	if pts >= 10 then return "medium" end
+	return "small"
+end
+local function Bigger(a, b)
+	if (SIZE_RANK[b] or 0) > (SIZE_RANK[a] or 0) then return b end
+	return a
+end
+
+-- Son d'une fête : rend l'identifiant joué (nil : aucun)
+function ns:FeatPlaySize(size)
+	if self:DB().featSound == false or size == "small" then return nil end
 	local play = G("PlaySound")
-	if type(play) ~= "function" then return end
-	if not pcall(play, ns.FEAT_SOUND, "Master") then pcall(play, ns.FEAT_SOUND_FALLBACK, "Master") end
+	if type(play) ~= "function" then return nil end
+	if size == "medium" then
+		if pcall(play, ns.FEAT_SOUND_FALLBACK, "Master") then return ns.FEAT_SOUND_FALLBACK end
+		return nil
+	end
+	if pcall(play, ns.FEAT_SOUND, "Master") then return ns.FEAT_SOUND end
+	if pcall(play, ns.FEAT_SOUND_FALLBACK, "Master") then return ns.FEAT_SOUND_FALLBACK end
+	return nil
 end
 
 local function Record(self, def)
 	local title = type(def.reward) == "table" and def.reward.title and self:FeatTitleText(def.reward.title) or nil
-	return { id = def.id, name = self:FeatName(def), pts = tonumber(def.pts) or 0, icon = self:FeatIcon(def), title = title }
+	return { id = def.id, name = self:FeatName(def), pts = tonumber(def.pts) or 0, icon = self:FeatIcon(def), title = title,
+		size = self:FeatSize(def) }
 end
 
 -- Une obtention en attente d'annonce (record), ou un lot déjà compté
@@ -901,8 +1039,10 @@ function ns:FeatFlush(force)
 	local db = self:DB()
 	local units, pts, grouped = 0, 0, false
 	local names, namedPts = {}, 0
+	local size = "small"
 	for _, record in ipairs(pending) do
 		units, pts = units + (record.many or 1), pts + (record.pts or 0)
+		size = Bigger(size, record.size or "big")
 		if record.many then grouped = true
 		else names[#names + 1] = record.name; namedPts = namedPts + (record.pts or 0) end
 	end
@@ -917,7 +1057,9 @@ function ns:FeatFlush(force)
 		for _, record in ipairs(pending) do self:Print(self:F("FEAT_CHAT", record.name, record.pts or 0)) end
 	end
 	if db.featToast == false or not self.JournalToastPush then return true end
-	local function Fanfare() PlayFanfare(ns) end
+	-- 3.7.0 : le son suit la taille de la fête (le dessin de la pastille
+	-- viendra avec la page ; la taille part avec le bandeau)
+	local function Sound(which) return function() ns:FeatPlaySize(which) end end
 	local function Open() ns:FeatOpenRecent() end
 	if collapse then
 		local text = self:F("FEAT_TOAST_MANY", units, pts)
@@ -926,16 +1068,57 @@ function ns:FeatFlush(force)
 		-- noms (ajustés au bandeau), le compte et les points dans le titre
 		local named = not grouped and #names > 0
 		self:JournalToastPush({ kind = "feat", title = named and self:F("FEAT_TOAST_MANY_HEAD", units) or L.FEAT_TOAST_MANY_TITLE,
-			name = text, message = text, names = named and names or nil,
-			icon = metaCat and metaCat.icon, points = pts, onShow = Fanfare, onClick = Open, count = units })
+			name = text, message = text, names = named and names or nil, size = size,
+			icon = metaCat and metaCat.icon, points = pts, onShow = Sound(size), onClick = Open, count = units })
 	else
 		for _, record in ipairs(pending) do
+			local one = record.size or "big"
 			self:JournalToastPush({ kind = "feat", title = L.FEAT_TOAST_TITLE, name = record.name, id = record.id,
-				message = self:F("FEAT_CHAT", record.name, record.pts or 0), icon = record.icon, points = record.pts,
-				sub = record.title and self:F("FEAT_TOAST_NEW_TITLE", record.title) or nil, onShow = Fanfare })
+				message = self:F("FEAT_CHAT", record.name, record.pts or 0), icon = record.icon, points = record.pts, size = one,
+				sub = record.title and self:F("FEAT_TOAST_NEW_TITLE", record.title) or nil, onShow = Sound(one) })
 		end
 	end
 	return true
+end
+
+-- 3.7.0 : paillettes d'un haut fait (2, 5, 15, 40 selon ses points ; 0 pour un
+-- tour de force), payées une fois : la marque g = montant reste dans got[id].
+-- Rend le montant payé, ou nil si rien n'est dû (déjà payé, pas de porte-monnaie).
+function ns:FeatGlitterOf(def)
+	return ns.FEAT_GLITTER[tonumber(def and def.pts) or 0] or 0
+end
+function ns:FeatPayGlitter(def, entry)
+	if type(def) ~= "table" or type(entry) ~= "table" or entry.g ~= nil then return nil end
+	local amount = self:FeatGlitterOf(def)
+	if amount > 0 then
+		if type(self.PaillettesAdd) ~= "function" then return nil end
+		self:PaillettesAdd(amount, "feat")
+	end
+	entry.g = amount
+	return amount
+end
+
+-- Rattrapage des paillettes : les hauts faits du compte et du personnage
+-- connecté obtenus avant la 3.7.0 (sans marque g), payés en une fois.
+-- Rend le total versé et le nombre de hauts faits payés.
+function ns:FeatGlitterCatchUp()
+	local total, count = 0, 0
+	for _, scope in ipairs({ "account", "char" }) do
+		local got = self:FeatStore(scope).got
+		local ids = {}
+		for id, entry in pairs(got) do
+			if type(entry) == "table" and entry.g == nil then ids[#ids + 1] = id end
+		end
+		table.sort(ids)
+		for _, id in ipairs(ids) do
+			local def = Index().byId[id]
+			if def and def.scope == scope then
+				local paid = self:FeatPayGlitter(def, got[id])
+				if paid and paid > 0 then total, count = total + paid, count + 1 end
+			end
+		end
+	end
+	return total, count
 end
 
 -- Attribue un haut fait. opts : silent (ni bandeau ni chat), retro (r = true),
@@ -951,6 +1134,8 @@ function ns:FeatAward(def, opts)
 		r = (opts.retro or opts.silent) and true or nil }
 	local ok, err = pcall(self.FeatGrant, self, def)
 	if not ok and self.RecordError then self:RecordError("feats:grant", err) end
+	ok, err = pcall(self.FeatPayGlitter, self, def, store.got[def.id])
+	if not ok and self.RecordError then self:RecordError("feats:glitter", err) end
 	local titled = type(def.reward) == "table" and def.reward.title ~= nil
 	local pts = tonumber(def.pts) or 0
 	if not opts.silent then
@@ -969,9 +1154,23 @@ end
 -- ---------------------------------------------------------------------------
 -- Évaluation : seuls les hauts faits non obtenus abonnés aux sujets touchés
 -- ---------------------------------------------------------------------------
-local function Subscribed(def, topics)
-	for _, topic in ipairs(def.topicList or {}) do if topics[topic] then return true end end
-	return false
+-- 3.7.0 : les lignes abonnées aux sujets touchés, par l'index sujet -> lignes
+-- (dans l'ordre du catalogue) ; nil : tout le catalogue
+local NONE = {}
+local function Candidates(idx, topics)
+	if topics == nil then return idx.list end
+	local only, count = nil, 0
+	for topic in pairs(topics) do only, count = topic, count + 1 end
+	if count == 0 then return NONE end
+	if count == 1 then return idx.byTopic[only] or NONE end
+	local seen, out = {}, {}
+	for topic in pairs(topics) do
+		for _, def in ipairs(idx.byTopic[topic] or NONE) do
+			if not seen[def] then seen[def] = true; out[#out + 1] = def end
+		end
+	end
+	table.sort(out, function(a, b) return idx.pos[a] < idx.pos[b] end)
+	return out
 end
 
 -- topics : { [sujet] = true } ou nil (tout). opts : silent, retro, retroOnly.
@@ -984,8 +1183,8 @@ function ns:FeatEvaluate(topics, opts)
 	for _ = 1, MAX_LOOPS do
 		self:FeatCacheReset()
 		local fresh = false
-		for _, def in ipairs(idx.list) do
-			if (pass == nil or Subscribed(def, pass)) and not def.pending and not self:FeatGot(def)
+		for _, def in ipairs(Candidates(idx, pass)) do
+			if not def.pending and not self:FeatGot(def)
 				and (not opts.retroOnly or Retro(def)) and not (combat and (def.crit or {})[1] == "stat") then
 				local cur, max, state = self:FeatProgress(def)
 				if state == "open" and max > 0 and cur >= max then
@@ -1110,13 +1309,328 @@ function ns:FeatLogin()
 	if not ok and self.RecordError then self:RecordError("feats:sync", err) end
 	for _, def in ipairs(self:FeatRetroScan()) do found[#found + 1] = def end
 	if #found > 0 then
-		local pts = 0
-		for _, def in ipairs(found) do pts = pts + (tonumber(def.pts) or 0) end
+		local pts, size = 0, "small"
+		for _, def in ipairs(found) do
+			pts = pts + (tonumber(def.pts) or 0)
+			size = Bigger(size, self:FeatSize(def))
+		end
 		self:Print(self:F("FEAT_RETRO", #found, pts))
 		if #found == 1 then self:FeatQueue(Record(self, found[1]))
-		else self:FeatQueue({ many = #found, pts = pts }) end
+		else self:FeatQueue({ many = #found, pts = pts, size = size }) end
 	end
+	-- 3.7.0 : les paillettes des hauts faits obtenus avant (une ligne de chat)
+	local okPay, glitter, paid = pcall(self.FeatGlitterCatchUp, self)
+	if not okPay and self.RecordError then self:RecordError("feats:glitter", glitter) end
+	if okPay and paid > 0 then self:Print(self:F("FEAT_GLITTER_CATCHUP", glitter, paid)) end
 	return found
+end
+
+-- ---------------------------------------------------------------------------
+-- 3.7.0 : secrets, rangs, comparaison, suivi, lignes de la page
+-- ---------------------------------------------------------------------------
+-- Indices révélés des secrets : au compte (db.feats.hints = { [id] = at })
+local function Hints(self)
+	local store = self:FeatStore("account")
+	if type(store.hints) ~= "table" then store.hints = {} end
+	return store.hints
+end
+
+function ns:FeatHintKnown(id)
+	if type(id) == "table" then id = id.id end
+	return Hints(self)[id] ~= nil
+end
+
+-- Révèle l'indice d'un secret tiré au hasard parmi ceux qui restent (ni
+-- obtenus ni déjà révélés, hors lignes en attente). Rend le texte de
+-- l'indice et l'identifiant, ou nil s'il n'en reste pas.
+function ns:FeatHintNext()
+	local hints, left = Hints(self), {}
+	for _, def in ipairs(Index().list) do
+		if def.hidden and not def.pending and not self:FeatGot(def) and hints[def.id] == nil then left[#left + 1] = def end
+	end
+	if #left == 0 then return nil end
+	local def = left[math.random(#left)]
+	hints[def.id] = Time()
+	local key = "FEATH_" .. def.id
+	return (L[key] ~= key) and L[key] or L.FEAT_SECRET_WAIT, def.id
+end
+
+-- Rang de renommée d'un total de points (par défaut : compte + personnage
+-- connecté). Rend l'indice du rang (0 : aucun), son nom (nil : aucun), le
+-- seuil suivant et son nom (nil au dernier rang), le total.
+function ns:FeatRank(points)
+	points = tonumber(points) or (self:FeatPoints(nil))
+	local index = 0
+	for i, at in ipairs(ns.FEAT_RANKS) do if points >= at then index = i end end
+	local nextAt = ns.FEAT_RANKS[index + 1]
+	return index, index > 0 and L["FEAT_RANK_" .. index] or nil, nextAt, nextAt and L["FEAT_RANK_" .. (index + 1)] or nil, points
+end
+
+-- Comparaison : un bit par code n, six bits par caractère (A-Z a-z 0-9 - _),
+-- sûrs pour un message d'addon et pour un texte copié ; les zéros de queue
+-- sont retirés (« » : rien d'obtenu).
+local BITS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+ns.FEAT_BITS_ALPHABET = BITS
+local BIT_VALUE = {}
+for i = 1, #BITS do BIT_VALUE[BITS:sub(i, i)] = i - 1 end
+
+function ns:FeatBits(codes)
+	local cells, last = {}, 0
+	local function Set(n)
+		n = tonumber(n)
+		if not n or n < 1 or n ~= math.floor(n) then return end
+		local cell, bit = math.floor((n - 1) / 6) + 1, (n - 1) % 6
+		local value = cells[cell] or 0
+		if math.floor(value / 2 ^ bit) % 2 == 0 then cells[cell] = value + 2 ^ bit end
+		if cell > last then last = cell end
+	end
+	if type(codes) == "table" then
+		for n, on in pairs(codes) do if on then Set(n) end end
+	else
+		for _, def in ipairs(Index().list) do if self:FeatGot(def) then Set(def.n) end end
+	end
+	local out = {}
+	for cell = 1, last do
+		local value = cells[cell] or 0
+		out[cell] = BITS:sub(value + 1, value + 1)
+	end
+	return table.concat(out)
+end
+
+-- L'ensemble des codes { [n] = true } d'un texte de FeatBits (caractères
+-- inconnus ignorés : ils valent zéro)
+function ns:FeatBitsDecode(text)
+	local set = {}
+	if type(text) ~= "string" then return set end
+	for cell = 1, #text do
+		local value = BIT_VALUE[text:sub(cell, cell)]
+		if value then
+			for bit = 0, 5 do
+				if math.floor(value / 2 ^ bit) % 2 == 1 then set[(cell - 1) * 6 + bit + 1] = true end
+			end
+		end
+	end
+	return set
+end
+
+-- Suivre : jusqu'à 3 hauts faits par personnage (CharData().feats.follow).
+-- on = true : suivre, false : ne plus suivre, nil : bascule. Rend true si
+-- la liste a changé, sinon false et la raison ("unknown", "done", "full").
+local function FollowList(self)
+	local store = self:FeatStore("char")
+	if type(store.follow) ~= "table" then store.follow = {} end
+	return store.follow
+end
+
+function ns:FeatFollow(id, on)
+	if type(id) == "table" then id = id.id end
+	local def = Index().byId[id]
+	local list = FollowList(self)
+	local at
+	for i, other in ipairs(list) do if other == id then at = i end end
+	if on == nil then on = at == nil end
+	if not on then
+		if not at then return false end
+		table.remove(list, at)
+		return true
+	end
+	if at then return false end
+	if not def or def.pending or Secret(self, def) then return false, "unknown" end
+	if self:FeatGot(def) then return false, "done" end
+	if #self:FeatFollowed() >= ns.FEAT_FOLLOW_MAX then return false, "full" end
+	list[#list + 1] = id
+	-- premier suivi : le compteur de Tally.lua (s'il est là)
+	if type(self.TallyAdd) == "function" and (type(self.TallyGet) ~= "function" or (tonumber(self:TallyGet("follow")) or 0) == 0) then
+		pcall(self.TallyAdd, self, "follow")
+	end
+	return true
+end
+
+-- Les hauts faits suivis (identifiants), sans ceux obtenus depuis ni ceux
+-- disparus du catalogue (retirés de la liste au passage)
+function ns:FeatFollowed()
+	local list, out = FollowList(self), {}
+	for i = #list, 1, -1 do
+		local def = Index().byId[list[i]]
+		if not def or def.pending or self:FeatGot(def) then table.remove(list, i) end
+	end
+	for i, id in ipairs(list) do out[i] = id end
+	return out
+end
+
+-- Une ligne de la page : { def, cur, max, state, got, at }
+function ns:FeatEntry(def)
+	local got = self:FeatGot(def)
+	local cur, max, state = self:FeatProgress(def)
+	return { def = def, cur = cur, max = max, state = state, got = got, at = got and tonumber(got.at) or 0 }
+end
+
+-- Ordre de la page : non obtenus par progression décroissante, puis grisés
+-- (source illisible), puis obtenus du plus récent au plus ancien ; à
+-- égalité, le code
+local function EntryRank(entry)
+	if entry.got then return 3 end
+	if entry.state == "pending" then return 2 end
+	return 1
+end
+function ns.FeatEntryBefore(a, b)
+	local ra, rb = EntryRank(a), EntryRank(b)
+	if ra ~= rb then return ra < rb end
+	if ra == 1 then
+		local pa = a.max > 0 and a.cur / a.max or 0
+		local pb = b.max > 0 and b.cur / b.max or 0
+		if pa ~= pb then return pa > pb end
+	elseif ra == 3 and a.at ~= b.at then
+		return a.at > b.at
+	end
+	return (tonumber(a.def.n) or 0) < (tonumber(b.def.n) or 0)
+end
+
+-- Lignes d'une catégorie ("all" : toutes) groupées par série, dans l'ordre de
+-- la page. Une série devient un groupe { key, defs (seuil croissant), index
+-- (palier en cours : le premier non obtenu, le dernier si tous le sont), cur,
+-- max (du palier en cours), def (ce palier), state, got (tous obtenus : celui
+-- du dernier palier), at, done (paliers obtenus) } ; une ligne sans série
+-- reste telle quelle ({ def, cur, max, state, got, at }). filter : "all",
+-- "got" (série : tous les paliers), "open" (série : au moins un palier à
+-- faire). Lignes en attente jamais listées.
+function ns:FeatSeriesList(cat, filter)
+	cat, filter = cat or "all", filter or "all"
+	self:FeatCacheReset()
+	local idx = Index()
+	local out, done = {}, {}
+	for _, def in ipairs(idx.list) do
+		if (cat == "all" or def.cat == cat) and not def.pending then
+			local key = def.series
+			local members = key and idx.series[key]
+			if members and #members > 1 then
+				if not done[key] then
+					done[key] = true
+					local defs, index, count = {}, nil, 0
+					for _, member in ipairs(members) do
+						if not member.pending and (cat == "all" or member.cat == cat) then
+							defs[#defs + 1] = member
+							if self:FeatGot(member) then count = count + 1 elseif not index then index = #defs end
+						end
+					end
+					index = index or #defs
+					local entry = self:FeatEntry(defs[index])
+					entry.key, entry.defs, entry.index, entry.done = key, defs, index, count
+					if count < #defs then entry.got, entry.at = nil, 0 end
+					local wanted = filter == "all" or (filter == "got" and entry.got) or (filter == "open" and not entry.got)
+					if wanted then out[#out + 1] = entry end
+				end
+			else
+				local entry = self:FeatEntry(def)
+				local wanted = filter == "all" or (filter == "got" and entry.got) or (filter == "open" and not entry.got)
+				if wanted then out[#out + 1] = entry end
+			end
+		end
+	end
+	table.sort(out, ns.FeatEntryBefore)
+	self:FeatCacheReset()
+	return out
+end
+
+-- À portée de main : les `count` hauts faits comptables, non obtenus, non
+-- secrets, pas encore atteints, les plus proches du but (cur / max décroissant ; à égalité le
+-- moins de points, puis le code). Chacun : { def, cur, max }. Calculé à la
+-- demande seulement (une passe sur le catalogue).
+function ns:FeatNearest(count)
+	count = math.max(0, math.floor(tonumber(count) or 4))
+	self:FeatCacheReset()
+	local list = {}
+	for _, def in ipairs(Index().list) do
+		if not def.hidden and self:FeatCountable(def) and not self:FeatGot(def) then
+			local cur, max, state = self:FeatProgress(def)
+			-- (but déjà atteint : la prochaine passe l'attribue, il n'est plus « à portée »)
+			if state == "open" and max > 0 and cur < max then list[#list + 1] = { def = def, cur = cur, max = max, ratio = cur / max } end
+		end
+	end
+	self:FeatCacheReset()
+	table.sort(list, function(a, b)
+		if a.ratio ~= b.ratio then return a.ratio > b.ratio end
+		local pa, pb = tonumber(a.def.pts) or 0, tonumber(b.def.pts) or 0
+		if pa ~= pb then return pa < pb end
+		return (tonumber(a.def.n) or 0) < (tonumber(b.def.n) or 0)
+	end)
+	local out = {}
+	for i = 1, math.min(count, #list) do out[i] = { def = list[i].def, cur = list[i].cur, max = list[i].max } end
+	return out
+end
+
+-- Libellé d'un élément de liste cochée : le crochet de la liste
+-- (FEAT_LISTS[nom].label(self, item, i, total)), le nom gardé par le relevé,
+-- le nom du lieu ou du donjon, un haut fait, sinon la description de la source
+local function DungeonLabel(self, key)
+	local entry = type(self.DUNGEONS) == "table" and self.DUNGEONS[key]
+	if type(entry) == "table" and self.DungeonName then
+		local ok, name = pcall(self.DungeonName, self, entry)
+		if ok and type(name) == "string" then return name end
+	end
+	return tostring(key)
+end
+local function ItemLabel(self, list, item, i, total)
+	if list and type(list.label) == "function" then
+		local ok, text = pcall(list.label, self, item, i, total)
+		if ok and type(text) == "string" and text ~= "" then return text end
+	end
+	if type(item) == "string" then
+		local stamp = Stamps(self)[item]
+		if type(stamp) == "table" and type(stamp.name) == "string" and stamp.name ~= "" then return stamp.name end
+		local kind, key = item:match("^(%a+):(.+)$")
+		if kind == "dungeon" then return DungeonLabel(self, key) end
+		if kind == "capital" and self.JournalHubGroups then
+			local ok, groups = pcall(self.JournalHubGroups, self)
+			for name, group in pairs(ok and groups or {}) do
+				if tostring(group.areaID) == key then return name end
+			end
+		end
+		if kind == "zone" then
+			local map = G("C_Map")
+			local info = type(map) == "table" and Call(map.GetMapInfo, tonumber(key))
+			if type(info) == "table" and type(info.name) == "string" then return info.name end
+		end
+		return tostring(key or item)
+	end
+	if type(item) == "table" then
+		local source, n = tostring(item[1]), tonumber(item[2]) or 1
+		local boss = source:match("^boss_(.+)$")
+		if boss then return DungeonLabel(self, boss) end
+		local feat = source:match("^got_(.+)$")
+		if feat then return self:FeatName(feat) end
+		local cat = source:match("^featsCat_(.+)$")
+		if cat then return self:F("FEATD_meta_cat", n, L["FEATC_" .. cat]) end
+		local key = (source == "featPoints") and "FEATD_points" or ("FEATD_" .. source)
+		if L[key] ~= key then return self:F(key, n) end
+		return self:F("FEAT_CHECK_STEP", i, total)
+	end
+	return tostring(item)
+end
+
+-- Liste cochée d'un critère list ou meta (liste d'identifiants), dans
+-- l'ordre du catalogue : { { label, done }, … } ; nil pour les autres
+-- critères, un méta « n d'une catégorie » et un secret pas encore obtenu.
+function ns:FeatChecklist(def)
+	if type(def) ~= "table" then def = Index().byId[def] end
+	if not def or Secret(self, def) then return nil end
+	local crit = def.crit or {}
+	local out = {}
+	if crit[1] == "list" then
+		self:FeatCacheReset()
+		local list = ns.FEAT_LISTS[crit[2]]
+		local items = ListItems(self, crit[2])
+		for i, item in ipairs(items) do
+			out[i] = { label = ItemLabel(self, list, item, i, #items), done = ItemDone(self, item, def.scope) and true or false }
+		end
+		self:FeatCacheReset()
+		return out
+	end
+	if crit[1] == "meta" and type(crit[2]) == "table" then
+		for i, id in ipairs(crit[2]) do out[i] = { label = self:FeatName(id), done = self:FeatGot(id) ~= nil } end
+		return out
+	end
+	return nil
 end
 
 -- ---------------------------------------------------------------------------

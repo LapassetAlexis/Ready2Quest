@@ -370,8 +370,11 @@ function ns:FeatDefByCode(n)
 end
 
 -- Un « gros » haut fait (titre ou 25 points et plus) : grand effet au bandeau
+-- (3.7.0 : la même règle que la taille de la fête, ns:FeatSize : un tour de
+-- force aussi)
 function ns:FeatIsBig(def)
 	if type(def) ~= "table" then return false end
+	if self.FeatSize then return self:FeatSize(def) == "big" end
 	local titled = type(def.reward) == "table" and def.reward.title ~= nil
 	return titled or (tonumber(def.pts) or 0) >= ns.FEAT_GUILD_MIN
 end

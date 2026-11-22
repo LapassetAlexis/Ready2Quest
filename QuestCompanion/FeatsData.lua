@@ -10,7 +10,8 @@
 --   * n      : code numérique stable = rang dans le catalogue du document (§2,
 --              1 à 173), jamais réutilisé : c'est lui qui voyagera dans les
 --              messages d'addon (lot D) ;
---   * cat    : catégorie (ns.FEAT_CATEGORIES) ; pts : 5, 10, 25 ou 50 ;
+--   * cat    : catégorie (ns.FEAT_CATEGORIES) ; pts : 5, 10, 25 ou 50 (0 pour
+--              un tour de force, catégorie fos, seulement) ;
 --   * scope  : "account" (collection : compte) ou "char" (performance :
 --              personnage), règle « collection = compte, performance =
 --              personnage » (docs §1.3) ;
@@ -22,6 +23,15 @@
 --       { "list", nom }                    tous les éléments de ns.FEAT_LISTS[nom]
 --       { "meta", { ids } } / { "meta", cat, n }  hauts faits obtenus
 --       { "points", n }                    total de points (compte + personnage) ≥ n
+--       { "tally", clé, n, magasin }       3.7.0 : ns:TallyGet(clé, magasin) ≥ n (Tally.lua)
+--       { "tallymax", clé, n, magasin }    ns:TallyBest(clé, magasin) ≥ n
+--       { "tallyset", clé, n, magasin }    ns:TallySize(clé, magasin) ≥ n
+--         (magasin "account" par défaut ou "char" ; jamais rétroactifs ;
+--          description FEATD_tally_<clé>)
+--   * hidden : 3.7.0, secret : nom et description cachés tant qu'il n'est pas
+--              obtenu (indice FEATH_<id> révélé par ns:FeatHintNext) ;
+--   * series : 3.7.0, clé de série (paliers repliés à l'écran), d'ordinaire
+--              posée depuis ns.FEAT_SERIES ;
 --   * reward : { aids = { appat = 1 }, cosmetic = { "frame", "trainer" },
 --              appearance = "id", title = code } ;
 --   * pending: détection pas encore vérifiée en jeu (⚠️ du document) : la
@@ -44,20 +54,65 @@ local ADDON, ns = ...
 if ns.blocked then return end
 
 -- ---------------------------------------------------------------------------
--- Catégories : ordre de la page, portée par défaut, icône du bandeau
+-- Catégories : ordre de la page, portée par défaut, famille, icône du bandeau
+-- 3.7.0 : 16 catégories en trois familles (dresseur, compagnon et voyage,
+-- aventure) ; nouvelles : init, spec, shop, comp, fos (tours de force,
+-- 0 point, hors des totaux). Une catégorie sans ligne n'est pas listée.
 -- ---------------------------------------------------------------------------
+ns.FEAT_FAMILIES = { "dresseur", "voyage", "aventure" }
 ns.FEAT_CATEGORIES = {
-	{ id = "men",   scope = "account", icon = "Interface\\Icons\\Ability_Hunter_BeastCall" },
-	{ id = "shiny", scope = "account", icon = "Interface\\Icons\\INV_Misc_Gem_Pearl_04" },
-	{ id = "zone",  scope = "char",    icon = "Interface\\Icons\\INV_Misc_Map_01" },
-	{ id = "day",   scope = "char",    icon = "Interface\\Icons\\INV_Misc_PocketWatch_01" },
-	{ id = "soc",   scope = "account", icon = "Interface\\Icons\\INV_Letter_15" },
-	{ id = "char",  scope = "char",    icon = "Interface\\Icons\\INV_Helmet_08" },
-	{ id = "dng",   scope = "char",    icon = "Interface\\Icons\\INV_Misc_Key_10" },
-	{ id = "prof",  scope = "char",    icon = "Interface\\Icons\\Trade_BlackSmithing" },
-	{ id = "quest", scope = "char",    icon = "Interface\\Icons\\INV_Misc_Book_09" },
-	{ id = "fun",   scope = "account", icon = "Interface\\Icons\\INV_Misc_Toy_10" },
-	{ id = "meta",  scope = "account", icon = "Interface\\Icons\\INV_Crown_01" },
+	{ id = "init",  scope = "account", family = "dresseur", icon = "Interface\\Icons\\INV_Misc_Note_01" },
+	{ id = "men",   scope = "account", family = "dresseur", icon = "Interface\\Icons\\Ability_Hunter_BeastCall" },
+	{ id = "spec",  scope = "account", family = "dresseur", icon = "Interface\\Icons\\Ability_Hunter_BeastTraining" },
+	{ id = "shiny", scope = "account", family = "dresseur", icon = "Interface\\Icons\\INV_Misc_Gem_Pearl_04" },
+	{ id = "shop",  scope = "account", family = "dresseur", icon = "Interface\\Icons\\INV_Misc_Bag_10" },
+	{ id = "soc",   scope = "account", family = "dresseur", icon = "Interface\\Icons\\INV_Letter_15" },
+	{ id = "fun",   scope = "account", family = "dresseur", icon = "Interface\\Icons\\INV_Misc_Toy_10" },
+	{ id = "meta",  scope = "account", family = "dresseur", icon = "Interface\\Icons\\INV_Crown_01" },
+	{ id = "fos",   scope = "account", family = "dresseur", icon = "Interface\\Icons\\INV_Misc_Rune_01" },
+	{ id = "comp",  scope = "char",    family = "voyage",   icon = "Interface\\Icons\\Ability_Hunter_BeastSoothe" },
+	{ id = "zone",  scope = "char",    family = "voyage",   icon = "Interface\\Icons\\INV_Misc_Map_01" },
+	{ id = "day",   scope = "char",    family = "voyage",   icon = "Interface\\Icons\\INV_Misc_PocketWatch_01" },
+	{ id = "char",  scope = "char",    family = "aventure", icon = "Interface\\Icons\\INV_Helmet_08" },
+	{ id = "dng",   scope = "char",    family = "aventure", icon = "Interface\\Icons\\INV_Misc_Key_10" },
+	{ id = "prof",  scope = "char",    family = "aventure", icon = "Interface\\Icons\\Trade_BlackSmithing" },
+	{ id = "quest", scope = "char",    family = "aventure", icon = "Interface\\Icons\\INV_Misc_Book_09" },
+}
+
+-- 3.7.0 : séries (paliers d'une même échelle, repliés en une ligne à
+-- l'écran). Déclarées à part des lignes : le moteur pose def.series à la
+-- construction de l'index (une ligne qui écrit déjà `series` la garde).
+-- Une série reste dans une seule catégorie, un seul type de critère et une
+-- seule source ; ses paliers sont rangés par seuil croissant.
+ns.FEAT_SERIES = {
+	species     = { "men_first", "men_species_10", "men_species_25", "men_species_50", "men_species_100", "men_species_250",
+		"men_species_500", "men_species_750", "men_species_1000", "men_species_1500", "men_species_2000", "men_species_2500",
+		"men_species_3000" },
+	rare        = { "men_rare_1", "men_rare_10" },
+	stars3      = { "men_stars3_1", "men_stars3_25", "men_stars3_100" },
+	study       = { "men_study_10", "men_study_50", "men_study_100" },
+	patron      = { "men_patron_10", "men_patron_50", "men_patron_100" },
+	shinyFound  = { "shiny_found_5", "shiny_found_15", "shiny_found_30", "shiny_found_50" },
+	shinyCap    = { "shiny_cap_1", "shiny_cap_10", "shiny_cap_25" },
+	seals       = { "zone_seal_1", "zone_seal_5", "zone_seal_15" },
+	zones       = { "zone_visit_10", "zone_visit_25" },
+	villages    = { "zone_villages_10", "zone_villages_25" },
+	zones100    = { "zone_100_1", "zone_100_10" },
+	missions    = { "day_mission_1", "day_mission_25", "day_mission_100" },
+	rares       = { "day_rare_1", "day_rare_10", "day_rare_50" },
+	travel      = { "day_travel_100", "day_travel_1000" },
+	daysTogether = { "day_days_30", "day_days_365" },
+	level       = { "char_level_10", "char_level_20", "char_level_30", "char_level_40", "char_level_50", "char_level_60" },
+	kills       = { "char_kills_1000", "char_kills_10000" },
+	gold        = { "char_gold_100", "char_gold_1000" },
+	deaths      = { "char_deaths_1", "char_deaths_100" },
+	quests      = { "quest_10", "quest_100", "quest_500", "quest_1000" },
+	exalted     = { "rep_exalted_1", "rep_exalted_5" },
+	prof        = { "prof_150", "prof_225", "prof_300" },
+	gather      = { "prof_gather_100", "prof_gather_1000" },
+	dungeons    = { "dng_visit_1", "dng_visit_10", "dng_visit_20" },
+	cards       = { "soc_card_1", "soc_card_10" },
+	trades      = { "soc_trade_1", "soc_trade_10" },
 }
 
 -- capitales du carnet (groupes de Hubs.lua, plus petit areaID du groupe)
@@ -269,13 +324,21 @@ local FR = {
 	FEATC_shiny = "Brillantes",
 	FEATC_zone  = "Zones et sceaux",
 	FEATC_day   = "Au jour le jour",
-	FEATC_soc   = "Guilde et entraide",
+	FEATC_soc   = "Entre dresseurs",
 	FEATC_char  = "Personnage",
 	FEATC_dng   = "Donjons et raids",
 	FEATC_prof  = "Métiers",
 	FEATC_quest = "Quêtes, réputations et honneur",
 	FEATC_fun   = "Insolite",
 	FEATC_meta  = "Grands hauts faits",
+	FEATC_init  = "Initiation",
+	FEATC_spec  = "Spécimens",
+	FEATC_shop  = "Réserve et Échoppe",
+	FEATC_comp  = "Compagnon",
+	FEATC_fos   = "Tours de force",
+	FEATF_dresseur = "Dresseur",
+	FEATF_voyage   = "Compagnon et voyage",
+	FEATF_aventure = "Aventure",
 	FEATD_species       = "Capturer %d espèce(s), tous personnages confondus",
 	FEATD_shinyCap      = "Capturer %d brillante(s), tous personnages confondus",
 	FEATD_seals         = "Sceller %d zone(s)",
@@ -334,13 +397,21 @@ local EN = {
 	FEATC_shiny = "Shinies",
 	FEATC_zone  = "Zones and Seals",
 	FEATC_day   = "Day by Day",
-	FEATC_soc   = "Guild and Friends",
+	FEATC_soc   = "Trainer to Trainer",
 	FEATC_char  = "Character",
 	FEATC_dng   = "Dungeons and Raids",
 	FEATC_prof  = "Professions",
 	FEATC_quest = "Quests, Reputation and Honor",
 	FEATC_fun   = "Oddities",
 	FEATC_meta  = "Feats of Feats",
+	FEATC_init  = "Getting Started",
+	FEATC_spec  = "Specimens",
+	FEATC_shop  = "Reserve and Shop",
+	FEATC_comp  = "Companion",
+	FEATC_fos   = "Feats of Strength",
+	FEATF_dresseur = "Trainer",
+	FEATF_voyage   = "Companion and Travel",
+	FEATF_aventure = "Adventure",
 	FEATD_species       = "Capture %d species, across all your characters",
 	FEATD_shinyCap      = "Capture %d shiny creature(s), across all your characters",
 	FEATD_seals         = "Seal %d zone(s)",
