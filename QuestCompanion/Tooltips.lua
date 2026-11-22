@@ -26,6 +26,7 @@ local FR = {
 	MEN_TIP_FULL       = "%s %s · complète",
 	MEN_TIP_MORE       = "%s %s · amélioration possible si tu trouves mieux",
 	MEN_TIP_PINNED     = "%s %s · épinglée",
+	MEN_TIP_CHAIN      = "Série de chasse : %d sur %d · brillantes ×%s",
 }
 local EN = {
 	BST_TOOLTIP        = "Bestiary: %s",
@@ -37,6 +38,7 @@ local EN = {
 	MEN_TIP_FULL       = "%s %s · complete",
 	MEN_TIP_MORE       = "%s %s · can improve if you find a better one",
 	MEN_TIP_PINNED     = "%s %s · pinned",
+	MEN_TIP_CHAIN      = "Hunting streak: %d of %d · shinies ×%s",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.TOOLTIP_STRINGS = { fr = FR, en = EN } end
@@ -146,6 +148,31 @@ function ns:BestiaryTooltipWary(guid)
 	return self:F("CAPTURE_WARY", count, math.floor((1 - factor) * 100 + 0.5 + 1e-9))
 end
 
+-- 3.7.0 : la série de chasse des brillantes, rendue visible (Shiny.lua, rien
+-- de changé) : « Série de chasse : 23 sur 50 · brillantes ×2,3 », dès
+-- SHINY_CHAIN_SHOW abattus de l'espèce (toutes zones). Le multiplicateur est
+-- celui que la chance reçoit de la série (chance avec la série / sans) ; nil
+-- pour une espèce qui ne peut pas être brillante.
+ns.SHINY_CHAIN_SHOW = 10
+function ns:BestiaryTooltipChain(guid)
+	if not (ns.CompanionOn and ns.CompanionOn()) or not self.ShinyChance or not ns.ShinySpeciesKills then return nil end
+	local npcID = ns.BestiaryNpcID and ns.BestiaryNpcID(guid)
+	local zoneID = npcID and self.JournalZone and self:JournalZone()
+	if not zoneID then return nil end
+	local species = self:BestiarySpeciesOne(zoneID, npcID)
+	if type(species) ~= "table" then return nil end
+	local kills = tonumber(ns.ShinySpeciesKills(self, npcID)) or 0
+	if kills < ns.SHINY_CHAIN_SHOW then return nil end
+	local typeKey = self.CreatureTypeKey and self:CreatureTypeKey(species.type) or nil
+	local base = tonumber((self:ShinyChance(species.class, 0, typeKey))) or 0
+	if base <= 0 then return nil end
+	local cap = ns.SHINY_CHAIN_KILLS or 50
+	local mult = (tonumber((self:ShinyChance(species.class, kills, typeKey))) or base) / base
+	local text = string.format("%.1f", math.floor(mult * 10 + 0.5 + 1e-9) / 10)
+	if L.MEN_DECIMAL_SEP == "," then text = text:gsub("%.", ",") end
+	return self:F("MEN_TIP_CHAIN", math.min(kills, cap), cap, text)
+end
+
 function ns:BestiaryOnTooltip(tooltip, data)
 	local guid, level = HoveredGUID(tooltip, data)
 	local text, color = self:BestiaryTooltipLine(guid, level)
@@ -154,6 +181,8 @@ function ns:BestiaryOnTooltip(tooltip, data)
 	Theme.TooltipLine(tooltip, text, color)
 	local wary = self:BestiaryTooltipWary(guid)
 	if wary then Theme.TooltipLine(tooltip, wary, Theme.ORANGE or Theme.GOLD) end
+	local chain = self:BestiaryTooltipChain(guid)
+	if chain then Theme.TooltipLine(tooltip, chain, Theme.GOLD) end
 	-- accroche OnTooltipSetUnit (pas de data) : le cadre reprend sa taille
 	if data == nil and type(tooltip.Show) == "function" then pcall(tooltip.Show, tooltip) end
 	return true
