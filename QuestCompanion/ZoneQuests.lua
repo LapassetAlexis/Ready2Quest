@@ -147,7 +147,7 @@ local function ClientTitle(id, ask)
 	local log = rawget(_G, "C_QuestLog")
 	if type(log) ~= "table" then return nil end
 	local title = Call(log.GetTitleForQuestID, id)
-	title = ns.Plain and ns.Plain(title) or title
+	if ns.Plain then title = ns.Plain(title) end
 	if type(title) == "string" and title ~= "" then
 		state.titles[id] = title
 		return title

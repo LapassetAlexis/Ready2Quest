@@ -95,6 +95,14 @@ def transform(text, path):
         text = text.replace(old, new)
     # le nom de l'addon hôte, pour ADDON_LOADED et les métadonnées
     text = text.replace('BIT.name = ADDON or "Ready2QuestCombat"', 'BIT.name = "Ready2Quest"')
+    # 2.1.0 : la coche de portée reçoit un nom global, pour que Ready2Quest
+    # puisse la retirer quand Mot de l'ombre : Mort prend sa place
+    # (Ready2Quest/CombatDeath.lua)
+    if path.replace("\\", "/").endswith("Modules/Range/Range.lua"):
+        old = 'icon = CreateFrame("Frame", nil, UIParent)'
+        if text.count(old) != 1:
+            raise SystemExit("%s : cadre de la coche introuvable" % path)
+        text = text.replace(old, 'icon = CreateFrame("Frame", "Ready2QuestCombat_RangeIcon", UIParent)')
     banner = ("-- Repris de DoesItDiePlus (Ironship, GPL-3.0-or-later) par tools/sync_combat.py ;\n"
               "-- voir Ready2Quest/Combat/README.md. Ne pas modifier ici : corriger l'import.\n")
     return banner + text

@@ -5,7 +5,7 @@
 ## Notes-frFR: Prépare ta sortie avant de quitter la ville : sacs, gris à vendre, vivres, buffs, repos, durabilité, quêtes à rendre. Bilan d'expédition, fiche de donjon, QoL, aide au combat.
 ## Notes-esES: Prepárate antes de salir de la ciudad: bolsas, grises para vender, comida, beneficios, descanso, durabilidad, misiones por entregar. Informe de expedición, ficha de mazmorra, comodidad, ayuda en combate.
 ## Notes-esMX: Prepárate antes de salir de la ciudad: bolsas, grises para vender, comida, beneficios, descanso, durabilidad, misiones por entregar. Informe de expedición, ficha de mazmorra, comodidad, ayuda en combate.
-## Version: 2.0.0
+## Version: 2.1.0
 ## X-License: GPL-3.0
 ## X-Credits: Combat engine from DoesItDiePlus (Ironship, GPL-3.0) and Does It Die (Joe Greive, MIT)
 ## OptionalDeps: ElvUI, HydraUI, EllesmereUI, EllesmereUIActionBars, EllesmereUINameplates, EllesmereUIUnitFrames
@@ -138,5 +138,6 @@ Combat\Modules\Range\Range.lua
 Combat\Core\Debug.lua
 # combat:end
 Combat.lua
+CombatDeath.lua
 OptionsMenu.lua
 Locales_es.lua

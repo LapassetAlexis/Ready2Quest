@@ -129,6 +129,7 @@ A **Combat** section in the settings gathers the aggro range and four helpers, e
 
 - **Spell range**: a green check or a red cross above your target, measured with your class's main spells (it works in combat too); action bar icons grey out when out of range.
 - **Lethal DoTs**: on the target's health bar, what your DoTs will still deal; a skull when they are enough to kill it. Tick sizes are learned as you play.
+- **Shadow Word: Death (priests)**: its icon replaces the skull above the target when it surely kills, so it never hits you back (30% of your health). On cooldown or out of range, the skull comes back.
 - **Spell prediction**: while you cast, the spell's expected damage on the target's health bar, and an icon if it kills.
 - **Action bar numbers**: the damage (or healing) of each spell on its button, read from its description with your spell power and talents.
 
@@ -433,6 +434,7 @@ Une section **Combat** dans les réglages réunit la portée d'aggro et quatre a
 
 - **Portée des sorts** : une coche verte ou une croix rouge au-dessus de ta cible, mesurée avec les sorts principaux de ta classe (ça marche aussi en combat) ; les icônes des barres d'action se grisent hors de portée.
 - **DoT mortels** : sur la barre de vie de la cible, ce que tes DoT vont encore infliger ; un crâne quand ils suffisent à la tuer. La taille des ticks s'apprend en jouant.
+- **Mot de l'ombre : Mort (prêtre)** : son icône remplace le crâne au-dessus de la cible quand il la tue à coup sûr, donc sans retour (30 % de ta vie). En recharge ou hors de portée, le crâne revient.
 - **Prédiction des sorts** : pendant l'incantation, les dégâts attendus du sort sur la barre de vie de la cible, et une icône s'il la tue.
 - **Chiffres des barres** : les dégâts (ou soins) de chaque sort sur son bouton, lus dans sa description avec ta puissance des sorts et tes talents.
 

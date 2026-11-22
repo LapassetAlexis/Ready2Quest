@@ -57,7 +57,10 @@ for _, page in ipairs(ns.OPTION_PAGES or {}) do
 end
 
 local function G(name) return rawget(_G, name) end
-local function Plain(value) return ns.Plain and ns.Plain(value) or value end
+local function Plain(value)
+	if ns.Plain then return ns.Plain(value) end
+	return value
+end
 local function Clock() return (ns.Now and ns.Now()) or 0 end
 local function Money(copper) return ns.FormatMoney and ns:FormatMoney(copper) or tostring(copper) end
 

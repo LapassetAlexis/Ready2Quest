@@ -446,7 +446,10 @@ ns.COMPANION_AGGRO_TEXTURE = "Interface\\Buttons\\UI-ActionButton-Border"
 -- valeurs restent lues (true = solo, false = off)
 if ns.RegisterDefaults then ns.RegisterDefaults({ companionAggroBlink = "solo" }) end
 
-local function Plain(v) return ns.Plain and ns.Plain(v) or v end
+local function Plain(v)
+	if ns.Plain then return ns.Plain(v) end
+	return v
+end
 local function SafeCall(fn, ...)
 	if type(fn) ~= "function" then return nil end
 	local ok, a = pcall(fn, ...)
