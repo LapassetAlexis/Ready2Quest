@@ -1,7 +1,7 @@
 <!--
 Fiche de la page QuestCompanion sur CurseForge et Wago (à copier à la main, voir docs/PUBLIER.md).
 Summary EN (obligatoire en anglais sur CurseForge, 256 caractères max, ici 201) :
-  Catch the monsters you defeat in WoW Forever: unique 1-3 star specimens, rare shinies, player trades, a companion that hunts and talks with you, 197 achievements, 52 titles and a travel journal. FR/EN.
+  Catch the monsters you defeat in WoW Forever: unique 1-3 star specimens, rare shinies, player trades, a companion that hunts and talks with you, 400 achievements, 72 titles and a travel journal. FR/EN.
 Catégories : Companions (principale), Quests & Leveling (additionnelle). Si Companions n'existe pas : Miscellaneous (principale).
 Licence : GPLv3. Logo : docs/publication/logo_questcompanion.png (le médaillon bleu et or de la 3.1 : à remettre sur les deux stores).
 Relation : Optional Dependency -> Ready2Quest (facultatif).
@@ -15,6 +15,15 @@ Une seule description, anglais d'abord puis français (règle des stores : l'ang
 ![A shiny creature tries its luck against the net](https://media.forgecdn.net/attachments/2161/225/f-gif.gif)
 
 For **WoW Forever** (1.60). English, French and Spanish. Free and standalone (`/qc`). Pairs well with [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
+
+## New in 3.7: worth celebrating
+- **Achievements, second edition**: 203 more (400 in all) in 16 categories, with a first step for every feature, ten secrets your companion hints at, feats of strength, 20 new titles (72), and glitter for every achievement.
+- **A rebuilt Achievements page**: your renown rank, "Within reach", one row per series, a checklist on click, search, Titles and Statistics tabs; Shift-click follows an achievement on screen.
+- **Less noise**: small achievements show a silent pill, the fanfare is kept for the big ones, and a quiet mode lets only the essentials through.
+- **Show it off**: a souvenir card to screenshot, a text ready to paste on Discord, the odds of rare catches ("1 in 107,143"), a trainer code anyone can open, and achievement comparison between trainers.
+- **Community page**: the trainers you know, the Discord and its word of the version, and "Your feedback" (nothing is sent: you copy and paste).
+- **Zone, day, week**: bronze, silver and gold medals before a zone's seal, a daily swarm in every zone, a creature type and a creature of the week, the same for everyone.
+- **The companion**: sums up your outing when you get back, comes back rested after a break, and the net shakes before a notable catch.
 
 ## New in 3.6: always a goal
 - **The first hour**: a short tour of express capture, "Set out with it" on the first catch, tips at the right moment, helpful empty pages and five new Guide sections.
@@ -97,7 +106,7 @@ For **WoW Forever** (1.60). English, French and Spanish. Free and standalone (`/
 - **Exploration**: every zone and its percentage. For the chosen zone: its milestones (treats, capture aids, a Feast), its places, the herbs and ores for your professions, its quests your character can do, and its chest. A 100% zone opens a chest where you **choose** a cosmetic item.
 - **Prefilled zones**: creatures, gathering nodes and quests of every zone are known from your first visit (Forever islands and zones included). No other addon needed.
 - **Missions**: two of the day in your zone plus one from your companion's personality, three of the week (always a shiny hunt among them); they reward treats, capture aids and glitter. An inn loyalty card, too.
-- **Achievements**: 197, with points, and 52 titles ("Trainer Dyokrion", "Dyokrion the Tracker"…) to show on your trainer card. What you did before is awarded silently at login, and the **Y** key opens them (if it was free).
+- **Achievements**: 400, with points, a renown rank, series to climb and 72 titles ("Trainer Dyokrion", "Dyokrion the Tracker"…) to show on your trainer card. What you did before is awarded silently at login, and the **Y** key opens them (if it was free).
 - **Jukebox**: the game's own music on demand, 434 tracks with search, favourites, playlists and shuffle (`/qc juke`).
 - **An on-screen tracker** with your closest goals.
 
@@ -134,6 +143,15 @@ Free software, **GPL-3.0**. Zone data (creatures, gathering, quests) is generate
 ![Une brillante tente sa chance contre le filet](https://media.forgecdn.net/attachments/2161/225/f-gif.gif)
 
 Pour **WoW Forever** (1.60). En français, en anglais et en espagnol. Gratuit et autonome (`/qc`). Va très bien avec [Ready2Quest](https://www.curseforge.com/wow/addons/ready2quest).
+
+## Nouveau en 3.7 : ça se fête
+- **Les hauts faits, deuxième édition** : 203 de plus (400 en tout) en 16 catégories, avec un premier pas pour chaque fonction, dix secrets dont ton compagnon lâche un indice, des tours de force, 20 titres nouveaux (72) et des paillettes pour chaque haut fait.
+- **Une page Hauts faits refaite** : ton rang de renommée, « À portée de main », une ligne par série, la liste cochée au clic, une recherche, les onglets Titres et Statistiques ; Maj + clic suit un haut fait à l'écran.
+- **Moins de bruit** : les petits hauts faits passent en pastille muette, la fanfare reste aux grands, et un mode discret ne laisse passer que l'essentiel.
+- **Ça se montre** : une carte souvenir à photographier, un texte prêt à coller sur Discord, la cote des prises rares (« 1 chance sur 107 143 »), un code de dresseur que n'importe qui peut ouvrir, et la comparaison des hauts faits entre dresseurs.
+- **Page Communauté** : les dresseurs que tu connais, le Discord et son mot de la version, et « Ton avis » (rien n'est envoyé : tu copies, tu colles).
+- **La zone, le jour, la semaine** : des médailles de bronze, d'argent et d'or avant le sceau d'une zone, une pullulation du jour dans chaque zone, un type et une créature de la semaine, les mêmes pour tous.
+- **Le compagnon** : il résume ta sortie au retour, revient reposé après une absence, et le filet tremble avant une prise qui compte.
 
 ## Nouveau en 3.6 : toujours un but
 - **La première heure** : une courte visite de la capture express, « Partir avec lui » à la première prise, des astuces au bon moment, des pages vides qui aident et cinq nouvelles sections au Guide.
@@ -204,7 +222,7 @@ Pour **WoW Forever** (1.60). En français, en anglais et en espagnol. Gratuit et
 - **Exploration** : toutes les zones et leur pourcentage. Pour la zone choisie : ses paliers (friandises, aides de capture, un Festin), ses lieux, les herbes et minerais de tes métiers, ses quêtes faisables par ton personnage, et son coffre. Une zone à 100 % ouvre un coffre où tu **choisis** un objet cosmétique.
 - **Zones préremplies** : créatures, points de récolte et quêtes de chaque zone sont connus dès ta première visite (îles et zones propres à Forever comprises). Aucun autre addon requis.
 - **Missions** : deux du jour dans ta zone et une de son caractère, trois de la semaine (dont toujours une chasse au brillant) ; elles rapportent friandises, aides de capture et paillettes. Et une carte de fidélité des auberges.
-- **Hauts faits** : 197, avec des points, et 52 titres (« Dresseur Dyokrion », « Dyokrion le Traqueur »…) à afficher sur ta fiche de dresseur. Ce que tu as déjà fait est attribué en silence à la connexion, et la touche **Y** les ouvre (si elle était libre).
+- **Hauts faits** : 400, avec des points, un rang de renommée, des séries à gravir et 72 titres (« Dresseur Dyokrion », « Dyokrion le Traqueur »…) à afficher sur ta fiche de dresseur. Ce que tu as déjà fait est attribué en silence à la connexion, et la touche **Y** les ouvre (si elle était libre).
 - **Juke-box** : les musiques du jeu à la demande, 434 morceaux avec recherche, favoris, listes et lecture au hasard (`/qc juke`).
 - **Un suivi à l'écran** de tes objectifs les plus proches.
 
