@@ -70,6 +70,9 @@ function XP.Reset()
 	NS:TreatData().treatsInit = true
 	NS:DB().captureMuteUntil = nil
 	NS.captureExpressDormant = nil
+	-- 3.7.0 : sans le suspense des prises notables (réglage « Capture animée »
+	-- coupé) : ces scénarios lisent le verdict tout de suite ; zone_37.lua a le sien
+	NS:DB().companionCaptureAnim = false
 	if NS.captureStage then NS.captureStage:Hide(); NS.captureStage.rolling, NS.captureStage.prep = nil, nil end
 	NS:CompanionUpdateVisibility()
 end

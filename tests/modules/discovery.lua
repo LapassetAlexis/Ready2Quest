@@ -157,7 +157,9 @@ do
 		release = "release", codex = "codex", shop = "shop", titles = "title", guild = "guildFeat", noel = "noel",
 		expressAll = "batch", expressPrep = "prep",   -- 3.5.1 : astuces de la capture express
 		-- 3.6.0 : les six nouvelles
-		huntReserve = "hunt", reserve = "page_reserve", study = "study", bond = "bond", shopEarn = "page_shop", orders = "order" }
+		huntReserve = "hunt", reserve = "page_reserve", study = "study", bond = "bond", shopEarn = "page_shop", orders = "order",
+		-- 3.7.0 : les deux de la page Communauté (JournalCommunity.lua)
+		community = "page_community", communityAvis = "community_avis" }
 	for id, flag in pairs(FLAG) do NS:DiscoveryUse(flag) end
 	local still = {}
 	for _, tip in ipairs(NS.DISCOVERY_TIPS) do if not tip.learned(NS) then still[#still + 1] = tip.id end end

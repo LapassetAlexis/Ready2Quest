@@ -35,15 +35,33 @@ Scènes (Snap.scenes dans tests/snapshot.lua ; « list » les donne toutes) :
   r2q-exit-alert ; infobulles et divers : r2q-pace, r2q-minimap-tooltip, r2q-reward,
   r2q-settings-canvas ; QuestCompanion (3.1.0 : tout au thème forgé) : carnet
   qc-journal-creature, qc-journal-progress, qc-journal-day, qc-journal-menagerie,
-  qc-journal-guide, qc-journal-feats, qc-journal-reserve, qc-journal-juke,
-  qc-journal-confirm, qc-journal-winter, qc-trainer, qc-trainer-style, qc-allure ; compagnon
+  qc-journal-guide, qc-journal-feats, qc-journal-feats-list, qc-journal-feats-secrets,
+  qc-journal-feats-fos, qc-journal-feats-titles, qc-journal-feats-stats (3.7.0 : onglets Titres et Statistiques), qc-journal-reserve, qc-journal-juke,
+  qc-journal-confirm, qc-journal-winter, qc-journal-community-discord,
+  qc-journal-community-avis, qc-journal-community-dresseurs, qc-journal-community-dresseurs-empty
+  (3.7.0 : page Communauté), qc-trainer, qc-trainer-style, qc-trainer-rank,
+  qc-trainer-compare, qc-trainer-card_<id> (3.7.0 : rang, comparaison, les neuf habillages neufs), qc-allure ; compagnon
   qc-companion, qc-companion-hover, qc-companion-frame-tint, qc-companion-talk,
-  qc-companion-sad, qc-companion-winter, qc-tutorial, qc-pantry ; capture
+  qc-companion-sad, qc-companion-winter, qc-tutorial, qc-pantry ; cosmétiques
+  des hauts faits 3.7 : qc-feat37-<id> (feat_rarities, feat_contest,
+  feat_rare_size, feat_glitter, feat_volunteer, feat_worlds, feat_unfindable,
+  feat_starry, feat_sparkle, feat_perfect) et qc-feat37-ornaments ; capture
   qc-capture, qc-capture-shake, qc-capture-ok, qc-capture-fail, qc-capture-toast,
   qc-capture-shiny, qc-capture-prep, qc-capture-batch3, qc-capture-batch6,
   qc-capture-chooser ; bandeaux qc-result-forge, qc-result-shiny-forge,
-  qc-feat-forge, qc-feat-big-forge, qc-guild-forge, qc-tour-forge ; divers
-  qc-chest, qc-notify, qc-tracker, qc-tooltip.
+  qc-feat-forge, qc-feat-big-forge, qc-guild-forge, qc-tour-forge ; fêtes 3.7 :
+  qc-feat-pill, qc-feat-medium, qc-feat-big-sig, qc-result-rare-odds, qc-options-quiet ; divers
+  qc-chest, qc-notify, qc-tracker, qc-tracker-feat, qc-tooltip ; 3.7 (médailles de zone, série
+  de chasse, suspense) : qc-journal-menagerie-medals0, -medals1, -medals3,
+  qc-tracker-37, qc-tooltip-37, qc-capture-express-suspense ; 3.7 « Ça se montre » (carte
+  souvenir, écran réduit à la scène de la maquette) : qc-souvenir-specimen, qc-souvenir-feat,
+  qc-souvenir-trainer, qc-souvenir-noshot, qc-discord-copy ; 3.7 (le monde bouge :
+  pullulation, type et créature de la semaine) : qc-journal-day-37 (et
+  -scrolled, défilée à la molette), qc-journal-menagerie-swarm, qc-tracker-world,
+  qc-tooltip-world, qc-journal-community-week ; 3.7 (bilan de sortie) :
+  qc-trip-recap (le bandeau, « Détail »), qc-journal-trip (page « Dernière sortie »),
+  qc-companion-hello (le bonjour utile). Un cadre qui coupe ses enfants
+  (SetClipsChildren) coupe aussi l'aperçu.
 Ne pas versionner les HTML produits.
 """
 import base64

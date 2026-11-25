@@ -287,7 +287,9 @@ do
 	Check("[T31] minuscule capturé : « Petit mais costaud » ; un cadeau géant ne compte pas", flagged.sizeTiny == "account"
 		and flagged.sizeGiant == nil)
 	local giant, tiny = NS:FeatDef("men_size_giant"), NS:FeatDef("men_size_tiny")
-	Check("[T31] hauts faits : Créatures, compte, 10 points, codes 176 et 177, drapeaux", giant and tiny and giant.cat == "men"
+	-- (3.7.0 : passés de Créatures à Spécimens, mêmes identifiants, codes et points)
+	Check("[T31] hauts faits : Spécimens, compte, 10 points, codes 176 et 177, drapeaux", giant and tiny and giant.cat == "spec"
+		and tiny.cat == "spec"
 		and giant.scope == "account" and giant.pts == 10 and giant.n == 176 and tiny.n == 177 and giant.crit[2] == "sizeGiant"
 		and tiny.crit[2] == "sizeTiny" and NS.L.FEAT_men_size_giant == "Un géant parmi les bêtes"
 		and NS.L.FEAT_men_size_tiny == "Petit mais costaud" and NS:FeatDescription(giant) == "Capturer un spécimen géant")

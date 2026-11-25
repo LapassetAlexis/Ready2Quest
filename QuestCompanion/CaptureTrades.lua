@@ -789,6 +789,8 @@ local function Commit(self, pending)
 	-- hauts faits (FeatsCatMenagerie.lua) : soc_trade_1, soc_trade_10, soc_trade_new
 	if self.FeatCount then pcall(self.FeatCount, self, "trades", 1, "account") end
 	if newSpecies and self.FeatFlag then pcall(self.FeatFlag, self, "tradeNew", "account") end
+	-- 3.7.0 : partenaires d'échange différents (Tally.lua), par clé de joueur
+	if self.TallyMark then pcall(self.TallyMark, self, "tradePartners", self.TrainerKey and self:TrainerKey(peer) or peer, "account", 100) end
 	self:Print(self:F("TRADE_MSG_DONE", Short(self, peer), self:TradeListText(gave), self:TradeListText(got)))
 	for _, note in ipairs(notes) do self:Print(self:F(note[1], self:SpecimenLabel(note[2]))) end
 	if self.FireCallback then self:FireCallback("SPECIMENS", "trade", pending.tid) end

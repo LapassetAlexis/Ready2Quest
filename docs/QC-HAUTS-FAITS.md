@@ -54,6 +54,17 @@ Trois fichiers neufs, déclarés dans le `.toc` après `GuildFeats.lua` (les cro
 | `streak` | `{ "streak", clé, n }` | compteur qui repart à zéro (échecs de capture de suite) |
 | `meta` | `{ "meta", { ids } }` ou `{ "meta", cat, n }` | hauts faits obtenus parmi une liste, ou N dans une catégorie |
 | `points` | `{ "points", n }` | total de points ≥ n |
+| `tally` / `tallymax` / `tallyset` | `{ "tally", clé, n, magasin }` | 3.7.0 : compteur de `Tally.lua` (`ns:TallyGet`, `ns:TallyBest`, `ns:TallySize`, magasin `"account"` par défaut ou `"char"`) ≥ n ; sujet `tally` ; **jamais rétroactif** ; « à vérifier » tant que `Tally.lua` n'est pas chargé ; description `FEATD_tally_<clé>` |
+
+**Champs 3.7.0** (deuxième édition) :
+
+- `hidden = true` : **secret**. Tant qu'il n'est pas obtenu : nom « Un secret du compagnon », description = son indice (`FEATH_<id>`) s'il a été révélé, sinon une phrase d'attente ; hors des totaux. `ns:FeatHintNext()` révèle l'indice d'un secret tiré au hasard parmi ceux qui restent (rend le texte et l'identifiant, rien s'il n'en reste pas) ; `ns:FeatHintKnown(id)`.
+- `series = "<clé>"` : paliers d'une même échelle, repliés en une ligne à l'écran. Déclarés à part dans `ns.FEAT_SERIES` (`FeatsData.lua`, clé → identifiants), posés par le moteur à la construction de l'index ; une ligne peut aussi l'écrire elle-même. Une série reste dans une catégorie, un type de critère et une source. `ns:FeatSeriesList(cat, filtre)` rend, dans l'ordre de la page, des groupes `{ key, defs (seuil croissant), index (palier en cours), cur, max, def, done, got }` et les lignes sans série telles quelles (`{ def, cur, max, state, got, at }`).
+- `pts = 0` : admis pour un **tour de force** (catégorie `fos`) seulement (`ns.FeatPointsOK(def)`).
+
+**Lignes comptables** (`ns:FeatCountable(def)`) : ni en attente (`pending`), ni tour de force, ni secret pas encore obtenu. Les totaux, pourcentages, comptes par catégorie (`ns:FeatCategoryStats`) et le nombre obtenu de `ns:FeatPoints` n'utilisent qu'elles ; une ligne en attente n'est plus listée du tout.
+
+**API de la page** (3.7.0, rien calculé tant que la page ne demande pas) : `ns:FeatNearest(n)` (les n plus proches du but, comptables, non obtenus, non secrets, pas encore atteints : `cur / max` décroissant, à égalité le moins de points ; chacun `{ def, cur, max }`) ; `ns:FeatChecklist(def)` (critère `list` ou `meta` d'identifiants : `{ label, done }` dans l'ordre ; rien pour les autres, un méta « n d'une catégorie » ou un secret caché ; une liste peut fournir `label(self, élément, i, total)`) ; `ns:FeatRank(points)` (rang de renommée, §1.4) ; `ns:FeatBits()` / `ns:FeatBitsDecode(texte)` (comparaison : un bit par code `n`, six par caractère `A-Z a-z 0-9 - _`, zéros de queue retirés) ; `ns:FeatFollow(id, on)` / `ns:FeatFollowed()` (3 suivis au plus par personnage, `CharData().feats.follow` ; ni obtenu, ni en attente, ni secret ; obtenus retirés à la lecture ; au premier suivi `ns:TallyAdd("follow")` si `Tally.lua` est là).
 
 **Sources** : petites fonctions nommées (`species`, `shinyCap`, `seals`, `level`, `goldMax`…), enregistrées dans `ns.FEAT_SOURCES[nom] = { get = function(self) … end, topics = { … }, retro = true|false }`. `retro = true` : la valeur se recalcule à partir des données (captures, relevés, statistiques), donc le rattrapage peut l'attribuer après coup. `retro = false` : compteur d'événements tenu par nous depuis l'installation de la 2.7, sans rien avant.
 
@@ -82,7 +93,7 @@ Trois fichiers neufs, déclarés dans le `.toc` après `GuildFeats.lua` (les cro
 | `minute` | horloge d'une minute existante (temps ensemble, km parcourus) |
 | `feat` | un haut fait vient d'être obtenu (métas, points) |
 
-**Évaluation** : on marque les sujets à revoir, puis une seule passe au plus toutes les 0,5 s (horloge `OnUpdate` du moteur, retirée quand rien n'attend). Le calcul se fait même en combat (lectures seulement) ; le bandeau et le chat attendent la sortie de combat (même file que le carnet, `JournalFlush`). Les sources coûteuses sont gardées en cache : `MenagerieTypeCounts` et les comptes d'étoiles par `capture.serial` et `capture.count`, les statistiques 60 s.
+**Évaluation** : on marque les sujets à revoir, puis une seule passe au plus toutes les 0,5 s (3.7.0 : la passe ne lit que les lignes abonnées aux sujets touchés, par l'index sujet → lignes construit avec le catalogue) (horloge `OnUpdate` du moteur, retirée quand rien n'attend). Le calcul se fait même en combat (lectures seulement) ; le bandeau et le chat attendent la sortie de combat (même file que le carnet, `JournalFlush`). Les sources coûteuses sont gardées en cache : `MenagerieTypeCounts` et les comptes d'étoiles par `capture.serial` et `capture.count`, les statistiques 60 s.
 
 ### 1.2 Statistiques natives (`GetStatistic`)
 
@@ -111,9 +122,14 @@ Les deux tables ont la même forme :
 ```lua
 feats = {
   v = 1,                      -- version du format (migration faite)
-  got = { [id] = { at, lvl, r } },  -- at = time(), lvl = niveau, r = true si rattrapé ou migré (pas de bandeau)
+  got = { [id] = { at, lvl, r, g } },  -- at = time(), lvl = niveau, r = true si rattrapé ou migré (pas de bandeau),
+                              -- g = paillettes versées (3.7.0 ; absent = pas encore payé)
   ctr = { [clé] = n },        -- compteurs d'événements tenus par nous (alt des stats, streaks)
   flag = { [clé] = at },      -- faits ponctuels
+  -- compte seulement (3.7.0) :
+  hints = { [id] = at },      -- indices de secrets révélés
+  -- personnage seulement (3.7.0) :
+  follow = { id, … },         -- hauts faits suivis (3 au plus)
   -- personnage seulement (lot D) :
   title = 12,                 -- code du titre affiché ; nil = automatique ; 0 = aucun titre
   form = "auto",              -- forme des titres : auto (UnitSex) | m | f
@@ -132,21 +148,38 @@ Une ligne peut déroger à la règle de sa catégorie en l'écrivant (`scope`), 
 
 ### 1.4 Catégories et points
 
-| Code | Catégorie (FR / EN) | Portée |
-|---|---|---|
-| `men` | Créatures / Creatures | compte |
-| `shiny` | Brillantes / Shinies | compte |
-| `zone` | Zones et sceaux / Zones and Seals | personnage |
-| `day` | Au jour le jour / Day by Day | personnage |
-| `soc` | Guilde et entraide / Guild and Friends | compte |
-| `char` | Personnage / Character | personnage |
-| `dng` | Donjons et raids / Dungeons and Raids | personnage |
-| `prof` | Métiers / Professions | personnage |
-| `quest` | Quêtes, réputations et honneur / Quests, Reputation and Honor | personnage |
-| `fun` | Insolite / Oddities | compte |
-| `meta` | Grands hauts faits / Feats of Feats | compte |
+3.7.0 : 16 catégories en trois familles (`family` : `dresseur`, `voyage`, `aventure`), dans l'ordre de la page ; chacune a son icône du client (par référence). Une catégorie sans ligne n'est pas listée.
 
-**Points**, sur l'échelle de retail : **5** (premier pas, fait amusant), **10** (étape normale), **25** (gros objectif), **50** (sommet, méta). Total affiché sur la page, la fiche de dresseur et les bandeaux de guilde.
+| Code | Catégorie (FR / EN) | Famille | Portée |
+|---|---|---|---|
+| `init` | Initiation / Getting Started (3.7.0) | Dresseur | compte |
+| `men` | Créatures / Creatures | Dresseur | compte |
+| `spec` | Spécimens / Specimens (3.7.0) | Dresseur | compte |
+| `shiny` | Brillantes / Shinies | Dresseur | compte |
+| `shop` | Réserve et Échoppe / Reserve and Shop (3.7.0) | Dresseur | compte |
+| `soc` | Entre dresseurs / Trainer to Trainer (« Guilde et entraide » avant la 3.7.0) | Dresseur | compte |
+| `fun` | Insolite / Oddities | Dresseur | compte |
+| `meta` | Grands hauts faits / Feats of Feats | Dresseur | compte |
+| `fos` | Tours de force / Feats of Strength (3.7.0 ; 0 point, hors des totaux) | Dresseur | compte |
+| `comp` | Compagnon / Companion (3.7.0) | Compagnon et voyage | personnage |
+| `zone` | Zones et sceaux / Zones and Seals | Compagnon et voyage | personnage |
+| `day` | Au jour le jour / Day by Day | Compagnon et voyage | personnage |
+| `char` | Personnage / Character | Aventure | personnage |
+| `dng` | Donjons et raids / Dungeons and Raids | Aventure | personnage |
+| `prof` | Métiers / Professions | Aventure | personnage |
+| `quest` | Quêtes, réputations et honneur / Quests, Reputation and Honor | Aventure | personnage |
+
+**Changements de catégorie (3.7.0)** : 20 lignes changent de catégorie sans changer d'identifiant, de code ni de points ; elles restent à leur place dans le §2 (leur code est leur rang), ce qui est obtenu reste obtenu, et les grands hauts faits par catégorie gardent leurs seuils (`meta_menagerie` : 20 hauts faits « Créatures ») :
+
+- vers `spec` (12) : `men_stars3_1`, `men_stars3_25`, `men_stars3_100`, `men_size_giant`, `men_size_tiny`, `men_sizes_all`, `men_traits_all`, `men_study_10`, `men_study_50`, `men_study_100`, `men_bond_familiar`, `men_bond_inseparable` ;
+- vers `shop` (3) : `men_patron_10`, `men_patron_50`, `men_patron_100` ;
+- vers `comp` (5) : `day_days_30`, `day_days_365`, `day_travel_100`, `day_travel_1000`, `day_pets_100`.
+
+**Points**, sur l'échelle de retail : **5** (premier pas, fait amusant), **10** (étape normale), **25** (gros objectif), **50** (sommet, méta) ; **0** pour un tour de force. Total affiché sur la page, la fiche de dresseur et les bandeaux de guilde.
+
+**Paillettes (3.7.0)** : tout haut fait en donne à l'obtention, selon ses points (`ns.FEAT_GLITTER`) : 2, 5, 15, 40 (0 pour un tour de force), par `ns:PaillettesAdd(n, "feat")` ; la marque `g` dans `got[id]` empêche tout second paiement.
+
+**Rangs de renommée (3.7.0)** : `ns.FEAT_RANKS` = 100, 250, 500, 1 000, 1 500, 2 000, 3 000, 4 000 points (compte + personnage connecté), nommés « Connu au village », « Connu du comté », « Un nom qui circule », « Réputé », « De grande renommée », « Illustre », « Célèbre dans tout Azeroth », « Légende vivante ». `ns:FeatRank(points)` rend l'indice du rang (0 : aucun), son nom, le seuil suivant et son nom, le total.
 
 ### 1.5 Rattrapage à la connexion
 
@@ -154,6 +187,7 @@ Une ligne peut déroger à la règle de sa catégorie en l'écrivant (`scope`), 
 - **Première passe** (`feats.v == nil`) : migration (§3) puis rattrapage, **en silence** (`r = true`, aucun bandeau, aucun exploit de guilde), puis **une seule ligne** de chat : « Hauts faits : 47 obtenus d'après ta progression (385 points). Ouvre le carnet pour les voir. »
 - **Passes suivantes** : ce qui est trouvé à la connexion (réputation montée pendant que l'addon était coupé, statistique qui a bougé) est attribué de la même façon : en silence, une ligne de chat récapitulative et **au plus un bandeau** (groupé dès 2). Fait au lot A.
 - Tant que le rattrapage de la connexion n'a pas eu lieu, les sujets touchés attendent (le carnet rattrape ses paliers de niveau à l'entrée dans le monde : ils ne doivent pas sortir en bandeaux un par un).
+- **Paillettes (3.7.0)** : à chaque connexion, les hauts faits du compte et du personnage connecté obtenus sans marque `g` (avant la 3.7.0, sauvegarde ancienne comprise) sont payés en une fois, avec une seule ligne de chat ; ceux d'un autre personnage le sont à sa connexion. Chaque haut fait n'est payé qu'une fois.
 - Les compteurs `retro = false` (danses, caresses depuis la 2.7…) démarrent à zéro, sauf quand une donnée existante sert d'amorce : `missionsDone`, `inn.total`, `daily.perfect`, `travel`, `ShinyData().count`, `CaptureData().count`, relevés du carnet, `GatheringData`.
 
 ### 1.6 Bandeau « Haut fait obtenu » et regroupement
@@ -162,6 +196,7 @@ Une ligne peut déroger à la règle de sa catégorie en l'écrivant (`scope`), 
 - Hors combat seulement, un à la fois, 4 s. **À partir de 3 en attente** : un seul bandeau « 3 hauts faits obtenus · +45 points » (même règle que `TOAST_COLLAPSE`).
 - Un haut fait qui donne un titre : la sous-ligne dit « Nouveau titre : … » ; un clic sur le bandeau ouvre la page, sur ce haut fait.
 - Son : `CAPTURE_SOUNDS` du client (un nouveau kit `feat`, à choisir : 12891 est la fanfare des hauts faits sur le moteur récent, ⚠️ à écouter en jeu ; repli 17316).
+- **Taille de la fête (3.7.0)** : `ns:FeatSize(def)` = `small` (5 points), `medium` (10), `big` (25, 50, un titre ou un tour de force). Fanfare (`FEAT_SOUND`) pour `big` seulement, son court (`FEAT_SOUND_FALLBACK`) pour `medium`, aucun son pour `small`. La taille part avec le bandeau (`size`) ; un bandeau groupé prend la taille du plus gros. Le regroupement à partir de 3 ne change pas ; le dessin de la pastille vient avec la page.
 - Le compagnon réagit (`CompanionSay("UNLOCK")`) pour les hauts faits à 25 points ou plus, et pour ceux qui donnent un titre.
 - Le bandeau « Nouveau tampon » **disparaît** (§3).
 
@@ -241,7 +276,7 @@ Fenêtre 980 × 680 (contenu `INNER`), mise en page :
 
 - **Colonne de gauche** (180 px) : « Résumé » puis les 11 catégories, chacune avec obtenus/total et une fine barre ; pastille dorée sur une catégorie qui a du neuf depuis `feats.seen`.
 - **Résumé** : total de points, grande barre globale, les 5 derniers obtenus (date), les 3 plus proches d'être finis (« presque »), le titre affiché et un bouton « Choisir mon titre ».
-- **Liste** (lignes de 58 px, paginée par `Pager` et la molette comme le Guide) : bouclier avec les points (atlas Azeroth si dispo, sinon losange du thème), nom, description générée, barre x/n (ou « 5/8 » pour une liste, détail au survol), date et niveau si obtenu, ligne de récompense (titre / cosmétique / aides, avec icône). Une ligne ⚠️ « à vérifier en jeu » sans source lisible est grisée avec la mention « détection pas encore disponible sur ce client ».
+- **Liste** (lignes de 58 px, paginée par `Pager` et la molette comme le Guide) : bouclier avec les points (atlas Azeroth si dispo, sinon losange du thème), nom, description générée, barre x/n (ou « 5/8 » pour une liste, détail au survol), date et niveau si obtenu, ligne de récompense (titre / cosmétique / aides, avec icône). Une ligne ⚠️ « à vérifier en jeu » sans source lisible est grisée avec la mention « détection pas encore disponible sur ce client ». (3.7.0 : une ligne `pending` n'est plus listée du tout ; seule une ligne dont la source est illisible sur ce client reste grisée. La page sera refaite d'après une maquette validée.)
 - **Filtres** : Tous / En cours (progression > 0) / Obtenus / À faire (0). Tri : non obtenus par progression décroissante, puis obtenus du plus récent au plus ancien. Filtre gardé dans `db.featsFilter`.
 - **Onglet Titres** : les titres gagnés (boutons radio, rendus avec le nom du joueur et la forme choisie), puis les titres pas encore gagnés en gris avec leur haut fait source ; « Automatique » et « Aucun titre » en tête ; choix de la forme (auto / masculin / féminin).
 - Ligne d'aperçu pour les tests : scène `qc-journal-feats` (et `qc-journal-feats-titles`).
@@ -695,6 +730,28 @@ Retour en 2.6 possible : la 2.6 relit `journal.stamps` intact et ignore `feats`.
 | T47 | `men_species_all` | %s, Dresseur de tout Azeroth | %s, Dresseuse de tout Azeroth | %s, Trainer of All Azeroth | S |
 | T48 | `men_study_50` | %s le Savant | %s la Savante | %s the Scholar | S |
 | T49 | `men_bond_inseparable` | %s l'Inséparable | — | %s the Inseparable | S |
+| T50 | `init_all` | Dresseur en herbe %s | Dresseuse en herbe %s | Budding Trainer %s | P |
+| T51 | `men_caught_10000` | %s au filet d'or | — | %s of the Golden Net | S |
+| T52 | `men_elite_150` | %s le Dompteur d'élites | %s la Dompteuse d'élites | %s the Elite Tamer | S |
+| T53 | `men_medal5_all` | %s, Grand maître des huit familles | %s, Grande maîtresse des huit familles | %s, Grand Master of the Eight Families | S |
+| T54 | `spec_study_250` | %s le Naturaliste | %s la Naturaliste | %s the Naturalist | S |
+| T55 | `spec_bond_10` | %s au grand cœur | — | %s the Big-Hearted | S |
+| T56 | `shiny_found_250` | %s l'Étincelant | %s l'Étincelante | %s the Sparkling | S |
+| T57 | `shiny_cap_100` | %s, Gardien du trésor | %s, Gardienne du trésor | %s, Keeper of the Hoard | S |
+| T58 | `shop_order_150` | %s le Fournisseur | %s la Fournisseuse | %s the Purveyor | S |
+| T59 | `zone_seal_all` | %s, Gardien d'Azeroth | %s, Gardienne d'Azeroth | %s, Guardian of Azeroth | S |
+| T60 | `comp_radiant_3000` | %s le Rayonnant | %s la Rayonnante | %s the Radiant | S |
+| T64 | `comp_wish_250` | %s l'Attentionné | %s l'Attentionnée | %s the Thoughtful | S |
+| T65 | `comp_wardrobe_100` | %s l'Élégant | %s l'Élégante | %s the Elegant | S |
+| T66 | `soc_trade_25` | %s le Marchand | %s la Marchande | %s the Merchant | S |
+| T67 | `soc_mentor_10` | %s le Passeur | %s la Passeuse | %s the Torchbearer | S |
+| T68 | `fos_pioneer` | %s le Pionnier | %s la Pionnière | %s the Pioneer | S |
+| T69 | `meta_points_5000` | %s le Renommé | %s la Renommée | %s the Renowned | S |
+| T70 | `meta_soc` | %s le Sociable | %s la Sociable | %s the Sociable | S |
+| T71 | `meta_fun` | %s l'Original | %s l'Originale | %s the Eccentric | S |
+| T72 | `meta_all` | Dresseur accompli %s | Dresseuse accomplie %s | Accomplished Trainer %s | P |
+
+T50 à T60 et T64 à T72 : 3.7.0, deuxième édition (§7).
 
 T41 à T49 : 3.6.0 (rangs de dresseur au-delà de 500 espèces, étude, lien). Les codes 61 à 63 sont pris par la 3.6 (mécénat).
 
@@ -832,3 +889,261 @@ Une ligne se libère en retirant son `pending` quand sa statistique est confirm�
 - `fun_unlucky` n'est plus « caché, sans points » (§4.1) : ligne ordinaire de 5 points, hors numérotation.
 - La statistique 15027 (Bazzalan, Gouffre de Ragefeu) est lisible ; la table des boss garde les correspondances du §2.13.
 - Les paliers 2 à 4 de donjons comptent l'entrée (relevé) pour les donjons sans boss connu (Site de fouilles des Paluns, Cité engloutie, Bastion de Krol'dok, Blackmaw Hold), comme prévu au §2.7.
+
+## 7. Deuxième édition (3.7.0)
+
+### 7.1 Famille « dresseur » (chantier B2a, `FeatsCatDresseur.lua`)
+
+99 lignes, au compte, codes 244 à 323 et 378 à 396, 1 780 points ; titres T50 à T58 (§4.1). Calcul : rétroactif (donnée déjà dans la sauvegarde, rattrapée à la connexion), état (vrai en ce moment : au rattrapage et en direct), compteur (`Tally.lua`, non rétroactif). Les paillettes de chaque ligne viennent du moteur, selon ses points ; les cosmétiques « à créer » attendent en `reward.soon` (étape 2).
+
+Relevés posés par ce fichier, faute de donnée complète dans la sauvegarde (la source y ajoute les preuves déjà gardées : fiches d'espèce, spécimens possédés) : `captureZones` (ensemble des zones de capture), `shinyCapZone:<zone>` et `shinyZoneBest` (brillantes capturées par zone), `shinyDayBest` (brillantes capturées le même jour ; le jour en cours dans `db.feats.dresseurShinyDay`). La zone d'une espèce maîtrisée (`spec_study_zone`) est celle de sa première capture. `men_elite_1`, `shiny_seen_1` et `shiny_zones_10` rejoignent les séries `elite`, `shinySeen` et `shinyZones` (identifiant, code et points inchangés).
+
+#### Initiation (`init`)
+
+- `init_meet` (code 244) — Faisons connaissance / Nice to Meet You — Finir la présentation du compagnon — 5 points — `count, tourMeet, 1`
+- `init_net` (code 245) — Leçon de filet / Net Practice — Finir la visite de la capture — 5 points — `count, tourCapture, 1` — récompense : appât ×2
+- `init_partner` (code 246) — En route ensemble / Off We Go — Partir avec une créature que tu as capturée — 5 points — `count, partnerCaptured, 1`
+- `init_journal` (code 247) — Carnet ouvert / Open Book — Finir la visite du carnet — 5 points — `count, tourJournal, 1`
+- `init_study` (code 248) — Première leçon / First Lesson — Finir une tâche d'étude — 5 points — `count, studyTasks, 1`
+- `init_radiant` (code 249) — Rayonnant ! / All Aglow! — Rendre ton compagnon Rayonnant — 5 points — `tally, radiant, 1, char`
+- `init_wish` (code 250) — À tes souhaits / Wish Granted — Combler une envie du compagnon — 5 points — `tally, wish, 1, char`
+- `init_treat` (code 251) — Petite douceur / A Little Treat — Donner une friandise — 5 points — `tally, treat, 1, char`
+- `init_hunt` (code 252) — Ouverture de la chasse / Open Season — Lancer le mode chasse — 5 points — `tally, huntStart, 1`
+- `init_release` (code 253) — Rendu à la nature / Back to the Wild — Relâcher un spécimen — 5 points — `tally, release, 1`
+- `init_shop` (code 254) — Premier achat / First Purchase — Acheter un article à l'Échoppe — 5 points — `count, shopBought, 1`
+- `init_order` (code 255) — Bon de livraison / Special Delivery — Livrer une commande — 5 points — `tally, orderDone, 1`
+- `init_aid` (code 256) — Coup de pouce / A Helping Hand — Capturer une créature avec une aide — 5 points — `tally, captureAided, 1`
+- `init_pin` (code 257) — Avis de recherche / Wanted Poster — Ajouter une espèce à ta liste de chasse — 5 points — `count, huntPins, 1`
+- `init_follow` (code 258) — Cap fixé / Eyes on the Prize — Suivre un haut fait à l'écran — 5 points — `tally, follow, 1`
+- `init_all` (code 259) — Dresseur diplômé / Graduate Trainer — Obtenir tous les hauts faits d'Initiation — 10 points — `meta, INIT` — récompense : titre « Dresseur en herbe », lasso ×2
+#### Créatures (`men`)
+
+- `men_caught_100` (code 260) — Cent prises / A Hundred Catches — Capturer 100 créatures (tous spécimens) — 5 points — `count, caught, 100`
+- `men_caught_500` (code 261) — Cinq cents prises / Five Hundred Catches — Capturer 500 créatures — 10 points — `count, caught, 500` — récompense : lasso ×1
+- `men_caught_2000` (code 262) — Deux mille prises / Two Thousand Catches — Capturer 2 000 créatures — 10 points — `count, caught, 2000` — récompense : sifflet ×1
+- `men_caught_5000` (code 263) — Le filet ne chôme pas / The Net Never Rests — Capturer 5 000 créatures — 25 points — `count, caught, 5000`
+- `men_caught_10000` (code 264) — Dix mille prises / Ten Thousand Catches — Capturer 10 000 créatures — 25 points — `count, caught, 10000` — récompense : titre « au filet d'or »
+- `men_elite_10` (code 265) — Dix gros gibiers / Ten Trophies — Capturer 10 élites différentes — 10 points — `count, elite, 10` — récompense : lasso ×1
+- `men_elite_50` (code 266) — Tableau de chasse / Trophy Wall — Capturer 50 élites différentes — 25 points — `count, elite, 50`
+- `men_elite_150` (code 267) — La fine fleur / Cream of the Crop — Capturer 150 élites différentes — 50 points — `count, elite, 150` — récompense : titre « le Dompteur d'élites »
+- `men_rare_25` (code 268) — Galerie des raretés / Gallery of Rarities — Capturer 25 rares ou rares élites — 25 points — `count, rare, 25` — récompense : sifflet ×1
+- `men_rare_50` (code 269) — L'œil du collectionneur / A Collector's Eye — Capturer 50 rares ou rares élites — 50 points — `count, rare, 50` — récompense : ornement (à créer)
+- `men_rareelite_1` (code 270) — Rare et coriace / Rare and Tough — Capturer une rare élite — 10 points — `count, rareElite, 1`
+- `men_medal4_1` (code 271) — Spécialiste / Specialist — Atteindre le palier 4 dans un type de créature — 10 points — `count, medal4, 1`
+- `men_medal4_all` (code 272) — Huit spécialités / Eight Specialties — Atteindre le palier 4 dans les 8 types — 25 points — `count, medal4, 8` — récompense : cadre de fiche (à créer)
+- `men_medal5_1` (code 273) — Sommité / Leading Authority — Atteindre le palier 5 dans un type de créature — 25 points — `count, medal5, 1`
+- `men_medal5_all` (code 274) — Les huit sommets / The Eight Summits — Atteindre le palier 5 dans les 8 types — 50 points — `count, medal5, 8` — récompense : titre « Grand maître des huit familles »
+- `men_zones_10` (code 275) — Dix terrains de chasse / Ten Hunting Grounds — Capturer des créatures dans 10 zones différentes — 10 points — `count, captureZones, 10`
+- `men_zones_25` (code 276) — Chasseur itinérant / Roaming Hunter — Capturer des créatures dans 25 zones différentes — 25 points — `count, captureZones, 25`
+- `men_zones_all` (code 277) — Partout chez soi / At Home Everywhere — Capturer des créatures dans les 40 zones à sceau — 25 points — `list, captureSealZones`
+- `men_level60` (code 278) — Gibier de taille / Prime Quarry — Capturer une créature de niveau 60 ou plus — 10 points — `count, level60, 1`
+- `men_streak_10` (code 279) — Main chaude / Hot Hand — Réussir 10 captures de suite — 10 points — `tallymax, captureStreak, 10`
+- `men_streak_25` (code 280) — Rien ne m'échappe / Nothing Gets Away — Réussir 25 captures de suite — 25 points — `tallymax, captureStreak, 25`
+- `men_batch_10` (code 281) — Grande volée / Mighty Haul — Prendre 10 créatures en une seule volée « Tout capturer » — 25 points — `tallymax, batch, 10`
+- `men_hunt_100` (code 282) — Saison de chasse / Hunting Season — Capturer 100 créatures en mode chasse — 10 points — `tally, captureHunt, 100`
+- `men_hunt_1000` (code 283) — Grand veneur / Master of the Hunt — Capturer 1 000 créatures en mode chasse — 25 points — `tally, captureHunt, 1000`
+- `men_aid_50` (code 284) — Trousse bien remplie / Well-Stocked Kit — Utiliser 50 aides de capture — 5 points — `tally, aidUsed, 50`
+- `men_whistle_10` (code 285) — Maître siffleur / Whistle Master — Capturer 10 créatures au Sifflet — 10 points — `tally, captureWhistle, 10`
+- `men_noaid_rare` (code 286) — À mains nues / Bare-Handed — Capturer une rare ou une rare élite sans aide — 10 points — `tally, rareNoAid, 1`
+- `men_fail_100` (code 287) — Persévérant / If at First You Don't Succeed — Rater 100 captures (au total) — 5 points — `tally, captureFail, 100`
+#### Spécimens (`spec`)
+
+- `spec_stars3_250` (code 288) — Voûte étoilée / Starry Vault — Avoir 250 espèces capturées à 3 étoiles — 50 points — `count, stars3, 250` — récompense : cadre du compagnon (à créer)
+- `spec_giant_10` (code 289) — Dix géants / Ten Giants — Capturer un Géant de 10 espèces différentes — 25 points — `count, studyGiant, 10`
+- `spec_tiny_10` (code 290) — Dix minuscules / Ten Tiny Ones — Capturer un Minuscule de 10 espèces différentes — 25 points — `count, studyTiny, 10`
+- `spec_sizes_species` (code 291) — La gamme complète / The Full Range — Capturer les 5 tailles d'une même espèce — 25 points — `count, studyAllSizes, 1`
+- `spec_twins` (code 292) — David et Goliath / Little and Large — Capturer un Minuscule et un Géant de la même espèce — 10 points — `count, studyTwins, 1`
+- `spec_index_max` (code 293) — Hors gabarit / Off the Charts — Capturer un spécimen d'indice de taille 125 — 10 points — `count, studyIndexMax, 1`
+- `spec_index_min` (code 294) — Poids plume / Featherweight — Capturer un spécimen d'indice de taille 75 — 10 points — `count, studyIndexMin, 1`
+- `spec_trait_rare` (code 295) — Perle rare / A Rare Gem — Capturer un Zen ou un Espiègle (1 sur 10) — 5 points — `count, studyTraitRare, 1`
+- `spec_traits_species` (code 296) — Tous les tempéraments / Every Temperament — Capturer les 8 caractères d'une même espèce — 25 points — `count, studyAllTraits, 1`
+- `spec_contest` (code 297) — Bête de concours / Best in Show — Un spécimen à 3 étoiles et de taille rare (1 sur 357) — 25 points — `tally, contest, 1` — récompense : ornement (à créer)
+- `spec_tasks_50` (code 298) — Bon élève / Star Pupil — Finir 50 tâches d'étude — 5 points — `count, studyTasks, 50`
+- `spec_study_250` (code 299) — Bibliothèque vivante / Living Library — Maîtriser l'étude de 250 espèces — 50 points — `count, studyMastered, 250` — récompense : titre « le Naturaliste »
+- `spec_study_500` (code 300) — Somme zoologique / Zoological Compendium — Maîtriser l'étude de 500 espèces — 50 points — `count, studyMastered, 500` — récompense : fond de fiche (à créer)
+- `spec_study_zone` (code 301) — Monographie / Monograph — Maîtriser 25 espèces d'une même zone — 25 points — `count, studyZone, 25`
+- `spec_bond_3` (code 302) — Trois inséparables / Three Inseparables — Avoir 3 spécimens au lien Inséparable — 25 points — `count, bond5, 3`
+- `spec_bond_10` (code 303) — Cercle d'amis / Circle of Friends — Avoir 10 spécimens au lien Inséparable — 50 points — `count, bond5, 10` — récompense : titre « au grand cœur »
+- `spec_bond_1000` (code 304) — Kilomètres d'amitié / Miles of Friendship — Gagner 1 000 points de lien (au total) — 10 points — `tally, bondPoints, 1000`
+- `spec_nick_1` (code 305) — Petit nom / Pet Name — Donner un surnom à un spécimen — 5 points — `count, nicks, 1`
+- `spec_nick_10` (code 306) — Chacun son nom / A Name for Everyone — Avoir 10 spécimens surnommés — 10 points — `count, nicks, 10`
+- `spec_lock_10` (code 307) — Sous bonne garde / Under Lock and Key — Protéger 10 spécimens — 5 points — `count, locks, 10`
+- `spec_same_25` (code 308) — Idée fixe / One-Track Mind — Capturer 25 fois la même espèce — 10 points — `count, studySame, 25`
+- `spec_same_100` (code 309) — Monomanie / Obsession — Capturer 100 fois la même espèce — 25 points — `count, studySame, 100`
+#### Brillantes (`shiny`)
+
+- `shiny_seen_25` (code 310) — Œil exercé / Trained Eye — Repérer 25 brillantes — 5 points — `count, shinySeen, 25`
+- `shiny_seen_100` (code 311) — Rien ne t'échappe / Hawk-Eyed — Repérer 100 brillantes — 10 points — `count, shinySeen, 100`
+- `shiny_found_100` (code 312) — Cent éclats / A Hundred Sparkles — Trouver 100 brillantes — 25 points — `count, shinyFound, 100` — récompense : fond du compagnon (à créer)
+- `shiny_found_250` (code 313) — Pluie d'étoiles / Shower of Stars — Trouver 250 brillantes — 50 points — `count, shinyFound, 250` — récompense : titre « l'Étincelant »
+- `shiny_cap_50` (code 314) — Salle du trésor / Treasure Room — Capturer 50 brillantes — 50 points — `count, shinyCap, 50` — récompense : cadre de fiche (à créer)
+- `shiny_cap_100` (code 315) — Cent trésors / A Hundred Treasures — Capturer 100 brillantes — 50 points — `count, shinyCap, 100` — récompense : titre « Gardien du trésor »
+- `shiny_types` (code 316) — Huit éclats / Eight Gleams — Capturer une brillante de chacun des 8 types — 25 points — `list, shinyTypes`
+- `shiny_zone_5` (code 317) — Filon / Mother Lode — Capturer 5 brillantes dans une même zone — 10 points — `count, shinyZoneBest, 5`
+- `shiny_day_2` (code 318) — Jour de chance / Lucky Day — Capturer 2 brillantes le même jour — 10 points — `count, shinyDayBest, 2`
+- `shiny_chain` (code 319) — Au bout de la série / End of the Chain — Trouver une brillante avec la série de chasse au maximum (50 abattus) — 10 points — `tallymax, shinyChain, 50`
+- `shiny_zones_25` (code 320) — Azeroth scintille / Azeroth Sparkles — Trouver des brillantes dans 25 zones différentes — 25 points — `count, shinyZones, 25`
+- `shiny_partner` (code 321) — Compagnon de gala / Dressed to Dazzle — Partir avec une créature brillante — 5 points — `count, partnerShiny, 1`
+- `shiny_rare_size` (code 322) — Brillante hors norme / Sparkling Oddity — Capturer une brillante Géante ou Minuscule (1 sur 3 750) — 25 points — `tally, shinyRareSize, 1` — récompense : ornement (à créer)
+- `shiny_study_10` (code 323) — Étude en or / A Study in Gold — Finir la tâche « brillante » de 10 espèces — 10 points — `count, studyShiny, 10`
+#### Réserve et Échoppe (`shop`)
+
+- `shop_slots_max` (code 378) — Réserve comble / Packed to the Rafters — Agrandir la Réserve jusqu'à 150 places — 25 points — `count, reserveSlots, 150`
+- `shop_full` (code 379) — Plus une place / No Vacancy — Remplir la Réserve — 5 points — `count, reserveFull, 1`
+- `shop_release_50` (code 380) — Retour aux champs / Back to the Fields — Relâcher 50 spécimens — 5 points — `tally, release, 50`
+- `shop_release_500` (code 381) — Grand lâcher / The Great Release — Relâcher 500 spécimens — 10 points — `tally, release, 500`
+- `shop_release_2500` (code 382) — Repeupleur d'Azeroth / Repopulating Azeroth — Relâcher 2 500 spécimens — 25 points — `tally, release, 2500`
+- `shop_tidy` (code 383) — Grand ménage / Spring Cleaning — Relâcher 10 spécimens d'un coup — 5 points — `tallymax, releaseBatch, 10`
+- `shop_glitter_500` (code 384) — Premières paillettes / First Glitter — Gagner 500 paillettes (au total) — 5 points — `count, glitterEarned, 500`
+- `shop_glitter_5000` (code 385) — Bourse scintillante / Glittering Purse — Gagner 5 000 paillettes — 10 points — `count, glitterEarned, 5000`
+- `shop_glitter_25000` (code 386) — Coffre scintillant / Glittering Chest — Gagner 25 000 paillettes — 25 points — `count, glitterEarned, 25000`
+- `shop_glitter_100000` (code 387) — Pluie de paillettes / Raining Glitter — Gagner 100 000 paillettes — 50 points — `count, glitterEarned, 100000` — récompense : ornement (à créer)
+- `shop_spent_1000` (code 388) — Panier percé / Spendthrift — Dépenser 1 000 paillettes — 10 points — `tally, glitterSpent, 1000`
+- `shop_spent_10000` (code 389) — Grand train / Living Large — Dépenser 10 000 paillettes — 25 points — `tally, glitterSpent, 10000`
+- `shop_order_10` (code 390) — Dix livraisons / Ten Deliveries — Livrer 10 commandes — 10 points — `tally, orderDone, 10`
+- `shop_order_50` (code 391) — Cinquante livraisons / Fifty Deliveries — Livrer 50 commandes — 25 points — `tally, orderDone, 50`
+- `shop_order_150` (code 392) — Cent cinquante livraisons / A Hundred and Fifty Deliveries — Livrer 150 commandes — 50 points — `tally, orderDone, 150` — récompense : titre « le Fournisseur »
+- `shop_order_week` (code 393) — Semaine pleine / A Week's Work — Livrer les 3 commandes d'une même semaine — 10 points — `tally, orderWeek, 1`
+- `shop_order_week_10` (code 394) — Dix semaines pleines / Ten Weeks' Work — Livrer les 3 commandes de 10 semaines — 25 points — `tally, orderWeek, 10`
+- `shop_arrivals_all` (code 395) — Client fidèle / Loyal Customer — Posséder les 8 cosmétiques d'arrivage — 25 points — `count, arrivalsOwned, 8`
+- `shop_aids_100` (code 396) — Bon client / Valued Customer — Acheter 100 aides à l'Échoppe — 10 points — `tally, aidBought, 100`
+
+### 7.2 Compagnon et voyage, Entre dresseurs, Insolite, Tours de force, Grands hauts faits
+
+104 lignes (codes 324 à 447 ; le code 413, `soc_pack_25`, reste réservé), dans `FeatsCatCompagnon.lua`, avec 11 titres (T59, T60, T64 à T72, §4.1). Portée = celle de la catégorie. Calcul : `retro` (donnée déjà dans la sauvegarde, rattrapée à la connexion), `etat` (vrai en ce moment : rattrapé, et attribué en direct par une enveloppe sur la fonction qui change l'état), `compteur` (critère sur un compteur de `Tally.lua`, non rétroactif), `fonction` (clé réservée à une étape suivante : ligne en attente, invisible et hors total).
+
+Choix faits au codage :
+
+- `zone_seal_all` : « toutes les zones à sceau », soit les 44 zones qui ont une liste d'espèces (`ZONE_CREATURES` : 22 des Royaumes de l'Est, 18 de Kalimdor et 4 zones propres à Forever), pas 40 ; le seuil est compté à la construction du catalogue.
+- `zone_lore_all` : liste « une zone racontée de plus » jusqu'au nombre de zones qui ont une histoire (`LORE_RAW`, 45) ; les zones racontées viennent de `CharData().lore.z`.
+- `zone_medal_*` : `ns:ZoneMedalCounts()` (`ZoneMedals.lua`, autre chantier) ; sans elle, 0. Relu quand les captures bougent.
+- `comp_pets_500`, `soc_trade_25`, `soc_guild_cheer_100`, `soc_card_25`, `fun_dance_100` : compteurs du moteur déjà tenus (`streak`), rattrapés à la connexion par l'enveloppe de `ns:FeatRetroScan`.
+- `fos_pioneer` : `ns:CaptureEarliestAt()` (`capture.firstAt`, figée à la capture suivant la 3.0, sinon la plus ancienne date des fiches d'espèce) avant 2027.
+- `fos_first_veil` : la date du drapeau `winterVeil` (posé une fois, en saison, par `WinterCompanions.lua`) entre le 15 décembre 2026 et le 2 janvier 2027.
+- `comp_wardrobe_*` : les clés `app:`, `frame:`, `bg:`, `orn:` de `CompanionData().unlocked` (les fonds et cadres de fiche n'en sont pas).
+- `meta_points_500` (ligne existante) reçoit le cadre de fiche `card_rank_bronze` (à venir) ; les paliers de points portent la série `points`.
+
+**Zones et sceaux (`zone`, personnage)**
+
+- `zone_medal_bronze_1` (code 324) — Premier bronze / First Bronze — Gagner la médaille de bronze d'une zone (25 % des espèces), 5 points, calcul `retro`.
+- `zone_medal_silver_5` (code 325) — Cinq d'argent / Silver Five — Avoir 5 zones à la médaille d'argent (50 %), 10 points, calcul `retro`.
+- `zone_medal_gold_5` (code 326) — Cinq d'or / Golden Five — Avoir 5 zones à la médaille d'or (75 %), 25 points, calcul `retro`.
+- `zone_medal_gold_20` (code 327) — Vingt d'or / Twenty Golds — Avoir 20 zones à la médaille d'or, 50 points, calcul `retro` ; récompense : fond de fiche (à créer).
+- `zone_seal_25` (code 328) — Grand sceau / Great Seal — Sceller 25 zones, 50 points, calcul `retro`.
+- `zone_seal_all` (code 329) — Azeroth scellé / Azeroth Sealed — Sceller les 40 zones à sceau, 50 points, calcul `retro` ; récompense : titre « Gardien d'Azeroth ».
+- `zone_chests_25` (code 330) — Coffres en série / Chest After Chest — Ouvrir 25 coffres de zone, 25 points, calcul `retro`.
+- `zone_golden_5` (code 331) — Cinq zones d'or / Five Golden Zones — Rendre 5 zones dorées, 25 points, calcul `retro`.
+- `zone_100_25` (code 332) — Vingt-cinq zones accomplies / Twenty-Five Zones Complete — Accomplir 25 zones à 100 %, 50 points, calcul `retro`.
+- `zone_lore_10` (code 333) — Oreille attentive / All Ears — Écouter l'histoire de 10 zones, 5 points, calcul `retro`.
+- `zone_lore_all` (code 334) — Mémoire des lieux / Memory of Places — Écouter l'histoire de toutes les zones racontées, 25 points, calcul `retro`.
+- `zone_milestones_100` (code 335) — Cent paliers / A Hundred Milestones — Franchir 100 paliers de zone, 25 points, calcul `retro`.
+
+**Au jour le jour (`day`, personnage)**
+
+- `day_mission_250` (code 336) — Toujours volontaire / Always Volunteering — Accomplir 250 missions du compagnon, 25 points, calcul `retro`.
+- `day_mission_500` (code 337) — Cinq cents missions / Five Hundred Missions — Accomplir 500 missions du compagnon, 50 points, calcul `retro` ; récompense : ornement (à créer).
+- `day_perfect_30` (code 338) — Trente journées parfaites / Thirty Perfect Days — Boucler toutes les missions du jour 30 fois, 25 points, calcul `retro`.
+- `day_perfect_100` (code 339) — Cent journées parfaites / A Hundred Perfect Days — Boucler toutes les missions du jour 100 fois, 50 points, calcul `retro` ; récompense : fond du compagnon (à créer).
+- `day_weekly_10` (code 340) — Dix semaines bouclées / Ten Weeks Wrapped Up — Boucler toutes les missions de 10 semaines, 25 points, calcul `compteur`.
+- `day_weekly_25` (code 341) — Vingt-cinq semaines bouclées / Twenty-Five Weeks Wrapped Up — Boucler toutes les missions de 25 semaines, 50 points, calcul `compteur`.
+- `day_inn_100` (code 342) — Cent nuits à l'auberge / A Hundred Nights at the Inn — Passer 100 jours à l'auberge, 25 points, calcul `retro`.
+- `day_inn_cards_10` (code 343) — Habitué de la maison / Regular Guest — Remplir 10 cartes d'auberge, 10 points, calcul `retro`.
+- `day_rare_100` (code 344) — Cent têtes mises à prix / A Hundred Bounties — Vaincre 100 ennemis rares, 25 points, calcul `retro`.
+- `day_played_30` (code 345) — Trente jours de route / Thirty Days on the Road — Jouer 30 jours différents (pas forcément d'affilée), 10 points, calcul `compteur`.
+- `day_played_100` (code 346) — Cent jours de route / A Hundred Days on the Road — Jouer 100 jours différents, 25 points, calcul `compteur`.
+- `day_played_365` (code 347) — Une année de route / A Year on the Road — Jouer 365 jours différents, 50 points, calcul `compteur`.
+- `day_week_1` (code 348) — Prise de la semaine / Catch of the Week — Capturer la créature de la semaine, 5 points, calcul `fonction` (créature de la semaine, livrée).
+- `day_week_10` (code 349) — Dix prises de la semaine / Ten Catches of the Week — Capturer 10 créatures de la semaine, 10 points, calcul `fonction` (créature de la semaine, livrée).
+- `day_week_52` (code 350) — Une année de prises / A Year of Catches — Capturer 52 créatures de la semaine, 50 points, calcul `fonction` (créature de la semaine, livrée).
+- `day_swarm_10` (code 351) — Chasseur de pullulations / Swarm Chaser — Capturer l'espèce en pullulation dans 10 zones différentes, 10 points, calcul `fonction` (pullulation du jour, livrée).
+
+**Compagnon (`comp`, personnage)**
+
+- `comp_stage_2` (code 352) — Il grandit / Growing Up — Voir ton compagnon atteindre le deuxième stade, 5 points, calcul `retro`.
+- `comp_stage_3` (code 353) — Aguerri / Seasoned — Voir ton compagnon atteindre le troisième stade, 5 points, calcul `retro`.
+- `comp_stage_4` (code 354) — Vaillant / Valiant — Voir ton compagnon atteindre le quatrième stade, 10 points, calcul `retro`.
+- `comp_stage_5` (code 355) — Légendaire / Legendary — Voir ton compagnon atteindre le dernier stade, 25 points, calcul `retro`.
+- `comp_persona` (code 356) — Un sacré caractère / Quite a Character — Voir le caractère de ta mascotte se former, 10 points, calcul `retro`.
+- `comp_radiant_60` (code 357) — Une heure de bonheur / An Hour of Bliss — Passer 60 minutes Rayonnant (au total), 10 points, calcul `compteur`.
+- `comp_radiant_600` (code 358) — Dix heures de bonheur / Ten Hours of Bliss — Passer 10 heures Rayonnant, 25 points, calcul `compteur`.
+- `comp_radiant_3000` (code 359) — Bonheur au long cours / Lasting Happiness — Passer 50 heures Rayonnant, 50 points, calcul `compteur` ; récompense : titre « le Rayonnant ».
+- `comp_wish_10` (code 360) — Aux petits soins / Doting — Combler 10 envies, 5 points, calcul `compteur`.
+- `comp_wish_50` (code 361) — Devin / Mind Reader — Combler 50 envies, 10 points, calcul `compteur`.
+- `comp_wish_250` (code 362) — Ses désirs sont des ordres / At Its Beck and Call — Combler 250 envies, 25 points, calcul `compteur` ; récompense : titre « l'Attentionné ».
+- `comp_treat_25` (code 363) — Bonne table / Fine Dining — Donner 25 friandises, 5 points, calcul `compteur`.
+- `comp_treat_100` (code 364) — Cordon-bleu / Cordon Bleu — Donner 100 friandises, 10 points, calcul `compteur`.
+- `comp_treat_500` (code 365) — Gourmandise / Sweet Tooth — Donner 500 friandises, 25 points, calcul `compteur`.
+- `comp_treat_all` (code 366) — Menu dégustation / Tasting Menu — Donner les 5 sortes de friandises, 10 points, calcul `compteur`.
+- `comp_pets_500` (code 367) — Mille caresses, ou presque / A Thousand Pats, Almost — Caresser le compagnon 500 fois, 25 points, calcul `retro`.
+- `comp_partners_10` (code 368) — Chacun son tour / Taking Turns — Voyager avec 10 créatures différentes, 10 points, calcul `compteur`.
+- `comp_partners_50` (code 369) — Toute la troupe / The Whole Troupe — Voyager avec 50 créatures différentes, 25 points, calcul `compteur`.
+- `comp_wardrobe_10` (code 370) — Garde-robe / Wardrobe — Débloquer 10 cosmétiques du compagnon, 5 points, calcul `retro`.
+- `comp_wardrobe_25` (code 371) — Belle garde-robe / Fine Wardrobe — Débloquer 25 cosmétiques, 10 points, calcul `retro`.
+- `comp_wardrobe_50` (code 372) — Grande garde-robe / Grand Wardrobe — Débloquer 50 cosmétiques, 25 points, calcul `retro`.
+- `comp_wardrobe_100` (code 373) — Dressing complet / Walk-In Closet — Débloquer 100 cosmétiques, 50 points, calcul `retro` ; récompense : titre « l'Élégant ».
+- `comp_juke_fav_10` (code 374) — Mélomane / Music Lover — Avoir 10 morceaux favoris au juke-box, 5 points, calcul `etat`.
+- `comp_juke_list` (code 375) — Ma sélection / My Mixtape — Créer une liste au juke-box, 5 points, calcul `etat`.
+- `comp_juke_100` (code 376) — Tour de chant / Song Recital — Écouter 100 morceaux différents, 10 points, calcul `compteur`.
+- `comp_jokes_25` (code 377) — Bon public / Easy Crowd — Écouter 25 blagues du compagnon, 5 points, calcul `compteur`.
+
+**Entre dresseurs (`soc`, compte)**
+
+- `soc_share_1` (code 397) — Fier de sa prise / Proud of the Catch — Partager un moment dans le chat, 5 points, calcul `compteur`.
+- `soc_share_25` (code 398) — Grand bavard / Chatterbox — Partager 25 moments, 10 points, calcul `compteur`.
+- `soc_trade_25` (code 399) — Grand négociant / Master Trader — Conclure 25 échanges, 25 points, calcul `retro` ; récompense : titre « le Marchand ».
+- `soc_trade_partners_5` (code 400) — Réseau / Networking — Échanger avec 5 dresseurs différents, 10 points, calcul `compteur`.
+- `soc_guild_feat_10` (code 401) — Porte-voix / Town Crier — Annoncer 10 exploits à ta guilde, 10 points, calcul `compteur`.
+- `soc_guild_cheer_100` (code 402) — Premier rang / Front Row — Voir 100 exploits des membres de ta guilde, 10 points, calcul `retro`.
+- `soc_group_50` (code 403) — Meute soudée / Tight-Knit Pack — Capturer 50 créatures en groupe, 10 points, calcul `compteur`.
+- `soc_holders_10` (code 404) — Du beau monde / Good Company — Croiser 10 dresseurs, 5 points, calcul `compteur`.
+- `soc_card_25` (code 405) — Annuaire / Who's Who — Consulter 25 fiches de dresseur différentes, 25 points, calcul `compteur` ; récompense : fond de fiche (à créer).
+- `soc_photo_1` (code 406) — Souriez ! / Say Cheese! — Créer une carte souvenir, 5 points, calcul `fonction` (carte souvenir, livrée).
+- `soc_code_1` (code 407) — Carte de visite / Calling Card — Copier ton code de dresseur, 5 points, calcul `fonction` (code de dresseur, livré).
+- `soc_code_5` (code 408) — Correspondants / Pen Pals — Ouvrir 5 fiches reçues par code, 10 points, calcul `fonction` (code de dresseur, livré).
+- `soc_compare` (code 409) — Jeu des différences / Spot the Difference — Comparer tes hauts faits avec ceux d'un dresseur, 5 points, calcul `fonction` (fenêtre de comparaison, livrée).
+- `soc_mentor_1` (code 410) — Passeur / Word of Mouth — Faire découvrir Quest Companion à un joueur, 5 points, calcul `fonction` (parrainage, livré).
+- `soc_mentor_5` (code 411) — Cinq filleuls / Five Protégés — Faire découvrir Quest Companion à 5 joueurs, 10 points, calcul `fonction` (parrainage, livré).
+- `soc_mentor_10` (code 412) — Dix filleuls / Ten Protégés — Faire découvrir Quest Companion à 10 joueurs, 25 points, calcul `fonction` (parrainage, livré) ; récompense : titre « le Passeur ».
+- `soc_discord` (code 414) — Porte ouverte / Open Door — Saisir le mot de la version trouvé sur le Discord (page Communauté), 10 points, calcul `fonction` (page Communauté, livrée) ; récompense : ornement « Explorateur des mondes » (`feat_worlds`).
+- `soc_feedback` (code 415) — Mon grain de sel / My Two Cents — Composer un avis sur la page Communauté, 5 points, calcul `fonction` (page Communauté, livrée).
+
+**Insolite (`fun`, compte)**
+
+- `fun_critters_10` (code 416) — Arche de poche / Pocket Ark — Capturer 10 bestioles différentes, 10 points, calcul `retro`.
+- `fun_murlocs_10` (code 417) — Mrgl mrgl mrgl ! / Mrgl Mrgl Mrgl! — Capturer 10 murlocs différents, 10 points, calcul `retro`.
+- `fun_dance_100` (code 418) — Roi de la piste / Lord of the Dance — Danser 100 fois avec le compagnon affiché, 5 points, calcul `retro`.
+- `fun_winter_all` (code 419) — Trois de saison / Seasonal Trio — Voyager avec les 3 compagnons du Voile d'hiver, 10 points, calcul `compteur`.
+- `fun_hogger_partner` (code 420) — Lardeur en promenade / Walkies with Hogger — Partir avec Lardeur, 10 points, calcul `etat` ; secret.
+- `fun_hogger_shiny` (code 421) — Lardeur doré / Golden Hogger — Capturer Lardeur en version brillante, 25 points, calcul `retro` ; secret.
+- `fun_namesake` (code 422) — Mon double / Mini-Me — Donner ton propre nom à un spécimen, 5 points, calcul `etat` ; secret.
+- `fun_clones` (code 423) — Jumeaux / Double Trouble — Avoir deux spécimens identiques (espèce, étoiles, taille, caractère), 5 points, calcul `etat` ; secret.
+- `fun_close_call` (code 424) — Du bout des doigts / By the Skin of Your Teeth — Capturer une créature juste après avoir survécu de justesse, 10 points, calcul `compteur` ; secret.
+- `fun_boss_miss` (code 425) — Tout ça pour ça / All That for Nothing — Rater la capture d'un boss du monde, 5 points, calcul `compteur` ; secret.
+- `fun_winter_song` (code 426) — Douce nuit / Silent Night — Écouter un morceau au juke-box, la nuit, pendant le Voile d'hiver, 5 points, calcul `compteur` ; secret.
+- `fun_small_game` (code 427) — Petit gibier / Small Fry — Au niveau 60, capturer une créature de niveau 5 ou moins, 5 points, calcul `compteur` ; secret.
+- `fun_wake` (code 428) — Debout là-dedans ! / Rise and Shine! — Réveiller le compagnon d'une caresse, 5 points, calcul `compteur` ; secret.
+- `fun_full_bag` (code 429) — Besace pleine / Packed to the Brim — Avoir en même temps 10 appâts, 5 lassos et 3 sifflets, 5 points, calcul `etat` ; secret.
+
+**Tours de force (`fos`, compte, 0 point, hors des totaux)**
+
+- `fos_pioneer` (code 430) — Pionnier / Pioneer — Avoir fait ta première capture avant le 1er janvier 2027, 0 point, calcul `retro` ; récompense : titre « le Pionnier », marque sur la fiche.
+- `fos_first_veil` (code 431) — Premier Voile d'hiver / First Winter Veil — Avoir fêté le Voile d'hiver 2026 avec un compagnon de saison, 0 point, calcul `retro`.
+- `fos_unfindable` (code 432) — L'introuvable / The Unfindable — Capturer une brillante à 3 étoiles et de taille rare (1 sur 53 571), 0 point, calcul `compteur` ; récompense : ornement (à créer).
+- `fos_golden_legend` (code 433) — Légende dorée / Golden Legend — Capturer un boss du monde en version brillante, 0 point, calcul `retro`.
+
+**Grands hauts faits (`meta`, compte)**
+
+- `meta_points_100` (code 434) — Premiers lauriers / First Laurels — Atteindre 100 points de hauts faits, 5 points, calcul `retro` ; récompense : rang « Connu au village ».
+- `meta_points_250` (code 435) — On en parle / Talk of the Town — Atteindre 250 points, 5 points, calcul `retro` ; récompense : rang « Connu du comté ».
+- `meta_points_1000` (code 436) — Réputation faite / Reputation Made — Atteindre 1 000 points, 10 points, calcul `retro` ; récompense : rang « Réputé », cadre de fiche argent.
+- `meta_points_2000` (code 437) — Illustre / Illustrious — Atteindre 2 000 points, 25 points, calcul `retro` ; récompense : rang « Illustre », cadre de fiche or.
+- `meta_points_3000` (code 438) — Célèbre dans tout Azeroth / Famous Across Azeroth — Atteindre 3 000 points, 25 points, calcul `retro` ; récompense : rang « Célèbre ».
+- `meta_points_4000` (code 439) — Légende vivante / Living Legend — Atteindre 4 000 points, 50 points, calcul `retro` ; récompense : rang « Légende vivante », cadre de fiche à lueur.
+- `meta_points_5000` (code 440) — Au sommet de la renommée / Height of Fame — Atteindre 5 000 points, 50 points, calcul `retro` ; récompense : titre « le Renommé ».
+- `meta_spec` (code 441) — Maître des spécimens / Specimen Master — Obtenir 15 hauts faits « Spécimens », 25 points, calcul `retro`.
+- `meta_comp` (code 442) — Meilleur ami / Best Friend — Obtenir 15 hauts faits « Compagnon », 25 points, calcul `retro`.
+- `meta_shop` (code 443) — Pilier de l'Échoppe / Pillar of the Stall — Obtenir 10 hauts faits « Réserve et Échoppe », 25 points, calcul `retro`.
+- `meta_soc` (code 444) — Figure connue / Familiar Face — Obtenir 10 hauts faits « Entre dresseurs », 25 points, calcul `retro` ; récompense : titre « le Sociable ».
+- `meta_fun` (code 445) — Cabinet de curiosités / Curio Cabinet — Obtenir 15 hauts faits « Insolite », 25 points, calcul `retro` ; récompense : titre « l'Original ».
+- `meta_secrets` (code 446) — Dans la confidence / In on the Secret — Découvrir 5 hauts faits secrets, 25 points, calcul `retro`.
+- `meta_all` (code 447) — Dresseur accompli / Accomplished Trainer — Obtenir tous les grands hauts faits de dresseur, 50 points, calcul `retro` ; récompense : titre « Dresseur accompli ».

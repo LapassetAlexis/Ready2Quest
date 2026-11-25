@@ -83,11 +83,33 @@ local TITLES = {
 	-- 3.6.0 : étude (50 espèces maîtrisées) et lien Inséparable
 	[48] = { pos = "suf", src = "men_study_50",     m = "%s le Savant", f = "%s la Savante", en = "%s the Scholar" },
 	[49] = { pos = "suf", src = "men_bond_inseparable", m = "%s l'Inséparable", en = "%s the Inseparable" },
+	-- 3.7.0 : famille « dresseur » (FeatsCatDresseur.lua), codes 50 à 58
+	[50] = { pos = "pre", src = "init_all",         m = "Dresseur en herbe %s", f = "Dresseuse en herbe %s", en = "Budding Trainer %s" },
+	[51] = { pos = "suf", src = "men_caught_10000", m = "%s au filet d'or", en = "%s of the Golden Net" },
+	[52] = { pos = "suf", src = "men_elite_150",    m = "%s le Dompteur d'élites", f = "%s la Dompteuse d'élites", en = "%s the Elite Tamer" },
+	[53] = { pos = "suf", src = "men_medal5_all",   m = "%s, Grand maître des huit familles", f = "%s, Grande maîtresse des huit familles", en = "%s, Grand Master of the Eight Families" },
+	[54] = { pos = "suf", src = "spec_study_250",   m = "%s le Naturaliste", f = "%s la Naturaliste", en = "%s the Naturalist" },
+	[55] = { pos = "suf", src = "spec_bond_10",     m = "%s au grand cœur", en = "%s the Big-Hearted" },
+	[56] = { pos = "suf", src = "shiny_found_250",  m = "%s l'Étincelant", f = "%s l'Étincelante", en = "%s the Sparkling" },
+	[57] = { pos = "suf", src = "shiny_cap_100",    m = "%s, Gardien du trésor", f = "%s, Gardienne du trésor", en = "%s, Keeper of the Hoard" },
+	[58] = { pos = "suf", src = "shop_order_150",   m = "%s le Fournisseur", f = "%s la Fournisseuse", en = "%s the Purveyor" },
 	-- 3.6.0 : le mécénat de l'Échoppe (ShopWeek.lua), codes 61 à 63
 	[61] = { pos = "suf", src = "men_patron_10",   m = "%s le Mécène", f = "%s la Mécène", en = "%s the Patron" },
 	[62] = { pos = "suf", src = "men_patron_50",   m = "%s le Grand Mécène", f = "%s la Grande Mécène", en = "%s the Great Patron" },
 	[63] = { pos = "suf", src = "men_patron_100",  m = "%s, Bienfaiteur des créatures", f = "%s, Bienfaitrice des créatures",
 		en = "%s, Benefactor of Creatures" },
+	-- 3.7.0 : deuxième édition, catalogue Compagnon et voyage, Entre dresseurs, Insolite, Tours de force, Grands hauts faits (FeatsCatCompagnon.lua)
+	[59] = { pos = "suf", src = "zone_seal_all",     m = "%s, Gardien d'Azeroth", f = "%s, Gardienne d'Azeroth", en = "%s, Guardian of Azeroth" },
+	[60] = { pos = "suf", src = "comp_radiant_3000", m = "%s le Rayonnant", f = "%s la Rayonnante", en = "%s the Radiant" },
+	[64] = { pos = "suf", src = "comp_wish_250",     m = "%s l'Attentionné", f = "%s l'Attentionnée", en = "%s the Thoughtful" },
+	[65] = { pos = "suf", src = "comp_wardrobe_100", m = "%s l'Élégant", f = "%s l'Élégante", en = "%s the Elegant" },
+	[66] = { pos = "suf", src = "soc_trade_25",      m = "%s le Marchand", f = "%s la Marchande", en = "%s the Merchant" },
+	[67] = { pos = "suf", src = "soc_mentor_10",     m = "%s le Passeur", f = "%s la Passeuse", en = "%s the Torchbearer" },
+	[68] = { pos = "suf", src = "fos_pioneer",       m = "%s le Pionnier", f = "%s la Pionnière", en = "%s the Pioneer" },
+	[69] = { pos = "suf", src = "meta_points_5000",  m = "%s le Renommé", f = "%s la Renommée", en = "%s the Renowned" },
+	[70] = { pos = "suf", src = "meta_soc",          m = "%s le Sociable", f = "%s la Sociable", en = "%s the Sociable" },
+	[71] = { pos = "suf", src = "meta_fun",          m = "%s l'Original", f = "%s l'Originale", en = "%s the Eccentric" },
+	[72] = { pos = "pre", src = "meta_all",          m = "Dresseur accompli %s", f = "Dresseuse accomplie %s", en = "Accomplished Trainer %s" },
 }
 
 -- Mémoire : chaque titre devient un tableau de 6 cases (pos, src, m, f, en,
@@ -370,8 +392,11 @@ function ns:FeatDefByCode(n)
 end
 
 -- Un « gros » haut fait (titre ou 25 points et plus) : grand effet au bandeau
+-- (3.7.0 : la même règle que la taille de la fête, ns:FeatSize : un tour de
+-- force aussi)
 function ns:FeatIsBig(def)
 	if type(def) ~= "table" then return false end
+	if self.FeatSize then return self:FeatSize(def) == "big" end
 	local titled = type(def.reward) == "table" and def.reward.title ~= nil
 	return titled or (tonumber(def.pts) or 0) >= ns.FEAT_GUILD_MIN
 end

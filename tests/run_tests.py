@@ -163,7 +163,10 @@ ALLOWED_IMAGES = {
 UI_ASSETS = ("cadre", "ombre", "coin", "plaque", "creux", "lueur_ligne", "lueur_point", "vignette", "anneau",
              # QC 3.6.0 : fonds et cadres de la fiche de dresseur
              "fiche_registre", "fiche_atlas", "fiche_renom", "fiche_pantheon", "fiche_blason_est",
-             "fiche_blason_kalimdor", "fiche_lauriers")
+             "fiche_blason_kalimdor", "fiche_lauriers",
+             # QC 3.7.0 : neuf habillages de fiche de plus
+             "fiche_rang_bronze", "fiche_rang_argent", "fiche_rang_or", "fiche_rang_lueur", "fiche_huit",
+             "fiche_prisme", "fiche_zoologie", "fiche_zones_or", "fiche_repertoire")
 for _addon in ("Ready2Quest", "QuestCompanion"):
     for _name in UI_ASSETS:
         ALLOWED_IMAGES.add("%s/Libs/Socle/Media/%s.tga" % (_addon, _name))

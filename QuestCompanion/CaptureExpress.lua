@@ -41,6 +41,9 @@ ns.CAPTURE_EXPRESS = {
 	plate = 0.94,        -- opacité de la plaque d'encre (comme le filet)
 	soundGap = 0.15,     -- s au moins entre deux fois le même son
 	chimeGap = 3,        -- s au moins entre deux carillons « capture possible »
+	-- 3.7.0 : suspense d'une prise notable : secousses de 0,35 s (une à trois),
+	-- amplitude (px) et oscillations par secousse
+	shake = 0.35, shakeAmp = 3, shakeWaves = 2,
 }
 local X = ns.CAPTURE_EXPRESS
 
@@ -57,6 +60,7 @@ local FR = {
 	CAPTURE_X_ALL        = "Filet : %d sur %d",
 	CAPTURE_X_PCT        = "%d %%",
 	CAPTURE_X_SURE       = "sûre",
+	CAPTURE_X_SHAKE      = "le filet tremble…",
 	CAPTURE_X_TIP_CLICK  = "Clic : lancer sur %s",
 	CAPTURE_X_TIP_SHIFT  = "Maj+clic : tout le filet (%d)",
 	CAPTURE_X_TIP_CTRL   = "Ctrl+clic : préparer (aides, Lancer, Passer)",
@@ -79,6 +83,7 @@ local EN = {
 	CAPTURE_X_ALL        = "Net: %d of %d",
 	CAPTURE_X_PCT        = "%d%%",
 	CAPTURE_X_SURE       = "sure",
+	CAPTURE_X_SHAKE      = "the net shakes…",
 	CAPTURE_X_TIP_CLICK  = "Click: throw at %s",
 	CAPTURE_X_TIP_SHIFT  = "Shift-click: the whole net (%d)",
 	CAPTURE_X_TIP_CTRL   = "Ctrl-click: prepare (aids, Throw, Skip)",
@@ -162,7 +167,7 @@ end
 -- ancienne est reprise pour la nouvelle), les cadres sont faits une fois.
 local KIND_COLOR = {
 	ok = Theme.GREEN, fail = Theme.RED, notable = Theme.GOLD_LIGHT, shiny = Theme.SHINY,
-	offer = Theme.GOLD, all = Theme.GOLD,
+	offer = Theme.GOLD, all = Theme.GOLD, suspense = Theme.GOLD_LIGHT,
 }
 ns.CAPTURE_EXPRESS_COLORS = KIND_COLOR
 
@@ -425,6 +430,10 @@ function ns:CaptureExpressPush(kind, text, right, life)
 	if not feed then return nil end
 	local items = feed.items
 	local item = items[X.rows]
+	-- (3.7.0 : une pastille en suspens reprise avant son verdict : ce qu'elle
+	-- retenait, chat, bulle, bandeau, part tout de suite)
+	if item.verdict then ns.CaptureExpressReplay(self, item) end
+	item.verdict, item.revealAt, item.noSlide, item.shakes = nil, nil, nil, nil
 	for index = X.rows, 2, -1 do items[index] = items[index - 1] end
 	items[1] = item
 	item.kind, item.text, item.right = kind, text or "", right or ""
@@ -452,6 +461,11 @@ function ns:CaptureExpressUpdate(now)
 	feed.dirty = nil
 	for index = 1, X.rows do
 		local item, row = feed.items[index], feed.rows[index]
+		-- 3.7.0 : le filet a fini de trembler : le verdict (tiré depuis longtemps) s'affiche
+		if item.verdict and item.born and now >= (item.revealAt or 0) then
+			ns.CaptureExpressReveal(self, item, now)
+			row.slid = nil
+		end
 		local age = item.born and (now - item.born) or nil
 		if not age or age >= item.life or age < 0 then
 			item.born = nil
@@ -475,19 +489,20 @@ function ns:CaptureExpressUpdate(now)
 			end
 			-- glissement à l'arrivée (la plus récente seulement), puis en place ;
 			-- sous le compagnon, la plus récente en haut (contre lui)
-			local slide = age < X.slide and (1 - EaseOut(age / X.slide)) or 0
-			if slide > 0 or not row.slid then
+			local slide = (age < X.slide and not item.noSlide) and (1 - EaseOut(age / X.slide)) or 0
+			local shake = item.verdict and ns.CaptureExpressShakeOffset(age) or 0
+			if slide > 0 or not row.slid or item.verdict then
 				row:ClearAllPoints()
-				local dx, step = (index == 1 and slide or 0) * 14, (index - 1) * (X.h + X.gap)
+				local dx, step = (index == 1 and slide or 0) * 14 + shake, (index - 1) * (X.h + X.gap)
 				if feed.stack == "down" then
 					row:SetPoint("TOPLEFT", feed, "TOPLEFT", dx, -step)
 				else
 					row:SetPoint("BOTTOMLEFT", feed, "BOTTOMLEFT", dx, step)
 				end
-				row.slid = slide == 0 or nil
+				row.slid = (slide == 0 and not item.verdict) or nil
 			end
 			local alpha = 1
-			if age < X.slide and index == 1 then alpha = age / X.slide end
+			if age < X.slide and index == 1 and not item.noSlide then alpha = age / X.slide end
 			local left = item.life - age
 			if left < X.fade then alpha = math.min(alpha, left / X.fade) end
 			row:SetAlpha(math.max(0, math.min(1, alpha)))
@@ -521,18 +536,73 @@ local function Notable(self, target)
 end
 ns.CaptureExpressNotable = Notable
 
--- La pastille d'un verdict
-local function PushResult(self, rolling, before)
+-- Le verdict d'un lancer : sorte, texte de gauche, texte de droite
+local function Verdict(self, rolling, before)
 	local target = rolling.target
 	local name = target.name or tostring(target.npcID)
-	if not rolling.success then
-		return self:CaptureExpressPush("fail", name, L.CAPTURE_X_FLED)
-	end
+	if not rolling.success then return "fail", name, L.CAPTURE_X_FLED end
 	local stars = self:CaptureStarsText(rolling.stars or target.stars or 1, 10)
-	if target.shiny then return self:CaptureExpressPush("shiny", self:F("CAPTURE_SHINY_TAG", name), stars) end
-	if before == nil then return self:CaptureExpressPush("notable", name, L.CAPTURE_X_NEW .. " " .. stars) end
-	if rolling.starsBetter then return self:CaptureExpressPush("notable", name, L.CAPTURE_X_BEST .. " " .. stars) end
-	return self:CaptureExpressPush("ok", name, stars)
+	if target.shiny then return "shiny", self:F("CAPTURE_SHINY_TAG", name), stars end
+	if before == nil then return "notable", name, L.CAPTURE_X_NEW .. " " .. stars end
+	if rolling.starsBetter then return "notable", name, L.CAPTURE_X_BEST .. " " .. stars end
+	return "ok", name, stars
+end
+
+-- La pastille d'un verdict
+local function PushResult(self, rolling, before)
+	return self:CaptureExpressPush(Verdict(self, rolling, before))
+end
+
+-- ---------------------------------------------------------------------------
+-- 3.7.0 : le suspense d'une prise notable. Le verdict est tiré et inscrit
+-- tout de suite (comme avant) ; seul l'affichage attend : la pastille dit
+-- « le filet tremble… » et tremble, puis montre le verdict. Ce que le lancer
+-- aurait dit (chat, bulle, bandeau « Capturé ! ») attend avec elle.
+-- ---------------------------------------------------------------------------
+-- Secousses (0 à 3) : une pour une espèce nouvelle ou épinglée, deux pour une
+-- élite, trois pour une rare ou une brillante (le plus fort l'emporte) ; 0
+-- pour une prise ordinaire ou réglage « Capture animée » coupé
+function ns:CaptureExpressShakes(target, before)
+	if type(target) ~= "table" or self:DB().companionCaptureAnim == false then return 0 end
+	local class = target.class
+	if target.shiny or class == "rare" or class == "rareelite" or class == "worldboss" then return 3 end
+	if class == "elite" then return 2 end
+	if before == nil or (self.HuntPinned and self:HuntPinned(target.npcID)) then return 1 end
+	return 0
+end
+
+-- Décalage horizontal (px) d'une pastille qui tremble, `age` s après son arrivée
+function ns.CaptureExpressShakeOffset(age)
+	local phase = (tonumber(age) or 0) % X.shake / X.shake
+	return X.shakeAmp * math.sin(phase * 2 * math.pi * X.shakeWaves) * (1 - phase)
+end
+
+-- Ce que la pastille retenait part : lignes de chat, bulles, bandeau
+function ns.CaptureExpressReplay(self, item)
+	local replay, held = item.replay, item.held
+	item.replay, item.held = nil, nil
+	for _, call in ipairs(replay or {}) do
+		local fn = self[call.fn]
+		if type(fn) == "function" then pcall(fn, self, unpack(call, 1, call.n)) end
+	end
+	if held and not self.captureResultPending then
+		held.at = Clock()
+		self.captureResultPending = held
+	end
+end
+
+-- Le filet a fini de trembler : la pastille prend son verdict
+function ns.CaptureExpressReveal(self, item, now)
+	local v = item.verdict
+	item.verdict = nil
+	item.kind, item.text, item.right = v[1], v[2] or "", v[3] or ""
+	item.born, item.noSlide = item.revealAt or now, true
+	if item.born > now then item.born = now end
+	item.life = (item.kind == "notable" or item.kind == "shiny") and X.lifeNotable or X.life
+	ns.CaptureExpressReplay(self, item)
+	local feed = self.captureExpressFeed
+	if feed then feed.dirty = true end
+	return item
 end
 
 -- Lance le filet sur `which` (un candidat de la file, son guid, ou le
@@ -574,14 +644,40 @@ function ns:CaptureExpressThrow(which, opts)
 	-- l'aide ne sert qu'à ce lancer (comme la carte et la volée)
 	state.aid = nil
 	-- une prise ordinaire ne remplit ni le chat ni les bulles : la pastille suffit
+	-- (3.7.0 : une prise notable en suspens : chat et bulles retenus jusqu'au verdict)
+	local shakes = 0
+	if not (opts and (opts.quietFeed or opts.batch)) then shakes = self:CaptureExpressShakes(picked, before) end
 	local print, say = self.Print, self.CompanionSay
-	if not notable then self.Print, self.CompanionSay = Quiet, QuietSay end
+	local replay, pendingBefore = nil, self.captureResultPending
+	if not notable then
+		self.Print, self.CompanionSay = Quiet, QuietSay
+	elseif shakes > 0 then
+		replay = {}
+		self.Print = function(_, ...) replay[#replay + 1] = { fn = "Print", n = select("#", ...), ... } end
+		self.CompanionSay = function(_, ...)
+			replay[#replay + 1] = { fn = "CompanionSay", n = select("#", ...), ... }
+			return true
+		end
+	end
 	self.captureExpressResolving = true
 	local done, err = pcall(self.CaptureResolve, self, rolling)
 	self.captureExpressResolving = nil
 	self.Print, self.CompanionSay = print, say
 	if not done and self.RecordError then self:RecordError("capture:express", err) end
-	if not (opts and opts.quietFeed) then PushResult(self, rolling, before) end
+	if shakes > 0 then
+		-- le bandeau « Capturé ! » de ce lancer attend lui aussi
+		local held = self.captureResultPending
+		if held and held ~= pendingBefore then self.captureResultPending = nil else held = nil end
+		local item = self:CaptureExpressPush("suspense", picked.name or tostring(picked.npcID), L.CAPTURE_X_SHAKE,
+			shakes * X.shake + X.life)
+		if item then
+			item.verdict = { Verdict(self, rolling, before) }
+			item.revealAt, item.shakes = item.born + shakes * X.shake, shakes
+			item.replay, item.held = replay, held
+		end
+	elseif not (opts and opts.quietFeed) then
+		PushResult(self, rolling, before)
+	end
 	if self.TourSignal then pcall(self.TourSignal, self, "result", rolling.success and true or false) end
 	self:CaptureQueueRefresh()
 	return rolling
@@ -595,7 +691,8 @@ function ns:CaptureExpressAll()
 	local got, tried = 0, 0
 	-- (la file se vide à mesure ; un candidat bloqué reste : on s'arrête sur lui)
 	for _ = 1, (ns.CAPTURE_QUEUE_MAX or 12) do
-		local rolling = self:CaptureExpressThrow(nil, tried > 0 and { silent = true } or nil)
+		-- (3.7.0 : tout le filet reste instantané, sans suspense)
+		local rolling = self:CaptureExpressThrow(nil, { silent = tried > 0 or nil, batch = true })
 		if not rolling then break end
 		tried = tried + 1
 		if rolling.success then got = got + 1 end

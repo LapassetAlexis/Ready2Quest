@@ -22,6 +22,11 @@ local FR = {
 	OPT_PAGE_COMPANION_TALK_SUB  = "Ce qu'il te dit : bavardage, astuces sur l'addon, blagues, histoire des lieux, tutoriel.",
 	OPT_PAGE_COMPANION_KEYS      = "Raccourcis",
 	OPT_PAGE_COMPANION_KEYS_SUB  = "Les touches pour le compagnon, le filet et le mode chasse.",
+	-- 3.7.0 : le mode discret, en tête de la page Discrétion (Quiet.lua)
+	OPT_QUIET_SECTION_ALL    = "Un seul réglage pour tout baisser",
+	OPT_QUIET_SECTION_DETAIL = "Le détail, comme aujourd'hui",
+	OPT_QUIET                = "Mode discret",
+	OPT_QUIET_DESC           = "Ne laisse passer que l'essentiel : le danger, les grands événements, une brillante. Coupe astuces, blagues, histoire des lieux, annonces automatiques aux autres joueurs et bilan de sortie. Les hauts faits passent en pastille muette.",
 }
 local EN = {
 	OPT_PAGE_COMPANION_QUIET     = "Discretion",
@@ -30,6 +35,10 @@ local EN = {
 	OPT_PAGE_COMPANION_TALK_SUB  = "What it tells you: chatter, addon tips, jokes, place lore, tutorial.",
 	OPT_PAGE_COMPANION_KEYS      = "Key bindings",
 	OPT_PAGE_COMPANION_KEYS_SUB  = "Keys for the companion, the net and hunt mode.",
+	OPT_QUIET_SECTION_ALL    = "One setting to turn it all down",
+	OPT_QUIET_SECTION_DETAIL = "The details, as before",
+	OPT_QUIET                = "Quiet mode",
+	OPT_QUIET_DESC           = "Only lets the essentials through: danger, big events, a shiny. Cuts tips, jokes, place lore, automatic announcements to other players and the outing summary. Achievements show as a silent pill.",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.COMPANION_SPLIT_STRINGS = { fr = FR, en = EN } end
@@ -65,6 +74,15 @@ function ns:CompanionOptionsSplit()
 		if target and moved[target] then table.insert(moved[target], row) else table.insert(keep, row) end
 	end
 	main.rows, main.split = keep, true
+	-- 3.7.0 : en tête de Discrétion, le mode discret ; dessous, les réglages
+	-- d'avant, inchangés
+	local quiet = moved.companionQuiet
+	if #quiet > 0 then
+		table.insert(quiet, 1, { header = "OPT_QUIET_SECTION_DETAIL" })
+		table.insert(quiet, 1, { key = "quiet", label = "OPT_QUIET", kind = "bool",
+			describe = function() return L.OPT_QUIET_DESC end })
+		table.insert(quiet, 1, { header = "OPT_QUIET_SECTION_ALL" })
+	end
 	-- les nouvelles pages juste après « Compagnon », dans l'ordre
 	local nextPage = ns.OPTION_PAGES[mainIndex + 1]
 	for _, id in ipairs(ORDER) do

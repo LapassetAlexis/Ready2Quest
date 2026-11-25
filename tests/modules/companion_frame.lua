@@ -511,7 +511,7 @@ do
 	local found = {}
 	for _, page in ipairs(NS.OPTION_PAGES or {}) do
 		if (page.id == "companionMain" or page.id == "companionQuiet" or page.id == "companionTalk" or page.id == "companionKeys") then
-			for _, row in ipairs(page.rows) do found[row.key] = row end
+			for _, row in ipairs(page.rows) do if row.key then found[row.key] = row end end
 		end
 	end
 	S.done()

@@ -649,7 +649,7 @@ do
 		and Has(NS.L.TOUR_B_shop, "paillettes") and Has(NS.L.TOUR_B_reserve, "onglet suivant"), list)
 end
 
--- 7. Colonne de navigation : dix entrées (3.0.1 : Addons liés) qui tiennent, dans les deux styles --------------------------------
+-- 7. Colonne de navigation : onze entrées (3.0.1 : Addons liés ; 3.7.0 : Communauté) qui tiennent, dans les deux styles ---------
 local navBad = {}
 for _, style in ipairs({ "sobre", "azeroth" }) do
 	Say("-- qc30 composants : navigation (" .. style .. ")")
@@ -662,10 +662,10 @@ for _, style in ipairs({ "sobre", "azeroth" }) do
 	local navH = f:GetHeight() - 2
 	local bottom = -(box.lastPoint and box.lastPoint.y or 0) + box:GetHeight()
 	local reserved = 18 + 16
-	if not (count == 10 and bottom <= navH - reserved) then navBad[#navBad + 1] = style .. " : " .. count .. " / " .. bottom .. " / " .. navH end
+	if not (count == 11 and bottom <= navH - reserved) then navBad[#navBad + 1] = style .. " : " .. count .. " / " .. bottom .. " / " .. navH end
 	C.Done()
 end
-Check("[UI30] colonne de navigation : dix entrées, le tableau de bord tient au-dessus du bas (deux styles)", #navBad == 0,
+Check("[UI30] colonne de navigation : onze entrées, le tableau de bord tient au-dessus du bas (deux styles)", #navBad == 0,
 	table.concat(navBad, " | "))
 
 -- 8. QC 3.5 : page Compagnon, les trois plaques d'état, l'humeur et l'envie (deux styles) ------------------

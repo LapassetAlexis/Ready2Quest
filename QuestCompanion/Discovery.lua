@@ -328,8 +328,8 @@ ns.DISCOVERY_TIPS = {
 		learned = function(self) return Used(self, "share") end,
 		eligible = function(self) return Captures(self) >= 1 end },
 	{ id = "announce",
-		fr = "En groupe, j'annonce tes brillantes et tes 3 étoiles. Réglable page Carnet de voyage.",
-		en = "In a group, I announce your shinies and 3-star catches. Set it on the Travel journal page.",
+		fr = "En groupe, j'annonce tes brillantes. Réglable page Carnet de voyage.",
+		en = "In a group, I announce your shinies. Set it on the Travel journal page.",
 		learned = function(self) return Used(self, "announce") or self:DB().announceGroup == false end,
 		eligible = function()
 			return (Call("IsInGroup") or Call("IsInRaid")) and true or false

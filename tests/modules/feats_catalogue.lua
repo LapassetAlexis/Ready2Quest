@@ -17,6 +17,15 @@ local function Read(path)
 	return text
 end
 local DOC = Read("docs/QC-HAUTS-FAITS.md") or ""
+-- 3.7.0 : les 20 lignes qui changent de catégorie (contrat, chantier B1 §1) :
+-- identifiant, code et points inchangés, place inchangée dans le §2 du document
+local MOVED = {
+	men_stars3_1 = "spec", men_stars3_25 = "spec", men_stars3_100 = "spec", men_size_giant = "spec", men_size_tiny = "spec",
+	men_sizes_all = "spec", men_traits_all = "spec", men_study_10 = "spec", men_study_50 = "spec", men_study_100 = "spec",
+	men_bond_familiar = "spec", men_bond_inseparable = "spec",
+	men_patron_10 = "shop", men_patron_50 = "shop", men_patron_100 = "shop",
+	day_days_30 = "comp", day_days_365 = "comp", day_travel_100 = "comp", day_travel_1000 = "comp", day_pets_100 = "comp",
+}
 local CATALOGUE = DOC:sub(DOC:find("## 2. Catalogue", 1, true) or 1, DOC:find("### 2.12", 1, true) or #DOC)
 
 -- 1. Définitions ----------------------------------------------------------------------------------------
@@ -35,7 +44,8 @@ do
 		if codes[def.n] then Bad("code en double") end
 		codes[def.n] = true
 		if type(def.n) ~= "number" or def.n < 1 or def.n > 999 then Bad("code") end
-		if not NS.FEAT_POINTS[def.pts] then Bad("points") end
+		-- (3.7.0 : 0 point pour un tour de force, catégorie fos, seulement)
+		if not NS.FeatPointsOK(def) then Bad("points") end
 		if def.scope ~= "account" and def.scope ~= "char" then Bad("portée") end
 		if catScope[def.cat] == nil then Bad("catégorie") end
 		if catScope[def.cat] ~= def.scope then Bad("portée ≠ règle de la catégorie") end
@@ -139,7 +149,8 @@ do
 			-- 2.14.0 : « Joyeux Voile d'hiver » (code 175) ; 3.1.0 : tailles rares (176, 177) ;
 			-- 3.0.0 : échanges de spécimens (178 à 180), venus après l'intégration ;
 			-- 3.4.0 : étude et lien (181 à 187) ; 3.6.0 : rangs longs (188 à 194)
-			if not (before and (def.id == "fun_unlucky" or def.id == "fun_winter_veil" or def.id == "men_size_giant"
+			-- 3.7.0 : la deuxième édition (codes 244 et plus) a ses propres contrôles (feats_cat_*)
+			if def.n < 244 and not (before and (def.id == "fun_unlucky" or def.id == "fun_winter_veil" or def.id == "men_size_giant"
 				or def.id == "men_size_tiny" or def.id == "soc_trade_1" or def.id == "soc_trade_10"
 				or def.id == "soc_trade_new" or def.n >= 181)) then defs[#defs + 1] = def end
 		end
@@ -149,6 +160,11 @@ do
 			local pending = def.pending == true or (before and I.UNPENDED[def.id]) or false
 			local reward = def.reward
 			if before and def.id == "meta_hero" then reward = { title = reward.title } end
+			-- 3.7.0 : « Un nom qui circule » reçoit le cadre de fiche bronze (à venir, puis fabriqué) : relue sans lui
+			if def.id == "meta_points_500" and type(reward) == "table" then
+				local pair = reward.soon or reward.cosmetic
+				if pair and pair[2] == "card_rank_bronze" then reward = nil end
+			end
 			-- 3.0.0 (bêta 6) : « Au galop » ne lit plus la statistique 339 (collection du compte)
 			local crit = def.crit
 			if before and def.id == "char_mount" then crit = { "stat", { 339 }, 1, alt = "mountSeen" } end
@@ -160,7 +176,9 @@ do
 				copy.soon, copy.cosmetic = copy.cosmetic, nil
 				reward = copy
 			end
-			lines[#lines + 1] = table.concat({ def.id, def.n, def.cat, def.pts, def.scope, I.Ser(crit), I.Ser(reward),
+			-- 3.7.0 : une ligne déplacée est relue dans sa catégorie d'origine (seule la catégorie a changé)
+			local cat = MOVED[def.id] and def.id:match("^(%a+)_") or def.cat
+			lines[#lines + 1] = table.concat({ def.id, def.n, cat, def.pts, def.scope, I.Ser(crit), I.Ser(reward),
 				tostring(def.desc), tostring(pending), type(def.paid) }, "|")
 		end
 		return table.concat(lines, "\n"), #defs
@@ -176,6 +194,16 @@ do
 	-- fonds et cadres de fiche livrés, mécénat (241 à 243) (afe95ed8 et 187 lignes avant)
 	Check("[HF] catalogue actuel : 197 lignes (173 + « La poisse » + « Joyeux Voile d'hiver » + tailles 3.1 + échanges 3.0 + étude et lien 3.4 + rangs et mécénat 3.6), empreinte",
 		hash == "796473a7" and count == 197, "empreinte " .. hash .. " (" .. count .. " lignes)")
+	-- 3.7.0 : exactement les 20 lignes du contrat ont changé de catégorie
+	local moved, count20 = {}, 0
+	for _, d in ipairs(NS:FeatDefs()) do
+		local prefix = d.id:match("^(%a+)_")
+		local want = MOVED[d.id] or ((prefix == "pvp" or prefix == "rep") and "quest") or prefix
+		if MOVED[d.id] then count20 = count20 + 1 end
+		if d.cat ~= want then moved[#moved + 1] = d.id .. " " .. tostring(d.cat) end
+	end
+	Check("[HF] 3.7.0 : 20 lignes changent de catégorie (12 vers Spécimens, 3 vers Réserve et Échoppe, 5 vers Compagnon), "
+		.. "aucune autre", count20 == 20 and #moved == 0, table.concat(moved, ", "))
 	local def = NS:FeatDef("men_species_10")
 	local added = NS.FeatAdd({ id = "test_compact", n = 990, cat = "fun", pts = 5, scope = "account",
 		crit = { "flag", "x" }, extra = "gardé" })
@@ -227,7 +255,7 @@ do
 			else
 				counts[cat] = (counts[cat] or 0) + 1
 				if def.pts ~= row.pts then Bad("points") end
-				if def.cat ~= cat then Bad("catégorie") end
+				if def.cat ~= (MOVED[row.id] or cat) then Bad("catégorie") end
 				if def.scope ~= ((cat == "zone" or cat == "day") and "char" or "account") then Bad("portée") end
 				if (def.pending == true) ~= (row.feas:find("⚠", 1, true) ~= nil) then Bad("à vérifier") end
 				local reward = def.reward or {}
@@ -361,7 +389,7 @@ do
 			end
 		end
 	end
-	Check("[TIT] 52 titres (3.6.0 : + 12), formes FR m/f et EN conformes au document (§4.1)", rows == 52 and #bad == 0,
+	Check("[TIT] 72 titres (52 en 3.6.0 ; 3.7.0 : + T50 à T60 et T64 à T72), formes FR m/f et EN conformes au document (§4.1)", rows == 72 and rows == (function() local n = 0; for _ in pairs(T_) do n = n + 1 end; return n end)() and #bad == 0,
 		rows .. " lignes ; " .. table.concat(bad, ", "))
 	local count, shape = 0, {}
 	for code, t in pairs(T_) do
@@ -380,8 +408,8 @@ do
 		-- anglais genré seulement pour Seigneur / Dame et Héros / Héroïne
 		if t.enf and code ~= 35 and code ~= 37 then shape[#shape + 1] = code .. " enf" end
 	end
-	Check("[TIT] codes 1 à 49 et 61 à 63 uniques, un seul %s par forme, place cohérente, source citée, anglais genré pour 35 et 37 seulement",
-		count == 52 and #shape == 0 and T_[35].enf and T_[37].enf, table.concat(shape, ", "))
+	Check("[TIT] codes 1 à 72 uniques, un seul %s par forme, place cohérente, source citée, anglais genré pour 35 et 37 seulement",
+		count == 72 and #shape == 0 and T_[35].enf and T_[37].enf, table.concat(shape, ", "))
 	-- chaque titre d'une ligne existe une fois au registre, et chaque titre a sa ligne (sa source)
 	local used, missing = {}, {}
 	for _, d in ipairs(NS:FeatDefs()) do
@@ -427,6 +455,16 @@ do
 		["interface/minimap/compassnorthtag"] = 136427,
 		-- 3.6.0 : grimoire du savant (wago.tools, listfile)
 		["interface/icons/inv_misc_book_09"] = 133741, ["interface/icons/inv_misc_book_11"] = 133743,
+		-- 3.7.0 : sept ornements et le soleil levant (wowdev/wow-listfile, community-listfile.csv)
+		["interface/icons/inv_misc_gem_sapphire_02"] = 134132, ["interface/icons/inv_misc_gem_sapphire_01"] = 134131,
+		["interface/icons/inv_misc_gem_amethyst_02"] = 134075, ["interface/icons/inv_jewelry_talisman_01"] = 133434,
+		["interface/icons/inv_misc_spyglass_03"] = 134442, ["interface/icons/inv_misc_spyglass_02"] = 134441,
+		["interface/icons/ability_hunter_snipershot"] = 132212, ["interface/icons/inv_misc_bag_10"] = 133639,
+		["interface/icons/inv_misc_coin_02"] = 133785, ["interface/icons/inv_misc_coin_01"] = 133784,
+		["interface/icons/inv_misc_token_argentdawn"] = 134499, ["interface/icons/inv_misc_token_argentdawn2"] = 134500,
+		["interface/icons/spell_holy_devotionaura"] = 135893, ["interface/icons/inv_misc_orb_01"] = 134333,
+		["interface/icons/inv_misc_map_01"] = 134269, ["interface/icons/inv_misc_gem_opal_01"] = 134116,
+		["interface/icons/inv_misc_gem_topaz_02"] = 134136, ["interface/icons/inv_misc_gem_pearl_04"] = 134123,
 	}
 	local ATLASES = { ["BonusChest-CircleGlow"] = 99, ["garrlanding-circleglow"] = 46 }
 	-- sols des sceaux : FileDataID -> chemin du listfile
@@ -531,7 +569,7 @@ do
 		table.concat(raw, " | ") .. " / " .. R("men_species_500"))
 	local pending, kinds = 0, true
 	for _, def in ipairs(NS:FeatDefs()) do
-		if def.reward and def.reward.soon then
+		if def.reward and def.reward.soon and def.n < 244 and def.id ~= "meta_points_500" then   -- (3.7.0 : la deuxième édition attend ses cosmétiques de l'étape 2)
 			pending = pending + 1
 			if def.reward.soon[1] ~= "cardbg" and def.reward.soon[1] ~= "cardframe" then kinds = false end
 		end

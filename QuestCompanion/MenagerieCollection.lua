@@ -731,6 +731,17 @@ do
 	end
 end
 
+-- 3.7.0 : fn(self) avec les tables de zone lues sans être gardées (le
+-- rattrapage des médailles de zone, ZoneMedals.lua) ; rend ce que fn rend
+function ns:MenagerieWithPeek(fn)
+	local was = peeking
+	peeking = true
+	local ok, a, b = pcall(fn, self)
+	peeking = was
+	if not ok then error(a, 0) end
+	return a, b
+end
+
 function ns:MenagerieCollectionCatchUp()
 	if not ModuleOn() then return nil end
 	local coll = self:MenagerieCollectionData()
@@ -836,32 +847,83 @@ function ns:MenagerieCollectionTip()
 	return lines
 end
 
--- Bandeau sous la liste de la Ménagerie (JournalWindow.lua) : sceau de la
--- zone choisie et sa progression, titre de dresseur et prochain palier ;
--- survol : paliers par type et titres
+-- Bandeau sous la liste de la Ménagerie (JournalWindow.lua). 3.7.0 (maquette
+-- 3.7, « Créatures : médailles de zone ») : quatre losanges (bronze, argent,
+-- or, sceau : ZoneMedals.lua), « <Zone> : n sur total espèces », à droite ce
+-- qui manque pour la suivante ; la barre et ses trois repères, les seuils
+-- dessous ; en bas à droite, le titre de dresseur à viser. La ligne du bas à
+-- gauche reste libre (pullulation du jour, chantier suivant). Survol : ce que
+-- donne le sceau, les médailles, les paliers par type et les titres.
 ns.MENAGERIE_COLLECTION_H = 70
+-- cotes (px) : marge, haut de la première ligne et sa hauteur, losanges
+-- (taille, centre du premier, pas), début du titre, barre, repères (débord),
+-- seuils, ligne du bas, écart entre le titre et le texte de droite
+ns.MENAGERIE_STRIP = { pad = 12, top = 8, line = 14, dia = 18, diaX = 19, diaStep = 23, titleX = 108,
+	barY = 31, barH = 4, tick = 2, marksY = 37, bottomY = 52, gap = 8 }
+
+local function Measure(fs)
+	local ok, w = pcall(fs.GetStringWidth, fs)
+	return ok and tonumber(w) or 0
+end
+local function NoWrap(fs)
+	if fs.SetWordWrap then fs:SetWordWrap(false) end
+	return fs
+end
 
 function ns:MenagerieCollectionBuild(pane, content, box)
 	local ui = ns.JournalUI
 	if not (ui and box) then return nil end
+	local K = ns.MENAGERIE_STRIP
 	local strip = Theme.CreateTile(pane, box.w, box.h, { kind = "Frame" })
 	ui.At(strip, content, box.x, box.y)
 	strip:SetFill(Theme.FIELD or Theme.ROW)
+	strip.w = box.w
 	if strip.EnableMouse then strip:EnableMouse(true) end
-	strip.seal = Theme.CreateDiamond(strip, 12)
-	strip.seal:SetPoint("TOPLEFT", strip, "TOPLEFT", 12, -10)
-	strip.title = ui.Text(strip, Theme.F_LABEL, Theme.LABEL, box.w - 36 - 110)
-	strip.title:SetPoint("TOPLEFT", strip, "TOPLEFT", 32, -8)
-	if strip.title.SetWordWrap then strip.title:SetWordWrap(false) end
-	strip.bar = Theme.CreateBar(strip, 96, 4)
-	strip.bar:SetPoint("TOPRIGHT", strip, "TOPRIGHT", -12, -14)
-	strip.detail = ui.Text(strip, Theme.F_SMALL, Theme.MUTED_LIGHT, box.w - 44)
-	strip.detail:SetPoint("TOPLEFT", strip, "TOPLEFT", 32, -28)
-	if strip.detail.SetWordWrap then strip.detail:SetWordWrap(false) end
-	strip.trainer = ui.Text(strip, Theme.F_SMALL, Theme.GOLD, box.w - 44)
-	strip.trainer:SetPoint("TOPLEFT", strip, "TOPLEFT", 32, -46)
-	if strip.trainer.SetWordWrap then strip.trainer:SetWordWrap(false) end
-	strip.onEnter = function(s) ui.Tip(s, s.tipTitle or "", ns:MenagerieCollectionTip(), "row") end
+	-- quatre losanges : bronze, argent, or, sceau
+	strip.medals = {}
+	for index = 1, 4 do
+		local dia = Theme.CreateDiamond(strip, K.dia)
+		dia:SetPoint("CENTER", strip, "TOPLEFT", K.diaX + (index - 1) * K.diaStep, -(K.top + K.line / 2))
+		strip.medals[index] = dia
+	end
+	strip.seal = strip.medals[4]
+	strip.title = NoWrap(ui.Text(strip, Theme.F_LABEL, Theme.LABEL, box.w - K.titleX - K.pad))
+	strip.title:SetPoint("TOPLEFT", strip, "TOPLEFT", K.titleX, -K.top)
+	strip.next = NoWrap(ui.Text(strip, Theme.F_SMALL, Theme.MUTED_LIGHT))
+	strip.next:SetJustifyH("RIGHT")
+	strip.next:SetPoint("TOPRIGHT", strip, "TOPRIGHT", -K.pad, -(K.top + 1))
+	-- la barre, ses trois repères (25, 50, 75 %), les seuils dessous
+	local barW = box.w - 2 * K.pad
+	strip.bar = Theme.CreateBar(strip, barW, K.barH)
+	strip.bar:SetPoint("TOPLEFT", strip, "TOPLEFT", K.pad, -K.barY)
+	strip.ticks, strip.marks = {}, {}
+	for index = 1, 3 do
+		local x = math.floor(barW * index / 4 + 0.5)
+		local tick = Theme.Solid(strip.bar, "OVERLAY", Theme.MUTED_LIGHT, 1)
+		tick:SetSize(1, K.barH + 2 * K.tick)
+		tick:SetPoint("TOPLEFT", strip.bar, "TOPLEFT", x, K.tick)
+		strip.ticks[index] = tick
+		local mark = NoWrap(ui.Text(strip, Theme.F_SMALL, Theme.MUTED, index == 3 and (barW - x) or math.floor(barW / 4)))
+		mark:SetPoint("TOPLEFT", strip, "TOPLEFT", K.pad + x, -K.marksY)
+		strip.marks[index] = mark
+	end
+	-- à la place de la barre : toutes zones (les médailles gagnées), zone sans liste
+	strip.note = NoWrap(ui.Text(strip, Theme.F_SMALL, Theme.MUTED_LIGHT, barW))
+	strip.note:SetPoint("TOPLEFT", strip, "TOPLEFT", K.pad, -(K.barY - 4))
+	-- 3.7.0 : en bas à gauche, la pullulation du jour de la zone (WorldDaily.lua)
+	strip.swarm = NoWrap(ui.Text(strip, Theme.F_SMALL, Theme.GOLD, math.floor(barW / 2)))
+	strip.swarm:SetPoint("TOPLEFT", strip, "TOPLEFT", K.pad, -K.bottomY)
+	strip.trainer = NoWrap(ui.Text(strip, Theme.F_SMALL, Theme.GOLD, math.floor(barW / 2)))
+	strip.trainer:SetJustifyH("RIGHT")
+	strip.trainer:SetPoint("TOPRIGHT", strip, "TOPRIGHT", -K.pad, -K.bottomY)
+	strip.onEnter = function(s)
+		local lines = ns:MenagerieCollectionTip()
+		if s.sealTip then
+			table.insert(lines, 1, s.sealTip)
+			if ns.ZoneMedalTipLine then table.insert(lines, 2, ns:ZoneMedalTipLine()) end
+		end
+		ui.Tip(s, s.tipTitle or "", lines, "row")
+	end
 	strip.onLeave = ui.HideTip
 	pane.collection = strip
 	return strip
@@ -871,66 +933,101 @@ end
 function ns:MenagerieCollectionRefresh(pane, zone)
 	local strip = pane and pane.collection
 	if not strip then return end
+	local K = ns.MENAGERIE_STRIP
 	local zoneID = tonumber(zone)
 	-- (molette : rien n'a changé depuis le dernier contrôle du sceau)
 	local scrolling = self.journalFrame and self.journalFrame.scrollOnly
-	if zoneID and not scrolling then self:MenagerieSealCheck(zoneID) end
-	local edge = BIOME_EDGE[zoneID and self:MenagerieZoneBiome(zoneID) or "forest"][1]
+	if zoneID and not scrolling then
+		self:MenagerieSealCheck(zoneID)
+		if self.ZoneMedalCheck then self:ZoneMedalCheck(zoneID) end
+	end
 	local sealed = zoneID and self:MenagerieSealed(zoneID)
+	local lit, need, thresholds, note = {}, 0, nil, nil
+	strip.sealTip = nil
+	strip.next:SetText("")
 	if not zoneID then
-		strip.title:SetText(self:F("MEN_COLL_SEALS", #self:MenagerieSeals()))
-		strip.detail:SetText(L.MEN_COLL_SEALS_TIP)
-		strip.bar:Hide()
-		Theme.SetDiamond(strip.seal, true)
-		strip.seal:SetVertexColor(Theme.GOLD[1], Theme.GOLD[2], Theme.GOLD[3], 1)
+		-- toutes zones : le compte des sceaux, et des médailles
+		local counts = self.ZoneMedalCounts and self:ZoneMedalCounts() or {}
+		local seals = #self:MenagerieSeals()
+		strip.title:SetText(self:F("MEN_COLL_SEALS", seals))
+		strip.next:SetText(L.MEN_COLL_SEALS_TIP)
+		if L.ZONE_MEDAL_ALL then note = self:F("ZONE_MEDAL_ALL", counts[1] or 0, counts[2] or 0, counts[3] or 0) end
+		lit = { (counts[1] or 0) > 0, (counts[2] or 0) > 0, (counts[3] or 0) > 0, seals > 0 }
 		strip:SetAccent(nil)
 	else
 		local name = ZoneName(self, zoneID)
-		local have, need = self:MenagerieSealProgress(zoneID)
-		local biome = self:MenagerieZoneBiome(zoneID)
+		local level, have, nextNeed = 0, 0, nil
+		if self.ZoneMedal then
+			level, have, need, nextNeed = self:ZoneMedal(zoneID)
+		else
+			have, need = self:MenagerieSealProgress(zoneID)
+		end
 		if sealed then
 			strip.title:SetText(self:F("MEN_COLL_SEALED", name))
-			strip.detail:SetText(self:F("MEN_COLL_SEAL_DONE", Dec(ns.SEAL_SHINY_MULT)))
+			strip.next:SetText(self:F("MEN_COLL_SEAL_DONE", Dec(ns.SEAL_SHINY_MULT)))
 		elseif need == 0 then
 			strip.title:SetText(name)
-			strip.detail:SetText(L.MEN_COLL_SEAL_NA)
+			note = L.MEN_COLL_SEAL_NA
 		else
-			strip.title:SetText(self:F("MEN_COLL_SEAL", name, have, need))
+			strip.title:SetText(self:F("ZONE_MEDAL_TITLE", name, have, need))
+			strip.next:SetText(self:F("ZONE_MEDAL_LEFT_" .. math.min(4, level + 1), math.max(0, (nextNeed or need) - have)))
+			local biome = self:MenagerieZoneBiome(zoneID)
 			local reward = L["COMP_FRAME_SEAL_" .. biome]
 			if self:MenagerieBiomeSeals(biome) >= 1 then reward = L["COMP_BG_SEAL_" .. biome] end
-			strip.detail:SetText(self:F("MEN_COLL_SEAL_TODO", reward, Dec(ns.SEAL_SHINY_MULT)))
+			strip.sealTip = self:F("MEN_COLL_SEAL_TODO", reward, Dec(ns.SEAL_SHINY_MULT))
 		end
 		if need > 0 then
 			strip.bar:SetValue(sealed and 1 or have / need)
-			local c = sealed and Theme.GOLD or edge
-			strip.bar:SetColor(c[1], c[2], c[3], 1)
-			strip.bar:Show()
-		else
-			strip.bar:Hide()
+			thresholds = self.ZoneMedalThresholds and { self:ZoneMedalThresholds(need) } or nil
 		end
-		Theme.SetDiamond(strip.seal, not sealed)
-		local c = sealed and Theme.GOLD or edge
-		strip.seal:SetVertexColor(c[1], c[2], c[3], 1)
+		lit = { level >= 1, level >= 2, level >= 3, sealed and true or false }
 		strip:SetAccent(sealed and Theme.GOLD or nil)
 	end
+	-- la barre et ses seuils, ou la note à sa place
+	local withBar = need > 0 and thresholds ~= nil
+	if withBar then
+		local c = Theme.GOLD
+		strip.bar:SetColor(c[1], c[2], c[3], 1)
+		strip.bar:Show()
+		strip.marks[1]:SetText(self:F("ZONE_MEDAL_MARK", L.ZONE_MEDAL_1, thresholds[1]))
+		strip.marks[2]:SetText(self:F("ZONE_MEDAL_MARK", L.ZONE_MEDAL_2, thresholds[2]))
+		strip.marks[3]:SetText(self:F("ZONE_MEDAL_MARK", L.ZONE_MEDAL_3, thresholds[3]) .. " · "
+			.. self:F("ZONE_MEDAL_MARK", L.ZONE_MEDAL_SEAL, need))
+	else
+		strip.bar:Hide()
+	end
+	for index = 1, 3 do
+		if withBar then strip.ticks[index]:Show(); strip.marks[index]:Show()
+		else strip.ticks[index]:Hide(); strip.marks[index]:Hide() end
+	end
+	strip.note:SetText(note or "")
+	if note then strip.note:Show() else strip.note:Hide() end
+	-- les losanges : allumés une fois gagnés, au métal de leur médaille
+	local tints = ns.ZONE_MEDAL_TINTS or {}
+	for index, dia in ipairs(strip.medals) do
+		local key = tints.off
+		if lit[index] then key = index == 4 and tints.seal or tints[index] end
+		local c = Theme[key or "EDGE"] or Theme.EDGE
+		Theme.SetDiamond(dia, false)
+		dia:SetVertexColor(c[1], c[2], c[3], 1)
+		dia.lit = lit[index] and true or false
+	end
+	-- le titre s'arrête avant le texte de droite
+	local room = (strip.w or 484) - K.titleX - K.pad - K.gap - Measure(strip.next)
+	strip.title:SetWidth(math.max(40, math.floor(room)))
+	-- en bas à droite : le titre de dresseur à viser
 	local species = self:MenagerieSpeciesCount()
 	local rank, _, nextRank = self:TrainerRank(species)
-	if rank and nextRank then
-		-- (3.6.0 : « tout Azeroth » : les espèces de la faction qui manquent)
-		local left = nextRank.count - species
-		if nextRank.all then
-			local have, need = self:MenagerieAzeroth()
-			left = need - have
-		end
-		strip.trainer:SetText(self:F("MEN_COLL_TITLE_NEXT", L["TRAINER_" .. rank.key], species, math.max(0, left),
-			L["TRAINER_" .. nextRank.key]))
+	if nextRank then
+		-- (3.6.0 : « tout Azeroth » : les espèces de la faction)
+		local have, goal = species, nextRank.count
+		if nextRank.all then have, goal = self:MenagerieAzeroth() end
+		strip.trainer:SetText(self:F("MEN_COLL_NEXT_SHORT", have, goal, L["TRAINER_" .. nextRank.key]))
 	elseif rank then
 		strip.trainer:SetText(self:F("MEN_COLL_TITLE", L["TRAINER_" .. rank.key], species))
-	else
-		local first = ns.TRAINER_RANKS[1]
-		strip.trainer:SetText(self:F("MEN_COLL_NOTITLE", species, first.count, L["TRAINER_" .. first.key]))
 	end
 	strip.tipTitle = rank and L["TRAINER_" .. rank.key] or L.JRN_SEC_menagerie
+	strip.swarm:SetText(zoneID and self.WorldSwarmStripText and self:WorldSwarmStripText(zoneID) or "")
 	strip:Show()
 end
 

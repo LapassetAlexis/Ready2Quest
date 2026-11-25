@@ -808,8 +808,8 @@ function ns:CompanionMood()
 	return ns.COMPANION_MOODS[self:CompanionStatesOn() + 1]
 end
 function ns:CompanionRadiant()
-	local data = self:CompanionData()
-	return not data.sleepy and self:CompanionStatesOn() == #NEED_KEYS
+	-- 3.7.0 : la somnolence du retour ne retire plus le bonus des états
+	return self:CompanionStatesOn() == #NEED_KEYS
 end
 
 -- ---------------------------------------------------------------------------
@@ -3528,6 +3528,7 @@ function ns:CompanionNextTip()
 end
 
 function ns:CompanionTryTip(force)
+	if ns.Quiet and self:Quiet() then return false end   -- 3.7.0 : mode discret (Quiet.lua)
 	if self:CompanionChatterLevel() < 3 or InCombat() then return false end
 	local rt, now = RT(), Clock()
 	if not rt.tipAt then rt.tipAt = now + TipDelay() end
@@ -3568,7 +3569,7 @@ end
 -- Objectif : un rappel quand le prochain déblocage est tout proche
 local GOAL_NEAR = { player = 2, journal = 3 }
 function ns:CompanionTryGoal()
-	if InCombat() then return false end
+	if InCombat() or (ns.Quiet and self:Quiet()) then return false end   -- 3.7.0 : mode discret
 	local rt, now = RT(), Clock()
 	if not rt.goalAt then rt.goalAt = now + GOAL_FIRST end
 	if now < rt.goalAt then return false end
@@ -3579,6 +3580,13 @@ function ns:CompanionTryGoal()
 		if not item.ready and item.need - item.have <= (GOAL_NEAR[item.source] or 3) then target = item; break end
 	end
 	if not target then
+		-- 3.7.0 : le haut fait suivi ou le plus proche, dans le même créneau (TripRecap.lua)
+		local line, args
+		if self.TripGoalLine then line, args = self:TripGoalLine() end
+		if line and self:CompanionSay("GOAL", { line = line, args = args, cd = "goal" }) then
+			rt.goalAt = now + COOLDOWNS.goal
+			return true
+		end
 		rt.goalAt = now + 300      -- rien de proche : on regardera plus tard
 		return false
 	end
@@ -3650,13 +3658,18 @@ function ns:CompanionLogin()
 		data.sleepyLeft = Clamp(math.floor(away / 3600 * SLEEPY_PER_HOUR), SLEEPY_MIN, SLEEPY_MAX)
 		self:CompanionAnimate()
 	end
+	-- 3.7.0 : bien reposé (CompanionRested.lua) : les états, et la réplique du bonjour
+	local rested = self.CompanionRestedLogin and self:CompanionRestedLogin(away, first) or nil
 	-- première apparition : le tutoriel tient lieu de bonjour
 	if not data.tutoDone then
 		self:CompanionStartTutorial(false)
 	elseif first then
 		self:CompanionSay("HELLO", { force = true, args = { self:CompanionName() } })
 	elseif data.sleepy then
-		self:CompanionSay("MISSED", { force = true })
+		-- 3.7.0 : sans réplique du repos, le bonjour dit où il en était (TripRecap.lua)
+		local line, args = rested, nil
+		if not line and self.TripGreeting then line, args = self:TripGreeting() end
+		self:CompanionSay("MISSED", { force = true, line = line, args = args })
 	end
 	self:CompanionRefreshLabels()
 	return away

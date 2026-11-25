@@ -37,6 +37,13 @@
 -- et cadre de la fiche (ids de TrainerCardStyle.lua, liste blanche à la
 -- lecture), sm = espèces maîtrisées (étude, 5 chiffres au plus), md =
 -- médailles de type « clé:palier » (types connus ici, palier 1 à 5).
+-- 3.7.0 (champ facultatif, ignoré des versions d'avant) : fb = les hauts
+-- faits obtenus, un bit par code (ns:FeatBits : A-Z a-z 0-9 - _, aucun
+-- caractère réservé), toujours présent dans une fiche de 3.7 (« fb= » si rien
+-- d'obtenu) ; absent : une fiche d'avant, la comparaison est impossible.
+-- 75 caractères pour 450 codes : une fiche aux champs tous pleins fait 949
+-- octets, 5 morceaux (5 aussi sans fb), partis dans une seule rafale (seau
+-- de 6) ; même découpage, même débit (tests/modules/trainer_37.lua).
 --
 -- Envoi : file d'attente avec limite de débit (seau de 6 messages, un de plus
 -- par seconde), jamais en combat ni pendant un verrou de messagerie (moteur
@@ -107,6 +114,20 @@ local FR = {
 	TRAINER_FEATS_PICKED   = "» %s",
 	OPT_DAILY_TRAINER      = "Partager ma fiche de dresseur",
 	HELP_TRAINER           = "/qc fiche [nom] — ta fiche de dresseur, ou celle d'un autre joueur",
+	-- 3.7.0 : rang, signature, Pionnier, pied, comparaison
+	TRAINER_RANK_LINE      = "%s · %s points · %s hauts faits",
+	TRAINER_FEATS_COUNT    = "%s obtenus · %s points",
+	TRAINER_POINTS_LINE    = "%s points · %s hauts faits",
+	TRAINER_THOUSANDS      = " ",
+	TRAINER_SINCE          = "Dresseur depuis le %s",
+	TRAINER_PIONEER_MARK   = "%s · %s",
+	TRAINER_PIONEER        = "Pionnier",
+	TRAINER_PIONEER_F      = "Pionnière",
+	TRAINER_SIGNATURE      = "QUEST COMPANION",
+	TRAINER_CODE_BUTTON    = "Code de dresseur",
+	TRAINER_SOUVENIR_BUTTON = "Carte souvenir",
+	TRAINER_COMPARE        = "Comparer les hauts faits",
+	TRAINER_COMPARE_OLD    = "Sa version de Quest Companion ne permet pas encore de comparer les hauts faits.",
 }
 local EN = {
 	TRAINER_TITLE          = "Trainer card",
@@ -161,6 +182,19 @@ local EN = {
 	TRAINER_FEATS_PICKED   = "» %s",
 	OPT_DAILY_TRAINER      = "Share my trainer card",
 	HELP_TRAINER           = "/qc fiche [name] — your trainer card, or another player's",
+	TRAINER_RANK_LINE      = "%s · %s points · %s achievements",
+	TRAINER_FEATS_COUNT    = "%s earned · %s points",
+	TRAINER_POINTS_LINE    = "%s points · %s achievements",
+	TRAINER_THOUSANDS      = ",",
+	TRAINER_SINCE          = "Trainer since %s",
+	TRAINER_PIONEER_MARK   = "%s · %s",
+	TRAINER_PIONEER        = "Pioneer",
+	TRAINER_PIONEER_F      = "Pioneer",
+	TRAINER_SIGNATURE      = "QUEST COMPANION",
+	TRAINER_CODE_BUTTON    = "Trainer code",
+	TRAINER_SOUVENIR_BUTTON = "Keepsake card",
+	TRAINER_COMPARE        = "Compare achievements",
+	TRAINER_COMPARE_OLD    = "Their version of Quest Companion cannot compare achievements yet.",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.TRAINER_STRINGS = { fr = FR, en = EN } end
@@ -624,6 +658,13 @@ local function Continent(self, zoneID)
 	return "other"
 end
 
+-- 3.7.0 : bits des hauts faits sûrs (alphabet de ns:FeatBits, 170 caractères
+-- au plus : 1020 codes) ; vide permis
+ns.TRAINER_BITS_MAX = 170
+local function ValidBits(text)
+	return type(text) == "string" and #text <= ns.TRAINER_BITS_MAX and text:find("^[A-Za-z0-9_%-]*$") ~= nil
+end
+
 -- Ma fiche, en table (même forme que celle reçue d'un autre joueur)
 function ns:TrainerOwnCard()
 	local card = { proto = ns.TRAINER_PROTO, name = self:TrainerMe() or "?", showcase = {}, badges = {} }
@@ -712,6 +753,11 @@ function ns:TrainerOwnCard()
 	if self.TrainerCardStyle then card.styleBg, card.styleFrame = self:TrainerCardStyle() end
 	if self.TrainerOwnMastered then card.mastered = self:TrainerOwnMastered() end
 	if self.TrainerOwnMedals then card.medals = self:TrainerOwnMedals() end
+	-- 3.7.0 : un bit par haut fait obtenu (comparaison, marque Pionnier)
+	if self.FeatBits then
+		local bits = Call(self.FeatBits, self)
+		if type(bits) == "string" then card.featBits = bits end
+	end
 	-- vitrine des hauts faits et obtenus par catégorie (2.8.0)
 	if self.FeatDefs then
 		card.featShowcase = {}
@@ -795,6 +841,8 @@ function ns:TrainerSerializeCard(card)
 		if tier and tier > 0 then medals[#medals + 1] = key .. ":" .. math.floor(tier) end
 	end
 	if #medals > 0 then f.md = medals end
+	-- 3.7.0 : les bits des hauts faits, même vides (« fb= » : une fiche de 3.7)
+	if type(card.featBits) == "string" and ValidBits(card.featBits) then f.fb = card.featBits end
 	return ns.TrainerEncode(f)
 end
 
@@ -899,7 +947,18 @@ function ns:TrainerParseCard(text)
 			end
 		end
 	end
+	-- 3.7.0 : bits des hauts faits ; absent ou illisible : pas de comparaison
+	if f.fb ~= nil and ValidBits(f.fb) then card.featBits = f.fb end
 	return card
+end
+
+-- 3.7.0 : la fiche a-t-elle ce haut fait ? (par son bit ; nil : on ne sait pas)
+function ns:TrainerCardHasFeat(card, id)
+	if type(card) ~= "table" or type(card.featBits) ~= "string" then return nil end
+	local def = self.FeatDef and self:FeatDef(id)
+	local n = def and tonumber(def.n)
+	if not n or not self.FeatBitsDecode then return nil end
+	return self:FeatBitsDecode(card.featBits)[n] == true
 end
 
 -- ---------------------------------------------------------------------------
@@ -1008,6 +1067,8 @@ local function OwnCardKey(self)
 		local bg, frame = self:TrainerCardStyle()
 		parts[#parts + 1] = tostring(bg) .. ":" .. tostring(frame)
 	end
+	-- 3.7.0 : les bits des hauts faits (un tour de force à 0 point change la fiche)
+	if self.FeatBits then parts[#parts + 1] = tostring(Call(self.FeatBits, self)) end
 	return table.concat(parts, "|")
 end
 
@@ -1381,6 +1442,8 @@ local SHOW_Y = -472
 ns.TRAINER_LAYOUT = { width = WIN_W, height = WIN_H, footer = FOOT_H, pad = PAD, titleY = TITLE_Y, bodyY = BODY_Y,
 	colX = COL_X, colW = COL_W, model = MODEL_W, featsY = FEATS_Y, showY = SHOW_Y, featW = FEAT_W, featH = FEAT_H,
 	medalY = MEDAL_Y, medalStep = MEDAL_STEP, styleW = 170 }
+-- 3.7.0 : signature de l'en-tête (bord droit du texte, sous le [×] ; patte de 11 px)
+ns.TRAINER_SIGNATURE = { x = -62, y = -38, paw = 11, gap = 5, alpha = 0.9 }
 
 local function Line(parent, font, color, width)
 	local text = Theme.Text(parent, font or Theme.F_BODY, color or Theme.TEXT)
@@ -1421,6 +1484,7 @@ local function FormatDate(ts)
 	local ok, text = pcall(dateFn, fmt, ts)
 	return ok and text or nil
 end
+ns.TrainerFormatDate = FormatDate   -- 3.7.0 : la comparaison (TrainerCompare.lua)
 
 local function ClassLabel(class)
 	if not class or class == "normal" or class == "trivial" or class == "minus" then return nil end
@@ -1589,6 +1653,18 @@ function ns:EnsureTrainerWindow()
 	local content = frame.content
 	frame.header = Theme.CreatePageHeader(content, WIN_W - 2, { compact = true, emblem = forged })
 	frame.header:SetPoint("TOPLEFT", content, "TOPLEFT", 0, 0)
+	-- 3.7.0 : la signature, en haut à droite (texte atténué et patte du logo,
+	-- une texture) : une capture postée dit d'où elle vient
+	local sig = ns.TRAINER_SIGNATURE
+	frame.signature = Line(content, Theme.F_SMALL, Theme.MUTED)
+	frame.signature:SetText(L.TRAINER_SIGNATURE)
+	frame.signature:SetPoint("TOPRIGHT", content, "TOPRIGHT", sig.x, sig.y)
+	frame.signaturePaw = content:CreateTexture(nil, "ARTWORK")
+	frame.signaturePaw:SetTexture(Theme.LOGO_GLYPH or Theme.LOGO_SMALL)
+	frame.signaturePaw:SetSize(sig.paw, sig.paw)
+	if frame.signaturePaw.SetDesaturated then frame.signaturePaw:SetDesaturated(true) end
+	frame.signaturePaw:SetVertexColor(Theme.MUTED[1], Theme.MUTED[2], Theme.MUTED[3], sig.alpha)
+	frame.signaturePaw:SetPoint("RIGHT", frame.signature, "LEFT", -sig.gap, 0)
 	-- sous le nom (ma fiche) : « Titre affiché : [choix] » ; plus rien en
 	-- haut à droite, où se tient le bouton de fermeture (2.8.0)
 	frame.titleLabel = Line(content, Theme.F_LABEL, Theme.MUTED_LIGHT)
@@ -1750,6 +1826,22 @@ function ns:EnsureTrainerWindow()
 		if frame.viewing then ns:TrainerRequest(frame.viewing); ns:TrainerRefreshWindow() end
 	end)
 	frame.retryButton:SetPoint("RIGHT", frame.closeButton, "LEFT", -10, 0)
+	-- 3.7.0 : « Code de dresseur » et « Carte souvenir » (ma fiche), montrés
+	-- seulement quand leur fonction existe (étape 3) ; « Comparer les hauts
+	-- faits » (la fiche d'un autre), grisé pour une fiche d'avant la 3.7
+	frame.codeButton = Theme.CreateButton(foot, "auto", "md", L.TRAINER_CODE_BUTTON, function()
+		if type(ns.TrainerCodeShow) == "function" then ns:TrainerCodeShow() end
+	end)
+	frame.souvenirButton = Theme.CreateButton(foot, "auto", "md", L.TRAINER_SOUVENIR_BUTTON, function()
+		if type(ns.SouvenirShow) == "function" then ns:SouvenirShow() end
+	end)
+	frame.codeButton:Hide(); frame.souvenirButton:Hide()
+	frame.compareButton = Theme.CreateButton(foot, "auto", "md", L.TRAINER_COMPARE, function(button)
+		if button.inactive or not frame.viewing then return end
+		if ns.TrainerCompareOpen then ns:TrainerCompareOpen(frame.viewing) end
+	end)
+	frame.compareButton:SetPoint("RIGHT", frame.retryButton, "LEFT", -10, 0)
+	frame.compareButton:Hide()
 	frame:Hide()
 	self.trainerFrame = frame
 	return frame
@@ -1804,15 +1896,35 @@ local function PaintTile(self, tile, item, own)
 	end
 end
 
--- « Hauts faits : 64 · 615 points (compte 400, perso 215) », ou vide (aucun point)
+-- 3.7.0 : « 1 240 » (séparateur des milliers de la langue)
+function ns.TrainerThousands(value)
+	local text = string.format("%d", math.max(0, math.floor(tonumber(value) or 0)))
+	local sep = L.TRAINER_THOUSANDS
+	if type(sep) ~= "string" or sep == "TRAINER_THOUSANDS" then sep = " " end
+	local out = text:reverse():gsub("(%d%d%d)", "%1" .. sep:reverse())
+	out = out:reverse()
+	if out:sub(1, #sep) == sep then out = out:sub(#sep + 1) end
+	return out
+end
+
+-- 3.7.0 : le rang de renommée sous le nom : « Réputé · 1 240 points · 142
+-- hauts faits » ; sans rang (moins de 100 points) : « 40 points · 3 hauts
+-- faits » ; vide sans aucun point. Le rang d'un autre dresseur se calcule
+-- de ses points (ns:FeatRank, seuils d'ici).
 function ns:TrainerCardFeatsText(card)
 	local feats = card.feats
 	if type(feats) ~= "table" then return "" end
 	local account, char = tonumber(feats.account) or 0, tonumber(feats.char) or 0
 	local count = tonumber(feats.count) or 0
-	if account + char <= 0 then return "" end
-	if account > 0 and char > 0 then return self:F("TRAINER_FEATS_SPLIT", count, account + char, account, char) end
-	return self:F("TRAINER_FEATS", count, account + char)
+	local points = account + char
+	if points <= 0 then return "" end
+	local rank
+	if self.FeatRank then
+		local ok, _, name = pcall(self.FeatRank, self, points)
+		rank = ok and type(name) == "string" and name or nil
+	end
+	if rank then return self:F("TRAINER_RANK_LINE", rank, ns.TrainerThousands(points), ns.TrainerThousands(count)) end
+	return self:F("TRAINER_POINTS_LINE", ns.TrainerThousands(points), ns.TrainerThousands(count))
 end
 
 -- Nom et titre de l'en-tête : un code connu ici est rendu dans ma langue et
@@ -1832,8 +1944,9 @@ end
 local function PaintFeats(self, frame, card, own)
 	local feats = type(card.feats) == "table" and card.feats or nil
 	local account, char = feats and tonumber(feats.account) or 0, feats and tonumber(feats.char) or 0
+	-- 3.7.0 : « (142 obtenus · 1 240 points) » (maquette validée : sans le détail compte / perso)
 	local detail = (feats and account + char > 0)
-		and self:F("TRAINER_FEATS_DETAIL", tonumber(feats.count) or 0, account + char, account, char) or nil
+		and self:F("TRAINER_FEATS_COUNT", ns.TrainerThousands(tonumber(feats.count) or 0), ns.TrainerThousands(account + char)) or nil
 	frame.featsSection:SetText(L.TRAINER_FEATS_HEAD, detail)
 	for index, tile in ipairs(frame.featCards) do
 		local item = card.featShowcase and card.featShowcase[index]
@@ -2000,7 +2113,14 @@ local function PaintCard(self, frame, card, own)
 	end
 	local lines = {}
 	local first = FormatDate(card.first)
-	lines[#lines + 1] = first and self:F("TRAINER_FIRST", first) or L.TRAINER_FIRST_NONE
+	-- 3.7.0 : « Dresseur depuis le … », puis « · Pionnier » (tour de force
+	-- fos_pioneer, lu dans les bits de la fiche)
+	lines[#lines + 1] = first and self:F("TRAINER_SINCE", first) or L.TRAINER_FIRST_NONE
+	if first and self:TrainerCardHasFeat(card, "fos_pioneer") then
+		local gender = card.gender
+		if own and self.FeatTitleGender then gender = Call(self.FeatTitleGender, self) or gender end
+		lines[1] = self:F("TRAINER_PIONEER_MARK", lines[1], gender == "f" and L.TRAINER_PIONEER_F or L.TRAINER_PIONEER)
+	end
 	-- 3.6.0 : avec les espèces maîtrisées quand la fiche les dit
 	if card.species and card.mastered then
 		lines[#lines + 1] = self:F("TRAINER_SPECIES_MASTERED", card.species, card.total or card.species, card.mastered)
@@ -2057,6 +2177,35 @@ local function PaintCard(self, frame, card, own)
 	for slot, tile in ipairs(frame.tiles) do PaintTile(self, tile, card.showcase and card.showcase[slot], own) end
 end
 
+-- 3.7.0 : le pied. Ma fiche : « Code de dresseur » et « Carte souvenir »
+-- entre la forme et Fermer, si leurs fonctions existent (sinon la disposition
+-- d'avant) ; la fiche d'un autre : « Comparer les hauts faits » avant
+-- « Redemander », grisé sans bits (fiche d'avant la 3.7), avec la raison.
+function ns:TrainerPaintFooter(frame, card, own)
+	local code = own and type(ns.TrainerCodeShow) == "function"
+	local souvenir = own and type(ns.SouvenirShow) == "function"
+	local right = frame.closeButton
+	for _, pair in ipairs({ { frame.souvenirButton, souvenir }, { frame.codeButton, code } }) do
+		local button = pair[1]
+		if pair[2] then
+			button:ClearAllPoints()
+			button:SetPoint("RIGHT", right, "LEFT", -10, 0)
+			button:Show()
+			right = button
+		else
+			button:Hide()
+		end
+	end
+	local compare = frame.compareButton
+	if own or not card then
+		compare:Hide()
+	else
+		local ready = type(card.featBits) == "string"
+		compare:SetInactive(not ready, not ready and L.TRAINER_COMPARE_OLD or nil)
+		compare:Show()
+	end
+end
+
 function ns:TrainerRefreshWindow()
 	local frame = self.trainerFrame
 	if not (frame and frame:IsShown()) then return end
@@ -2085,12 +2234,14 @@ function ns:TrainerRefreshWindow()
 		frame.statusHint:SetText("")
 		frame.body:Show()
 		PaintCard(self, frame, card, own)
+		self:TrainerPaintFooter(frame, card, own)
 		if age then
 			local minutes = math.floor(age / 60)
 			frame.received:SetText(self:F("TRAINER_RECEIVED", minutes < 1 and L.TRAINER_NOW or self:F("TRAINER_AGO", minutes)))
 		end
 	else
 		frame.body:Hide()
+		self:TrainerPaintFooter(frame, nil, own)
 		frame.bgStylePicker:Hide(); frame.frameStylePicker:Hide()
 		if self.TrainerCardStyleApply then self:TrainerCardStyleApply(frame, nil, nil) end
 		frame.header:SetTitle(who)

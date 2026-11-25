@@ -244,7 +244,7 @@ do
 		Check("[TIT] ma fiche : code, forme, texte nu, points ; en-tête « Testeur le Traqueur », points en sous-titre, sélecteurs",
 			card.titleCode == 19 and card.gender == "m" and card.title == "Traqueur" and card.feats and card.feats.account == 50
 			and card.feats.char == 25 and card.feats.count == 2 and f.header.title.text == "Testeur le Traqueur"
-			and f.header.subtitle.text == "Hauts faits : 2 · 75 points (compte 50, perso 25)" and f.titlePicker:IsShown()
+			and f.header.subtitle.text == "75 points · 2 hauts faits" and f.titlePicker:IsShown()
 			and f.formPicker:IsShown() and #f.titlePicker.options == 5 and f.titlePicker:GetValue() == "19"
 			and f.formPicker:GetValue() == "auto", f.header.title.text .. " / " .. tostring(f.header.subtitle.text))
 		local s = Steps()
@@ -268,7 +268,7 @@ do
 			card.titleCode == 1 and card.gender == "f" and card.title == "Apprentie dresseuse"
 			and NS:TrainerCardHeading(card, "Testeur") == "Apprentie dresseuse Testeur"
 			and NS:TrainerCardFeatsText({ feats = { account = 0, char = 0, count = 0 } }) == "" and NS:TrainerCardFeatsText({}) == ""
-			and NS:TrainerCardFeatsText({ feats = { account = 40, char = 0, count = 3 } }) == "Hauts faits : 3 · 40 points")
+			and NS:TrainerCardFeatsText({ feats = { account = 40, char = 0, count = 3 } }) == "40 points · 3 hauts faits")
 		TT.sex = nil
 	end
 

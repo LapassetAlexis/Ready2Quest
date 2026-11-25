@@ -347,6 +347,30 @@ function Snap.LiveLevel(frame)
 	return level + 1
 end
 
+-- 3.7.0 : la coupe d'un cadre (SetClipsChildren, la page Missions qui
+-- défile) : le rectangle commun à tous les ancêtres qui coupent (le cadre
+-- propriétaire d'une texture ou d'un texte compris), ou nil
+local function ClipRect(region, ctx)
+	local node = region.mockParent
+	local clip, guard = nil, 0
+	while node and guard < 60 do
+		if node.clipsChildren then
+			local r = Snap.Rect(node, ctx)
+			if r then
+				if not clip then
+					clip = { left = r.left, top = r.top, right = r.left + r.width, bottom = r.top + r.height }
+				else
+					clip.left, clip.top = math.max(clip.left, r.left), math.max(clip.top, r.top)
+					clip.right, clip.bottom = math.min(clip.right, r.left + r.width), math.min(clip.bottom, r.top + r.height)
+				end
+			end
+		end
+		node = node.mockParent
+		guard = guard + 1
+	end
+	return clip
+end
+
 function Snap.Render(root, opts)
 	opts = opts or {}
 	local ctx = { memo = {}, screen = opts.screen or Snap.SCREEN, root = root }
@@ -358,11 +382,17 @@ function Snap.Render(root, opts)
 		if Snap.Visible(region, root) then
 			local rect = Snap.Rect(region, ctx)
 			local drawable = IsRegion(region) or (region.kind == "EditBox" and region.text ~= "")
+			local clip = rect and ClipRect(region, ctx)
+			-- tout entier hors de la coupe : pas dessiné
+			if clip and (rect.left >= clip.right or rect.left + rect.width <= clip.left
+				or rect.top >= clip.bottom or rect.top + rect.height <= clip.top) then
+				drawable = false
+			end
 			if rect and drawable and region.drawLayer ~= "HIGHLIGHT" and rect.width >= 0 and rect.height >= 0 then
 				local frame = IsRegion(region) and region.mockParent or region
 				local strata, level = FrameOrder(frame, orderMemo)
 				items[#items + 1] = {
-					region = region, rect = rect,
+					region = region, rect = rect, clip = clip,
 					key = { strata, level, frame and frame.mockId or 0,
 						IsRegion(region) and (LAYER[region.drawLayer or "ARTWORK"] or 3) or 6,
 						tonumber(region.subLevel) or 0, region.mockId or 0 },
@@ -391,6 +421,14 @@ function Snap.Render(root, opts)
 		local alpha = EffectiveAlpha(region)
 		local pos = string.format("left:%.1fpx;top:%.1fpx;width:%.1fpx;height:%.1fpx", r.left + ox, r.top + oy,
 			math.max(0, r.width), math.max(0, r.height))
+		local cut = item.clip
+		if cut then
+			local top, left = math.max(0, cut.top - r.top), math.max(0, cut.left - r.left)
+			local bottom, right = math.max(0, r.top + r.height - cut.bottom), math.max(0, r.left + r.width - cut.right)
+			if top > 0 or left > 0 or bottom > 0 or right > 0 then
+				pos = pos .. string.format(";clip-path:inset(%.1fpx %.1fpx %.1fpx %.1fpx)", top, right, bottom, left)
+			end
+		end
 		if region.kind == "Texture" then
 			local style, file = TextureStyle(region, alpha)
 			-- texture retournée par SetTexCoord (haut et bas échangés), tournée
@@ -451,6 +489,10 @@ function Snap.Render(root, opts)
 					inset = string.format(";padding:0 %dpx 0 %dpx;box-sizing:border-box", region.textInsets[2] or 0, region.textInsets[1] or 0)
 				end
 				local wrap = (region.widthSet and region.kind == "FontString" and region.wordWrap ~= false) and "normal" or "nowrap"
+				-- 3.7.0 : champ sur plusieurs lignes (SetMultiLine, posé par la scène) : le texte revient à la ligne
+				if region.kind == "EditBox" and region.multiLine then wrap = "pre-wrap" end
+				-- 3.7.0 (S2) : un champ d'une ligne coupe son texte à sa largeur, comme en jeu
+				if region.kind == "EditBox" and not region.multiLine then inset = inset .. ";overflow:hidden" end
 				local clip = region.widthSet and region.kind == "FontString" and region.wordWrap == false
 				out[#out + 1] = string.format('<div class="txt" style="%s;font-size:%dpx;font-weight:%d;color:%s;justify-content:%s;'
 					.. 'align-items:%s;text-align:%s;white-space:%s%s%s"><span%s>%s</span></div>',
@@ -1487,15 +1529,205 @@ local function OwnDraws(T, scene)
 	return frame, title
 end
 
--- 3.1.0 : page Hauts faits (total sur sa plaque forgée, losanges des lignes)
+-- 3.7.0 : page Hauts faits refaite (maquette carnet-j1 à j3) : une collection
+-- en cours, des hauts faits obtenus et datés, un rattrapage, un suivi ; deux
+-- secrets (un indice connu), un découvert, un tour de force
+local function FeatsWorld(ns)
+	ns:DB().featsFilter = "all"
+	if rawget(_G, "date") == nil then _G.date = os.date end
+	local data = ns:CaptureData()
+	for index = 1, 37 do
+		data.creatures[90000 + index] = { name = "Créature " .. index, normal = true, class = "normal", type = "Bête",
+			shiny = index <= 3 or nil, at = 1793000000 + index }
+	end
+	data.count = 37
+	ns.menagerieStatic = nil
+	-- secrets et tour de force du catalogue (deuxième édition) : un secret découvert,
+	-- un indice lâché, « Pionnier » obtenu
+	ns:FeatStore("account").hints = { fun_hogger_partner = 1793000000 }
+	local at = 1793500000
+	for index, id in ipairs({ "men_first", "men_species_10", "men_species_25", "char_level_10", "char_level_20", "zone_visit_10",
+		"day_mission_1", "shiny_found_5", "men_rare_1", "fun_namesake", "fos_pioneer" }) do
+		ns:FeatAward(id, { silent = true, at = at + index * 86400 })
+	end
+	ns:FeatStore("account").catchup = { v = 1, ids = { "men_first", "men_species_10", "men_species_25", "char_level_10",
+		"char_level_20", "zone_visit_10" }, pts = 40, glitter = 22 }
+	ns:FeatFollow("men_species_50", true)
+end
+
 Snap.scenes["qc-journal-feats"] = function(T) return OwnDraws(T, function(T)
-	local frame = QCJournal(T, "feats", function(ns)
-		ns:DB().featsFilter = "all"
-		ns:FeatAward("men_first", { silent = true, at = 1700000000 })
-		ns:FeatAward("char_level_10", { silent = true, at = 1700100000 })
-		ns:FeatAward("char_level_20", { silent = true, at = 1700200000 })
+	local frame = QCJournal(T, "feats", FeatsWorld)
+	return frame, "QuestCompanion : carnet, page Hauts faits (Aperçu)"
+end) end
+
+-- une catégorie avec des séries et une ligne dépliée (Dresseur › Créatures)
+Snap.scenes["qc-journal-feats-list"] = function(T) return OwnDraws(T, function(T)
+	local frame, ns = QCJournal(T, "feats", FeatsWorld)
+	ns:OpenJournalFeatsAt("men_types_master")
+	return frame, "QuestCompanion : carnet, Hauts faits › Créatures (séries, ligne dépliée)"
+end) end
+
+-- Insolite : secrets (indice connu ou non), secret découvert, la note
+Snap.scenes["qc-journal-feats-secrets"] = function(T) return OwnDraws(T, function(T)
+	local frame, ns = QCJournal(T, "feats", FeatsWorld)
+	ns:JournalFeatsPick("fun")
+	ns.journalFrame.featsOffset = 99      -- la fin de la liste : secrets, découvert, la note
+	ns:RefreshJournal()
+	return frame, "QuestCompanion : carnet, Hauts faits › Insolite (secrets)"
+end) end
+
+-- tours de force : leur catégorie à eux
+Snap.scenes["qc-journal-feats-fos"] = function(T) return OwnDraws(T, function(T)
+	local frame, ns = QCJournal(T, "feats", FeatsWorld)
+	ns:JournalFeatsPick("fos")
+	return frame, "QuestCompanion : carnet, Hauts faits › Tours de force"
+end) end
+
+-- 3.7.0 (C1b) : onglet Titres (maquette carnet-j4) : des titres gagnés (un
+-- tour de force), un titre choisi, la liste à gagner
+Snap.scenes["qc-journal-feats-titles"] = function(T) return OwnDraws(T, function(T)
+	local frame, ns = QCJournal(T, "feats", function(ns)
+		FeatsWorld(ns)
+		local at = 1794500000
+		for index, id in ipairs({ "men_rare_10", "shiny_found_50", "shiny_cap_25", "zone_all_biomes", "char_level_60",
+			"men_bad_luck", "men_species_50", "men_species_100", "men_species_250" }) do
+			ns:FeatAward(id, { silent = true, at = at + index * 3600 })
+		end
+		ns:FeatSetTitle(13)
 	end)
-	return frame, "QuestCompanion : carnet, page Hauts faits"
+	ns:JournalFeatsTab("titles")
+	return frame, "QuestCompanion : carnet, Hauts faits › Titres"
+end) end
+
+-- 3.7.0 (C1b) : onglet Statistiques (maquette carnet-j5) : la sauvegarde
+-- d'une collection en cours et des compteurs depuis la 3.7
+local function StatsWorld(ns)
+	FeatsWorld(ns)
+	local data = ns:CaptureData()
+	data.caught, data.tries, data.paillettesEarned = 1412, 2655, 6240
+	data.study = data.study or {}
+	data.studyV = ns.STUDY_SCHEMA
+	data.study[90001] = { n = 37, z = 0, t = 0, paid = 0, lo = 88, hi = 124 }
+	data.study[90002] = { n = 12, z = 0, t = 0, paid = 0, lo = 76, hi = 101 }
+	data.creatures[90001].name, data.creatures[90002].name = "Raptor de Strangleronce", "Lapin"
+	ns:CompanionData().travel = 412000
+	for key, value in pairs({ captureHunt = 640, glitterSpent = 1180, release = 212, orderDone = 8 }) do ns:TallyAdd(key, value) end
+	ns:TallyMax("captureStreak", 17)
+	ns:TallyMax("shinyChain", 50)
+	for key, value in pairs({ radiantMin = 560, wish = 23, treat = 61 }) do ns:TallyAdd(key, value, "char") end
+	ns:FeatStore("account").ctr.trades = 3
+end
+
+Snap.scenes["qc-journal-feats-stats"] = function(T) return OwnDraws(T, function(T)
+	local frame, ns = QCJournal(T, "feats", StatsWorld)
+	ns:JournalFeatsTab("stats")
+	return frame, "QuestCompanion : carnet, Hauts faits › Statistiques"
+end) end
+
+-- le suivi à l'écran avec un haut fait suivi
+Snap.scenes["qc-tracker-feat"] = function(T)
+	local ns = QCWorld(T)
+	ns:DB().journalTracker = true
+	FeatsWorld(ns)
+	ns:RefreshJournalTracker()
+	local tracker = ns.journalTracker
+	tracker:ClearAllPoints()
+	tracker:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	return tracker, "QuestCompanion : suivi à l'écran, un haut fait suivi"
+end
+
+-- 3.7.0 : page Communauté (JournalCommunity.lua). Le banc n'a pas de champ
+-- sur plusieurs lignes : le temps de la scène, CreateFrame donne aux champs
+-- SetMultiLine (l'aperçu fait alors revenir leur texte à la ligne).
+local function WithMultiLine(scene)
+	local create = _G.CreateFrame
+	_G.CreateFrame = function(kind, ...)
+		local frame = create(kind, ...)
+		if kind == "EditBox" and frame.SetMultiLine == nil then
+			function frame:SetMultiLine(on) self.multiLine = on and true or nil end
+		end
+		return frame
+	end
+	local ok, frame, title = pcall(scene)
+	_G.CreateFrame = create
+	if not ok then error(frame, 0) end
+	return frame, title
+end
+
+local function QCCommunity(T, tab, prepare)
+	local frame, ns = QCJournal(T, "community", function(ns)
+		ns:DB().community = nil
+		ns:CommunityResetAnswers()
+		ns:CaptureData().count = 312
+		if prepare then prepare(ns) end
+	end)
+	ns:CommunitySelectTab(tab)
+	return frame, ns
+end
+
+-- onglet Discord : l'invitation à copier, les cinq salons, le mot, cette semaine
+Snap.scenes["qc-journal-community-discord"] = function(T) return OwnDraws(T, function(T)
+	return WithMultiLine(function()
+		local frame = QCCommunity(T, "discord")
+		return frame, "QuestCompanion : carnet, page Communauté (onglet Discord)"
+	end)
+end) end
+
+-- onglet Ton avis : trois réponses, un texte libre, l'avis composé dans la zone à copier
+Snap.scenes["qc-journal-community-avis"] = function(T) return OwnDraws(T, function(T)
+	return WithMultiLine(function()
+		local saved = _G.UnitLevel
+		_G.UnitLevel = function() return 38 end
+		local frame, ns = QCCommunity(T, "avis", function(ns)
+			ns:CommunityAnswer("love", 1)
+			ns:CommunityAnswer("talk", 2)
+			ns:CommunityAnswer("fav", 1)
+			ns:CommunitySetFree("Pouvoir trier la Réserve par zone de capture. Et une créature de la semaine pour les niveaux 60.")
+		end)
+		ns:CommunityAvisPaint()
+		_G.UnitLevel = saved
+		return frame, "QuestCompanion : carnet, page Communauté (onglet Ton avis)"
+	end)
+end) end
+
+-- 3.7.0 (étape 3, S2) : onglet Dresseurs (TrainerKnown.lua), comme la
+-- maquette carnet-c1 : quatre dresseurs connus (un croisé en guilde, trois
+-- reçus par code dont un d'un autre royaume et un de l'autre faction),
+-- l'encadré du parrainage ouvert. « -empty » : aucun dresseur connu.
+local function TrainersWorld(ns, filled)
+	ns:DB().trainerKnown, ns:DB().trainerMentor = nil, nil
+	ns:CaptureData().firstAt = time()
+	if rawget(_G, "UnitFactionGroup") == nil then _G.UnitFactionGroup = function() return "Alliance" end end
+	if not filled then return end
+	local day = 1795219200 + 12 * 3600   -- 21/11/2026, midi
+	local specs = {
+		{ "Xan-Royaume", "Maîtresse des brillantes", 1000, 105, 287, 9, "guild", nil, day, "AB" },
+		{ "Deklatis-Royaume", "Dresseur confirmé", 600, 20, 96, 2, "code", "A", day - 86400, "A" },
+		{ "Brakmar-Hyjal", nil, 2000, 40, 512, 31, "code", "A", day - 3 * 86400, nil },
+		{ "Zugzug-Royaume", "le Traqueur", 1300, 80, 301, 12, "code", "H", day - 6 * 86400, "AB" },
+	}
+	for _, spec in ipairs(specs) do
+		local card = { name = spec[1], title = spec[2], feats = { account = spec[3], char = spec[4], count = 100 },
+			species = spec[5], shinies = spec[6], showcase = {}, badges = {}, featBits = spec[10] }
+		ns:TrainerKnownAdd(card, spec[7], { faction = spec[8] })
+		local list = ns:TrainerKnownData().list
+		list[#list].at = spec[9]
+	end
+	ns:TrainerKnownResetSession()
+end
+
+Snap.scenes["qc-journal-community-dresseurs"] = function(T) return OwnDraws(T, function(T)
+	return WithMultiLine(function()
+		local frame = QCCommunity(T, "dresseurs", function(ns) TrainersWorld(ns, true) end)
+		return frame, "QuestCompanion : carnet, page Communauté (onglet Dresseurs)"
+	end)
+end) end
+
+Snap.scenes["qc-journal-community-dresseurs-empty"] = function(T) return OwnDraws(T, function(T)
+	return WithMultiLine(function()
+		local frame = QCCommunity(T, "dresseurs", function(ns) TrainersWorld(ns, false) end)
+		return frame, "QuestCompanion : carnet, page Communauté (onglet Dresseurs, aucun dresseur connu)"
+	end)
 end) end
 
 -- 3.1.0 : page Réserve (quelques spécimens, une brillante)
@@ -1648,6 +1880,83 @@ Snap.scenes["qc-trainer-style"] = function(T) return OwnDraws(T, function(T)
 	return Centered(frame), "QuestCompanion : fiche de dresseur, fond et cadre (3.6)"
 end) end
 
+-- 3.7.0 : la fiche de dresseur, rang sous le nom, signature, Pionnier, boutons
+-- de l'étape 3 (fonctions simulées), habillage `bg` / `frame` (ids du catalogue)
+local function TrainerStyled(T, bg, frame)
+	local ns = QCWorld(T)
+	ns:FeatAward("men_first", { silent = true, at = 1700000000 })
+	ns:CaptureData().creatures[3098] = ns:CaptureData().creatures[3098]
+		or { name = "Sanglier", class = "normal", normal = true, stars = 2, type = "Bête", at = 1793700000, firstAt = 1793700000 }
+	local pioneer = ns:FeatDef("fos_pioneer")
+	if not pioneer then
+		local n = 980
+		while ns:FeatDefByCode(n) do n = n + 1 end
+		pioneer = ns.FeatAdd({ "fos_pioneer", n, "fos", 0, "account", crit = { "flag", "snap_pioneer" } })
+	end
+	ns:FeatAward(pioneer, { silent = true, at = 1700000000 })
+	-- assez de hauts faits pour un rang (1 000 points et plus)
+	for _, def in ipairs(ns:FeatDefs()) do
+		if (ns:FeatPoints(nil)) >= 1240 then break end
+		if ns:FeatCountable(def) and not def.hidden and not ns:FeatGot(def) then ns:FeatAward(def, { silent = true, at = 1700300000 }) end
+	end
+	local data = ns:CompanionData()
+	data.cardStyle = {}
+	if bg then data.unlocked["cardbg:" .. bg] = true; data.cardStyle.bg = bg end
+	if frame then data.unlocked["cardframe:" .. frame] = true; data.cardStyle.frame = frame end
+	ns.TrainerCodeShow = ns.TrainerCodeShow or function() end
+	ns.SouvenirShow = ns.SouvenirShow or function() end
+	if ns.journalFrame then ns.journalFrame:Hide() end
+	ns.trainerFrame = nil
+	local f = ns:TrainerOpen()
+	if f and f.model then f.model:Hide() end
+	return Centered(f)
+end
+
+Snap.scenes["qc-trainer-rank"] = function(T) return OwnDraws(T, function(T)
+	return TrainerStyled(T, nil, "card_rank_silver"), "QuestCompanion : fiche de dresseur, rang, signature, Pionnier (3.7)"
+end) end
+
+-- 3.7.0 : chacun des neuf habillages neufs, sur la fiche
+Snap.scenes["qc-trainer-card_rank_bronze"] = function(T) return OwnDraws(T, function(T)
+	return TrainerStyled(T, nil, "card_rank_bronze"), "QuestCompanion : cadre de fiche « Rang de bronze » (3.7)" end) end
+Snap.scenes["qc-trainer-card_rank_silver"] = function(T) return OwnDraws(T, function(T)
+	return TrainerStyled(T, nil, "card_rank_silver"), "QuestCompanion : cadre de fiche « Rang d'argent » (3.7)" end) end
+Snap.scenes["qc-trainer-card_rank_gold"] = function(T) return OwnDraws(T, function(T)
+	return TrainerStyled(T, nil, "card_rank_gold"), "QuestCompanion : cadre de fiche « Rang d'or » (3.7)" end) end
+Snap.scenes["qc-trainer-card_rank_glow"] = function(T) return OwnDraws(T, function(T)
+	return TrainerStyled(T, nil, "card_rank_glow"), "QuestCompanion : cadre de fiche « Rang de lumière » (3.7)" end) end
+Snap.scenes["qc-trainer-card_eight"] = function(T) return OwnDraws(T, function(T)
+	return TrainerStyled(T, nil, "card_eight"), "QuestCompanion : cadre de fiche « Huit spécialités » (3.7)" end) end
+Snap.scenes["qc-trainer-card_prism"] = function(T) return OwnDraws(T, function(T)
+	return TrainerStyled(T, nil, "card_prism"), "QuestCompanion : cadre de fiche « Prisme » (3.7)" end) end
+Snap.scenes["qc-trainer-card_zoology"] = function(T) return OwnDraws(T, function(T)
+	return TrainerStyled(T, "card_zoology", nil), "QuestCompanion : fond de fiche « Planche de naturaliste » (3.7)" end) end
+Snap.scenes["qc-trainer-card_gold_zones"] = function(T) return OwnDraws(T, function(T)
+	return TrainerStyled(T, "card_gold_zones", nil), "QuestCompanion : fond de fiche « Carte dorée » (3.7)" end) end
+Snap.scenes["qc-trainer-card_directory"] = function(T) return OwnDraws(T, function(T)
+	return TrainerStyled(T, "card_directory", nil), "QuestCompanion : fond de fiche « Carnet d'adresses » (3.7)" end) end
+
+-- 3.7.0 : comparer les hauts faits avec la fiche reçue d'un autre dresseur
+Snap.scenes["qc-trainer-compare"] = function(T) return OwnDraws(T, function(T)
+	local ns = QCWorld(T)
+	-- mes hauts faits : un sur deux des premiers ; les siens : un sur trois
+	local mine, theirs, count = {}, {}, 0
+	for _, def in ipairs(ns:FeatDefs()) do
+		if ns:FeatCountable(def) and not def.hidden and def.cat ~= "fos" then
+			count = count + 1
+			if count % 2 == 0 and count < 60 then mine[#mine + 1] = def end
+			if count % 3 == 0 and count < 60 then theirs[tonumber(def.n)] = true end
+		end
+	end
+	for _, def in ipairs(mine) do ns:FeatAward(def, { silent = true, at = 1700000000 }) end
+	local text = "p=1;n=Xan;ti=19;tg=f;ap=1310;aq=0;ac=131;fb=" .. ns:FeatBits(theirs)
+	for _, chunk in ipairs(ns:TrainerChunks(text, 3)) do ns:TrainerOnAddonMessage("QCTrainer", chunk, "WHISPER", "Xan-Royaume") end
+	if ns.journalFrame then ns.journalFrame:Hide() end
+	_G.time = function() return 1795219200 end   -- la fiche « reçue » le 21/11 (date du sous-titre)
+	local w = ns:TrainerCompareOpen("Xan-Royaume")
+	return Centered(w), "QuestCompanion : comparer les hauts faits (3.7)"
+end) end
+
 -- 3.1.0 : le panneau « Choisir son allure » au-dessus du carnet
 Snap.scenes["qc-allure"] = function(T) return OwnDraws(T, function(T)
 	local _, ns = QCJournal(T, "evolution")
@@ -1725,6 +2034,21 @@ Snap.scenes["qc-companion-talk"] = function(T)
 	return Snap.Group(frame, ns.companionBubble), "QuestCompanion : il parle (bulle forgée, lueur ronde, reflet)"
 end
 
+-- 3.7.0, étape 3, S3 : la bulle de bonjour dit où l'on en était (TripRecap.lua),
+-- par la vraie connexion (somnolent après une absence) : 98 espèces sur 100
+Snap.scenes["qc-companion-hello"] = function(T)
+	local ns, frame = QCCompanion(T)
+	local dormant, rested = ns.featsDormant, ns.companionRestedDormant
+	ns.featsDormant, ns.companionRestedDormant = false, true
+	local capture = ns:CaptureData()
+	capture.creatures, capture.caught = {}, 0
+	for index = 1, 98 do capture.creatures[80000 + index] = { name = "Bête", normal = true, stars = 1 } end
+	ns:CompanionData().lastSeen = (time() or 0) - 10 * 3600
+	ns:CompanionLogin()
+	ns.featsDormant, ns.companionRestedDormant = dormant, rested
+	return Snap.Group(frame, ns.companionBubble), "QuestCompanion : bulle de bonjour, le haut fait le plus proche (3.7)"
+end
+
 -- 3.1.0 (bêta 9) : les pastilles de la capture express sous le compagnon,
 -- sous l'étiquette d'humeur, la plus récente contre lui ; la bulle au-dessus
 -- et le filet à côté restent libres
@@ -1762,6 +2086,39 @@ Snap.scenes["qc-companion-winter"] = function(T)
 	local ns, frame = QCCompanion(T, function(n) n:DB().winterVeil = "on" end)
 	ns:WinterVeilApply()
 	return frame, "QuestCompanion : médaillon forgé au Voile d'hiver (flocons, anneau Givre)"
+end
+
+-- 3.7.0 : les dix cosmétiques neufs des hauts faits, un par scène
+-- (qc-feat37-<id>), et tous les ornements des hauts faits à la fois
+-- (qc-feat37-ornaments) : les icônes du client restent des vignettes
+local function QCFeat37(T, kind, id)
+	local ns, frame = QCCompanion(T, function(n)
+		local data = n:CompanionData()
+		data.unlocked[kind .. ":" .. id] = true
+		if kind == "frame" then data.frameStyle = id elseif kind == "bg" then data.background = id end
+	end)
+	ns:CompanionApplyFrame()
+	ns:CompanionApplyBackground()
+	ns:CompanionApplyOrnaments()
+	return frame, "QuestCompanion : cosmétique des hauts faits 3.7, " .. kind .. ":" .. id
+end
+Snap.scenes["qc-feat37-feat_rarities"] = function(T) return QCFeat37(T, "orn", "feat_rarities") end
+Snap.scenes["qc-feat37-feat_contest"] = function(T) return QCFeat37(T, "orn", "feat_contest") end
+Snap.scenes["qc-feat37-feat_rare_size"] = function(T) return QCFeat37(T, "orn", "feat_rare_size") end
+Snap.scenes["qc-feat37-feat_glitter"] = function(T) return QCFeat37(T, "orn", "feat_glitter") end
+Snap.scenes["qc-feat37-feat_volunteer"] = function(T) return QCFeat37(T, "orn", "feat_volunteer") end
+Snap.scenes["qc-feat37-feat_worlds"] = function(T) return QCFeat37(T, "orn", "feat_worlds") end
+Snap.scenes["qc-feat37-feat_unfindable"] = function(T) return QCFeat37(T, "orn", "feat_unfindable") end
+Snap.scenes["qc-feat37-feat_starry"] = function(T) return QCFeat37(T, "frame", "feat_starry") end
+Snap.scenes["qc-feat37-feat_sparkle"] = function(T) return QCFeat37(T, "bg", "feat_sparkle") end
+Snap.scenes["qc-feat37-feat_perfect"] = function(T) return QCFeat37(T, "bg", "feat_perfect") end
+Snap.scenes["qc-feat37-ornaments"] = function(T)
+	local ns, frame = QCCompanion(T, function(n)
+		local data = n:CompanionData()
+		for _, def in ipairs(n.FEAT_COSMETICS.orn) do data.unlocked["orn:" .. def.id] = true end
+	end)
+	ns:CompanionApplyOrnaments()
+	return frame, "QuestCompanion : tous les ornements des hauts faits (3.7)"
 end
 
 Snap.scenes["qc-tutorial"] = function(T)
@@ -1984,6 +2341,137 @@ Snap.scenes["qc-feat-big-forge"] = function(T)
 	return toast, "QuestCompanion : gros haut fait (« Nouveau titre », 25 points, ailes et éclat forgés)"
 end
 
+-- 3.7.0 : fêtes à la taille de l'exploit, signature, cote d'une prise rare (Quiet.lua)
+Snap.scenes["qc-feat-pill"] = function(T)
+	local ns = QCBannerWorld(T)
+	ns.featPills, ns.featPillHideAt = {}, nil
+	if ns.featPill then ns.featPill:Hide() end
+	ns.featPill = nil
+	ns:FeatPillPush({ kind = "feat", name = "Petite douceur", points = 5, size = "small" })
+	return Centered(ns.featPill), "QuestCompanion : pastille muette d'un petit haut fait (5 points, 3.7)"
+end
+
+Snap.scenes["qc-feat-medium"] = function(T)
+	local ns = QCBannerWorld(T)
+	ns:JournalToastPush({ kind = "feat", title = ns.L.FEAT_TOAST_TITLE, name = "Cinq cents prises", size = "medium",
+		icon = "Interface\\Icons\\INV_Misc_Map_01", points = 10, sub = ns:F("FEAT_GLITTER_N", 5) .. " · Lasso ×1" })
+	return Centered(ns.journalToast), "QuestCompanion : bandeau moyen (10 points, ligne de récompense, 3.7)"
+end
+
+-- 3.7.0, étape 3, S3 : bilan de sortie (TripRecap.lua) : le bandeau moyen, d'autres textes, « Détail »
+local QC_TRIP_RECAP = { at = 1000, ended = 1000 + 5040, dur = 5040, captures = 14, species = 3, shinies = 1, glitter = 31,
+	study = 4, bond = 7, by = { study = 12, milestone = 10, feat = 5, capture = 4 },
+	best = { name = "Raptor de Strangleronce (brillant)", stars = 3, shiny = true, size = "giant" }, feats = { "men_caught_100" } }
+Snap.scenes["qc-trip-recap"] = function(T)
+	local ns = QCBannerWorld(T)
+	ns:TripBanner(QC_TRIP_RECAP)
+	return Centered(ns.journalToast), "QuestCompanion : bilan de sortie (bandeau moyen, « Détail », 3.7)"
+end
+
+Snap.scenes["qc-journal-trip"] = function(T)
+	local frame = QCJournal(T, "evolution", function(ns)
+		ns:CharData().tripLast = QC_TRIP_RECAP
+	end)
+	T.QNS:TripDetailOpen()
+	return frame, "QuestCompanion : carnet, page « Dernière sortie » (3.7)"
+end
+
+Snap.scenes["qc-feat-big-sig"] = function(T)
+	local ns = QCBannerWorld(T)
+	ns:JournalToastPush({ kind = "feat", id = "day_rare_50", title = ns.L.FEAT_TOAST_TITLE, name = "Bibliothèque vivante",
+		icon = "Interface\\Icons\\Ability_Hunter_BeastTaming", points = 50, size = "big" })
+	local toast = Centered(ns.journalToast)
+	local fx = toast.azReward
+	if fx and fx.at and ns.AzerothFxStep then ns.AzerothFxStep(fx.at + 0.9) end
+	return toast, "QuestCompanion : grand bandeau signé (titre et paillettes, grand effet, 3.7)"
+end
+
+Snap.scenes["qc-result-rare-odds"] = function(T)
+	local ns = QCBannerWorld(T)
+	ns.SHINY_CHANCE = 1 / 150
+	local id = ns:SpecimenAdd({ npc = 3398, stars = 3, name = "Raptor de Strangleronce", origin = "capture", zone = 1413,
+		size = "giant", shiny = true, trait = "curious" })
+	local frame = ns:CaptureResultShow({ name = "Raptor de Strangleronce", shiny = true, stars = 3, npcID = 3398, level = 38,
+		type = "Beast", class = "normal", specimen = id })
+	return Centered(frame), "QuestCompanion : « Brillant capturé ! », cote de base et signature (3.7)"
+end
+
+Snap.scenes["qc-options-quiet"] = function(T)
+	return Options(T, T.QNS, "companionQuiet"), "QuestCompanion : réglages, Compagnon de route > Discrétion (mode discret, 3.7)"
+end
+
+-- 3.7.0, étape 3 : la carte souvenir (maquette autres-c1). L'écran est
+-- ramené à la taille de la scène de la maquette (760 x 470) : le voile le
+-- couvre, la carte et ses boutons au centre. Le modèle 3D est une zone vide.
+local function SouvenirWorld(T)
+	local ns = QCBannerWorld(T)
+	if rawget(_G, "date") == nil then _G.date = os.date end
+	-- (chaque aperçu est un processus à lui : l'écran réduit n'y survit pas)
+	Snap.SCREEN = { width = 760, height = 470 }
+	UIParent.width, UIParent.height = 760, 470
+	_G.Screenshot = rawget(_G, "Screenshot") or function() end
+	if ns.souvenirFrame then ns.souvenirFrame:Hide() end
+	ns.souvenirFrame = nil
+	ns.SHINY_CHANCE = 1 / 150
+	local creatures = ns:CaptureData().creatures
+	for index = 1, 312 do creatures[93000 + index] = { name = "Bête " .. index, normal = true, stars = 2, class = "normal", type = "Bête" } end
+	return ns
+end
+local function SouvenirFrame(veil)
+	local model = veil and veil.card and veil.card.panel and veil.card.panel.model
+	if model then model:Hide() end
+	return veil
+end
+
+Snap.scenes["qc-souvenir-specimen"] = function(T) return OwnDraws(T, function(T)
+	local ns = SouvenirWorld(T)
+	local id = ns:SpecimenAdd({ npc = 3398, stars = 3, name = "Raptor de Strangleronce", origin = "capture", zone = 1413, by = "Testeur",
+		size = "giant", shiny = true, trait = "curious", at = os.time({ year = 2026, month = 11, day = 22, hour = 12 }) })
+	ns:SpecimenGet(id).nick = "Croc"
+	local veil = ns:SouvenirShow({ kind = "capture", result = { specimen = id, shiny = true, level = 38 } })
+	return SouvenirFrame(veil), "QuestCompanion : carte souvenir d'une prise brillante (3.7)"
+end) end
+
+Snap.scenes["qc-souvenir-feat"] = function(T) return OwnDraws(T, function(T)
+	local ns = SouvenirWorld(T)
+	ns:FeatAward("char_level_60", { silent = true, at = os.time({ year = 2026, month = 11, day = 21, hour = 12 }) })
+	local veil = ns:SouvenirShow({ kind = "feat", id = "char_level_60" })
+	return SouvenirFrame(veil), "QuestCompanion : carte souvenir d'un haut fait obtenu (3.7)"
+end) end
+
+Snap.scenes["qc-souvenir-trainer"] = function(T) return OwnDraws(T, function(T)
+	local ns = SouvenirWorld(T)
+	ns:FeatAward("char_level_60", { silent = true, at = 1700000000 })
+	local veil = ns:SouvenirShow({ kind = "trainer" })
+	return SouvenirFrame(veil), "QuestCompanion : carte souvenir de la fiche de dresseur (3.7)"
+end) end
+
+Snap.scenes["qc-souvenir-noshot"] = function(T) return OwnDraws(T, function(T)
+	local ns = SouvenirWorld(T)
+	local saved = rawget(_G, "Screenshot")
+	_G.Screenshot = nil
+	local id = ns:SpecimenAdd({ npc = 3236, stars = 2, name = "Kodo des Tarides", origin = "capture", zone = 1413, by = "Testeur",
+		size = "large", trait = "lazy", at = os.time({ year = 2026, month = 11, day = 20, hour = 12 }) })
+	local veil = ns:SouvenirShow({ kind = "specimen", id = id })
+	_G.Screenshot = saved
+	return SouvenirFrame(veil), "QuestCompanion : carte souvenir, client sans Screenshot (3.7)"
+end) end
+
+-- la fenêtre « Copier pour Discord », avec le texte d'une prise
+Snap.scenes["qc-discord-copy"] = function(T) return OwnDraws(T, function(T)
+	return WithMultiLine(function()
+		local ns = SouvenirWorld(T)
+		Snap.SCREEN = { width = 1600, height = 1000 }
+		UIParent.width, UIParent.height = Snap.SCREEN.width, Snap.SCREEN.height
+		if ns.discordCopy then ns.discordCopy:Hide() end
+		ns.discordCopy = nil
+		local id = ns:SpecimenAdd({ npc = 3398, stars = 3, name = "Raptor de Strangleronce", origin = "capture", zone = 1413, by = "Testeur",
+			size = "giant", shiny = true, trait = "curious", at = os.time({ year = 2026, month = 11, day = 22, hour = 12 }) })
+		local frame = ns.DiscordCopyShow(ns:DiscordText("capture", id))
+		return Centered(frame), "QuestCompanion : fenêtre « Copier pour Discord » (3.7)"
+	end)
+end) end
+
 Snap.scenes["qc-guild-forge"] = function(T)
 	local ns = QCBannerWorld(T)
 	ns:GuildFeatsShowToast({ key = "x", sender = "Xan-Royaume", feat = { kind = "h" }, score = 1000, at = Mock.now,
@@ -2076,6 +2564,235 @@ Snap.scenes["qc-tooltip"] = function(T)
 	tip:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 	return tip, "QuestCompanion : infobulle d'une créature (ligne du bestiaire)"
 end
+
+-- 3.7.0 : médailles de zone sur la page Créatures (0, 1 et 3 médailles) : la
+-- scène de l'espèce maîtrisée, avec assez d'espèces des Tarides capturées
+local function MedalScene(T, want)
+	local frame = Snap.scenes["qc-journal-menagerie-mastered"](T)
+	local ns = T.QNS
+	local capture = ns:CaptureData()
+	local ids = {}
+	for npc, species in pairs(ns:BestiarySpecies(1413)) do
+		if type(species) == "table" and species.class ~= "worldboss" then ids[#ids + 1] = tonumber(npc) or npc end
+	end
+	table.sort(ids)
+	for _, npc in ipairs(ids) do
+		if select(1, ns:MenagerieSealProgress(1413)) >= want then break end
+		if capture.creatures[npc] == nil then
+			capture.creatures[npc] = { name = "Créature " .. npc, normal = true, zoneID = 1413, at = 1, stars = 1 }
+			capture.count = capture.count + 1
+		end
+	end
+	capture.serial = (tonumber(capture.serial) or 0) + 1
+	if ns.ZoneMedalReset then ns.ZoneMedalReset() end
+	ns:RefreshJournal()
+	return frame, "QuestCompanion : carnet, Créatures, médailles de zone (3.7)"
+end
+Snap.scenes["qc-journal-menagerie-medals0"] = function(T) return MedalScene(T, 0) end
+Snap.scenes["qc-journal-menagerie-medals1"] = function(T) return MedalScene(T, 50) end
+Snap.scenes["qc-journal-menagerie-medals3"] = function(T) return MedalScene(T, 140) end
+
+-- 3.7.0 : le suivi avec la ligne de zone devenue médaille
+Snap.scenes["qc-tracker-37"] = function(T)
+	local ns = QCWorld(T)
+	ns:DB().journalTracker = true
+	local capture, count = ns:CaptureData(), 0
+	local ids = {}
+	for npc, species in pairs(ns:BestiarySpecies(1413)) do
+		if type(species) == "table" and species.class ~= "worldboss" then ids[#ids + 1] = tonumber(npc) or npc end
+	end
+	table.sort(ids)
+	for _, npc in ipairs(ids) do
+		if count >= 5 then break end
+		if capture.creatures[npc] == nil then
+			capture.creatures[npc] = { name = "Créature " .. npc, normal = true, zoneID = 1413, at = 1, stars = 1 }
+			capture.count = capture.count + 1
+		end
+		count = count + 1
+	end
+	capture.serial = (tonumber(capture.serial) or 0) + 1
+	if ns.ZoneMedalReset then ns.ZoneMedalReset() end
+	-- (deux objectifs de rang 3 masqués : la ligne de zone, au dernier rang, se voit)
+	local kept = 0
+	for _, goal in ipairs(ns:JournalObjectives()) do
+		if not goal.id:find("^medal:") then
+			kept = kept + 1
+			if kept > 2 then ns:JournalDismiss(goal.id, true) end
+		end
+	end
+	ns:RefreshJournalTracker()
+	local tracker = ns.journalTracker
+	tracker:ClearAllPoints()
+	tracker:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	return tracker, "QuestCompanion : bloc « Carnet », la médaille de la zone (3.7)"
+end
+
+-- 3.7.0 : l'infobulle avec la série de chasse (23 abattus)
+Snap.scenes["qc-tooltip-37"] = function(T)
+	local ns = QCWorld(T)
+	ns.SHINY_CHANCE = 1 / 150
+	local guid = "Creature-0-0-0-0-3398-0000"
+	local zoneID = ns:JournalZone()
+	local data = ns:JournalData()
+	data.bestiary = data.bestiary or {}
+	data.bestiary[zoneID] = data.bestiary[zoneID] or {}
+	data.bestiary[zoneID][3398] = { name = "Gesharahan", seen = true, killed = 23 }
+	GameTooltip:ClearLines()
+	GameTooltip:AddLine("Gesharahan", 1, 1, 1)
+	GameTooltip:AddLine("Niveau 20 Bête (rare élite)", 1, 1, 1)
+	local text, color = ns:BestiaryTooltipLine(guid)
+	if not text then text, color = ns:F("BST_TOOLTIP", ns:F("JRN_ITEM_KILLED", 23)), ns.Theme.GOLD end
+	GameTooltip:AddLine(text, color[1], color[2], color[3])
+	local chain = ns:BestiaryTooltipChain(guid) or ns:F("MEN_TIP_CHAIN", 23, 50, "2,3")
+	local c = ns.Theme.GOLD
+	GameTooltip:AddLine(chain, c[1], c[2], c[3])
+	local tip = Snap.Tooltip(GameTooltip, nil, 260)
+	tip:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	return tip, "QuestCompanion : infobulle, série de chasse (3.7)"
+end
+
+-- 3.7.0 : une pastille de la capture express en suspens, puis le verdict d'une autre
+Snap.scenes["qc-capture-express-suspense"] = function(T)
+	local ns, frame = QCCompanion(T)
+	ns.captureExpressDormant = nil
+	ns:CaptureExpressPush("notable", "Raptor des Tarides", ns.L.CAPTURE_X_NEW)
+	local item = ns:CaptureExpressPush("suspense", "Raptor des Tarides", ns.L.CAPTURE_X_SHAKE, 5)
+	item.verdict, item.revealAt, item.shakes = { "notable", "Raptor des Tarides", ns.L.CAPTURE_X_NEW }, ns.Now() + 1, 2
+	ns:CaptureExpressUpdate(ns.Now() + 0.3)
+	return Snap.Group(frame, ns.captureExpressFeed), "QuestCompanion : capture express, le filet tremble (3.7)"
+end
+
+-- 3.7.0, chantier E2 : le monde bouge (WorldDaily.lua). Le module est réveillé
+-- (le banc l'endort) ; le jour et la semaine sont choisis pour retrouver la
+-- maquette : une semaine des Bêtes dont la créature des niveaux 20 à 40 est le
+-- Raptor de Strangleronce, un jour où la pullulation des Tarides est le Kodo
+-- des Tarides (la maquette invente un « Raptor des Tarides » que la table n'a
+-- pas). Remise à zéro de la semaine un mardi.
+local function WorldAwake(ns, opts)
+	opts = opts or {}
+	ns.worldDailyDormant = nil
+	local week, day, fallback = nil, "2026-11-22", nil
+	for k = 2900, 9900 do
+		local id = "r" .. k
+		if ns:WorldWeekType(id) == "beast" then
+			fallback = fallback or id
+			if ns:WorldWeekCreature(2, id) == 685 then week = id; break end
+		end
+	end
+	week = week or fallback
+	local base = os.time({ year = 2026, month = 11, day = 22, hour = 12 })
+	for n = 0, 900 do
+		day = os.date("%Y-%m-%d", base + n * 86400)
+		ns.WorldDailyReset()
+		if ns:WorldSwarm(1413, day) == 3236 then break end
+	end
+	ns.WorldDay = function() return day end
+	ns.WorldWeek = function() return week end
+	ns.WorldDailyReset()
+	-- le jour de la remise à zéro (le faux client n'en a pas) : un mardi
+	ns.WorldWeekEndText = function(self) return self:F("WORLD_TYPE_UNTIL", ns.L.WORLD_WD_3) end
+	if opts.best then
+		local npc = ns:WorldWeekCreature(2)
+		local id = ns:SpecimenAdd({ npc = npc, zone = 1434, stars = 2, size = "large", origin = "trade" })
+		local spec = ns:SpecimenGet(id)
+		spec.zi = 112
+		ns:WorldWeekRecord().best[npc] = { stars = 2, size = "large", zi = 112, id = id }
+	end
+	-- le bouton « Carte souvenir » ne vient qu'avec ns.SouvenirShow (autre chantier)
+	if opts.souvenir then ns.SouvenirShow = function() end end
+	return ns
+end
+
+-- page Missions : « Aujourd'hui en Azeroth » en tête, le reste descend
+Snap.scenes["qc-journal-day-37"] = function(T)
+	local frame = Snap.scenes["qc-journal-day"](T)
+	local ns = T.QNS
+	WorldAwake(ns, { best = true, souvenir = true })
+	ns:RefreshJournal()
+	return frame, "QuestCompanion : carnet, Missions, « Aujourd'hui en Azeroth » (3.7)"
+end
+-- la même, défilée jusqu'en bas (molette)
+Snap.scenes["qc-journal-day-37-scrolled"] = function(T)
+	local frame = Snap.scenes["qc-journal-day-37"](T)
+	local ns = T.QNS
+	for _ = 1, 20 do ns:ScrollJournal(-1) end
+	return frame, "QuestCompanion : carnet, Missions défilées jusqu'en bas (3.7)"
+end
+
+-- page Créatures : la ligne « Pullulation » de l'encadré
+Snap.scenes["qc-journal-menagerie-swarm"] = function(T)
+	local frame = MedalScene(T, 5)
+	local ns = T.QNS
+	WorldAwake(ns)
+	ns:RefreshJournal()
+	return frame, "QuestCompanion : carnet, Créatures, pullulation du jour (3.7)"
+end
+
+-- suivi : un haut fait suivi, la médaille de la zone, la pullulation, la créature de la semaine
+Snap.scenes["qc-tracker-world"] = function(T)
+	local ns = QCWorld(T)
+	ns:DB().journalTracker = true
+	FeatsWorld(ns)
+	WorldAwake(ns)
+	local capture, count = ns:CaptureData(), 0
+	local ids = {}
+	for npc, species in pairs(ns:BestiarySpecies(1413)) do
+		if type(species) == "table" and species.class ~= "worldboss" then ids[#ids + 1] = tonumber(npc) or npc end
+	end
+	table.sort(ids)
+	for _, npc in ipairs(ids) do
+		if count >= 5 then break end
+		if capture.creatures[npc] == nil then
+			capture.creatures[npc] = { name = "Créature " .. npc, normal = true, zoneID = 1413, at = 1, stars = 1 }
+			capture.count = capture.count + 1
+		end
+		count = count + 1
+	end
+	capture.serial = (tonumber(capture.serial) or 0) + 1
+	if ns.ZoneMedalReset then ns.ZoneMedalReset() end
+	for _, goal in ipairs(ns:JournalObjectives()) do
+		local id = goal.id
+		if not (id:find("^feat:") or id:find("^medal:") or id:find("^swarm:") or id:find("^week:")) then ns:JournalDismiss(id, true) end
+	end
+	ns:RefreshJournalTracker()
+	local tracker = ns.journalTracker
+	tracker:ClearAllPoints()
+	tracker:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	return tracker, "QuestCompanion : suivi, la zone, le jour, la semaine (3.7)"
+end
+
+-- infobulle : la série de chasse, puis la pullulation du jour
+Snap.scenes["qc-tooltip-world"] = function(T)
+	local ns = QCWorld(T)
+	WorldAwake(ns)
+	ns.SHINY_CHANCE = 1 / 150
+	local npc, name = ns:WorldSwarm(1413)
+	local guid = "Creature-0-0-0-0-" .. npc .. "-0000"
+	local data = ns:JournalData()
+	data.bestiary[1413][npc] = { name = name, seen = true, killed = 23 }
+	GameTooltip:ClearLines()
+	GameTooltip:AddLine(name, 1, 1, 1)
+	GameTooltip:AddLine("Niveau 19 Bête", 1, 1, 1)
+	local text, color = ns:BestiaryTooltipLine(guid)
+	if text then GameTooltip:AddLine(text, color[1], color[2], color[3]) end
+	local c = ns.Theme.GOLD
+	local chain = ns:BestiaryTooltipChain(guid)
+	if chain then GameTooltip:AddLine(chain, c[1], c[2], c[3]) end
+	local swarm = ns:WorldSwarmTooltip(guid)
+	if swarm then GameTooltip:AddLine(swarm, c[1], c[2], c[3]) end
+	local tip = Snap.Tooltip(GameTooltip, nil, 260)
+	tip:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
+	return tip, "QuestCompanion : infobulle, pullulation du jour (3.7)"
+end
+
+-- Communauté, onglet Discord : la tuile « Cette semaine »
+Snap.scenes["qc-journal-community-week"] = function(T) return OwnDraws(T, function(T)
+	return WithMultiLine(function()
+		local frame, ns = QCCommunity(T, "discord", function(ns) WorldAwake(ns, { best = true, souvenir = true }) end)
+		ns:CommunityWeekPaint()
+		return frame, "QuestCompanion : carnet, Communauté, prise de la semaine (3.7)"
+	end)
+end) end
 
 -- Thème d'une scène : « sobre:<scène> » ou « azeroth:<scène> » ; sans
 -- préfixe, Azeroth (le thème par défaut des deux addons). Rend le thème et

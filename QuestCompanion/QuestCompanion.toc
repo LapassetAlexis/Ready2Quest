@@ -5,7 +5,7 @@
 ## Notes-frFR: Capture les monstres que tu abats : étoiles, brillantes, compagnon de chasse, sceaux de zone, titres et fiche de dresseur, exploits de guilde. Et un carnet de voyage.
 ## Notes-esES: Captura los monstruos que derrotas: estrellas, brillantes, un compañero de caza, sellos de zona, títulos y ficha de entrenador, logros de hermandad. Y un diario de viaje.
 ## Notes-esMX: Captura los monstruos que derrotas: estrellas, brillantes, un compañero de caza, sellos de zona, títulos y ficha de entrenador, logros de hermandad. Y un diario de viaje.
-## Version: 3.6.0
+## Version: 3.7.0
 ## X-License: GPL-3.0
 ## Author: Tristabeau
 ## X-Website: https://github.com/LapassetAlexis/Ready2Quest
@@ -77,19 +77,29 @@ JournalWindow.lua
 JournalCompletion.lua
 JournalGuide.lua
 JournalAddons.lua
+JournalCommunity.lua
 MenagerieView.lua
 TrainerCard.lua
 TrainerCardStyle.lua
 GuildFeats.lua
+TrainerCompare.lua
+TrainerCode.lua
+TrainerKnown.lua
 AzerothStyle.lua
 ForgeCompanion.lua
 ForgeBanners.lua
+Tally.lua
 FeatsData.lua
 FeatsCatMenagerie.lua
 FeatsCatJeu.lua
+FeatsCatDresseur.lua
+FeatsCatCompagnon.lua
 Feats.lua
 FeatsCosmetics.lua
 JournalFeats.lua
+JournalFeatsList.lua
+JournalFeatsTitles.lua
+JournalFeatsStats.lua
 FeatsTitles.lua
 JournalAzeroth.lua
 WinterVeil.lua
@@ -109,6 +119,7 @@ Share.lua
 GuidedTour.lua
 Bindings.lua
 Discovery.lua
+Quiet.lua
 CaptureExpress.lua
 CaptureAidBar.lua
 CaptureNetMove.lua
@@ -119,5 +130,11 @@ ShopWeek.lua
 ReserveBrowse.lua
 CompanionStates.lua
 TrackerGoals.lua
+ZoneMedals.lua
+CompanionRested.lua
+DiscordCopy.lua
+Souvenir.lua
+WorldDaily.lua
+TripRecap.lua
 NamesES.lua
 Locales_es.lua

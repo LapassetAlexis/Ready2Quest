@@ -308,9 +308,11 @@ do
 		NS:OpenMenagerieZone(1413)
 		local strip = f.men.collection
 		Check("[UI] bandeau des Créatures : sceau de la zone, ce qu'il donne, le titre à viser", strip ~= nil and strip:IsShown()
-			and strip.title.text == "Sceau de Les Tarides : 1/3 espèces" and strip.bar:IsShown()
-			and strip.detail.text:find("Sceau : savane", 1, true) and strip.detail.text:find("×1,5", 1, true)
-			and strip.trainer.text == "Pas encore de titre · 1/10 espèces pour « Apprenti dresseur »", strip and strip.title.text)
+			-- 3.7.0 : médailles de zone (ce que donne le sceau passe au survol, le titre se raccourcit)
+			and strip.title.text == "Les Tarides : 1 sur 3 espèces" and strip.bar:IsShown()
+			and strip.next.text == "encore 1 pour l'argent"
+			and strip.sealTip:find("Sceau : savane", 1, true) and strip.sealTip:find("×1,5", 1, true)
+			and strip.trainer.text == "1/10 pour « Apprenti dresseur »", strip and strip.title.text)
 		strip.onEnter(strip)
 		local tip = table.concat(_G.GameTooltip.lines or {}, " | ")
 		Check("[UI] survol : paliers par type et titres", tip:find("Bête", 1, true) and tip:find("Grand maître dresseur", 1, true), tip)
@@ -1284,8 +1286,9 @@ do
 			local bottom = top + box:GetHeight()
 			-- en bas : le total
 			local reserved = 18 + 16
-			Check("[J215] " .. style .. " : dix entrées (Réserve puis Échoppe après les Créatures), le résumé tient au-dessus du bas",
-				count == 10 and f.sections.reserve ~= nil and NS.JOURNAL_SECTIONS[3] == "reserve" and NS.JOURNAL_SECTIONS[4] == "shop"
+			-- 3.7.0 : onze (Communauté sous Addons liés)
+			Check("[J215] " .. style .. " : onze entrées (Réserve puis Échoppe après les Créatures), le résumé tient au-dessus du bas",
+				count == 11 and f.sections.reserve ~= nil and NS.JOURNAL_SECTIONS[3] == "reserve" and NS.JOURNAL_SECTIONS[4] == "shop"
 				and f.sections.shop ~= nil and bottom <= navH - reserved, bottom .. " / " .. navH)
 			J.Done()
 		end

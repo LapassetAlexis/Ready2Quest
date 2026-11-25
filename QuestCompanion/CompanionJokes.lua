@@ -177,6 +177,7 @@ end
 -- Au repos : parfois une blague à la place d'un bavardage
 -- ---------------------------------------------------------------------------
 function ns:CompanionIdlePool()
+	if ns.Quiet and self:Quiet() then return "IDLE" end   -- 3.7.0 : mode discret (Quiet.lua)
 	if self:DB().companionJokes ~= false and math.random() < ns.COMPANION_JOKE_SHARE then return "JOKE" end
 	return "IDLE"
 end

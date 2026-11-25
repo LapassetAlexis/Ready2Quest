@@ -228,7 +228,7 @@ do
 	end
 	s.ok("le plus long « Nouveau titre : … » tient en deux lignes (jamais coupé)", j.stars.forgeMaxLines == 2
 		and j.stars.wordWrap == true and worst <= 2, string.format("%.2f %s", worst, worstText))
-	s.ok("sous-ligne « Nouveau titre », bandeau plus haut", j.stars:IsShown() and j.stars.text == NS:F("FEAT_TOAST_NEW_TITLE", "Traqueuse")
+	s.ok("sous-ligne « Nouveau titre », bandeau plus haut", j.stars:IsShown() and j.stars.text == NS:FeatRewardLine("day_rare_50")
 		and j:GetHeight() > plainH, tostring(j:GetHeight()) .. " / " .. tostring(plainH))
 	-- grand effet forgé (sans atlas : éclat ART.dot et filets lumineux en miroir)
 	local fx = j.azReward
@@ -360,7 +360,7 @@ do
 	NS:JournalToastPush({ kind = "feat", id = "day_rare_50", title = NS.L.FEAT_TOAST_TITLE, name = "Le traqueur", points = 25,
 		sub = NS:F("FEAT_TOAST_NEW_TITLE", "Traqueuse") })
 	s.ok("sous-ligne « Nouveau titre » écrite (elle manquait), bandeau plus haut", j.stars and j.stars:IsShown()
-		and j.stars.text == NS:F("FEAT_TOAST_NEW_TITLE", "Traqueuse") and j:GetHeight() > 50)
+		and j.stars.text == NS:FeatRewardLine("day_rare_50") and j:GetHeight() > 50)
 	s.ok("Sobre : aucun grand effet", j.azReward == nil and NS:BannerRewardFX(j) == false)
 	j:Hide(); NS.journalToastHideAt = nil
 	if NS.BannerDone then NS:BannerDone("journal") end
@@ -459,7 +459,7 @@ do
 	NS:DB().companionStyle = "sobre"; NS:ApplyUIStyle()
 	local sj = NS.journalToast
 	s.ok("vers le Sobre : sous-ligne « Nouveau titre » gardée, bandeau plus haut", sj and sj ~= j and not sj.forgeBanner
-		and sj.stars and sj.stars:IsShown() and sj.stars.text == NS:F("FEAT_TOAST_NEW_TITLE", "Traqueuse") and sj:GetHeight() > 50)
+		and sj.stars and sj.stars:IsShown() and sj.stars.text == NS:FeatRewardLine("day_rare_50") and sj:GetHeight() > 50)
 	s.ok("vers le Sobre : points et Partager gardés", sj and sj.featPoints and sj.featPoints:IsShown()
 		and sj.featPoints.text == "25" and sj.shareButton and sj.shareButton:IsShown())
 	s.ok("vers le Sobre : temps inchangé", NS.journalToastHideAt == jHide)

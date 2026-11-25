@@ -28,6 +28,9 @@
 -- champs 9 et 10 ; le destinataire rend le titre dans sa langue, et un code
 -- de titre inconnu chez lui laisse le nom seul. Un haut fait inconnu chez
 -- lui : le message est ignoré.
+-- 3.7.0 : champ 11 = points de hauts faits de l'expéditeur, quand ils donnent
+-- un rang de renommée (100 ou plus) ; sans titre, les champs 9 et 10 partent
+-- vides. Une 3.6 l'ignore ; ici, le rang se dit après le nom du bandeau.
 -- Rien d'autre ne voyage : pas de nom de créature ni de zone. Le
 -- destinataire refait tout depuis SES données (tables de zone livrées,
 -- carnet, ménagerie) ; un identifiant inconnu chez lui : le message est
@@ -81,6 +84,7 @@ local FR = {
 	GFEAT_SHOW_shiny   = "Brillantes seulement",
 	GFEAT_SHOW_off     = "Aucun",
 	OPT_DAILY_GFEAT_CHAT      = "Exploits de la guilde dans le chat",
+	GFEAT_WHO_RANK     = "%s (%s)",
 }
 local EN = {
 	GFEAT_TITLE        = "Guild",
@@ -109,6 +113,7 @@ local EN = {
 	GFEAT_SHOW_shiny   = "Shinies only",
 	GFEAT_SHOW_off     = "None",
 	OPT_DAILY_GFEAT_CHAT      = "Guild feats in chat",
+	GFEAT_WHO_RANK     = "%s (%s)",
 }
 ns.RegisterStrings(FR, EN)
 if ns.KEEP_STRINGS then ns.GFEAT_STRINGS = { fr = FR, en = EN } end
@@ -271,7 +276,10 @@ end
 
 -- Le message d'un exploit ; titleCode / gender : le titre que j'affiche
 -- (champs 9 et 10, seulement si j'en ai un)
-function ns:GuildFeatMessage(feat, more, titleCode, gender)
+-- 3.7.0 : points : mes points de hauts faits (champ 11), seulement s'ils
+-- donnent un rang (100 ou plus) ; sans titre, les champs 9 et 10 partent
+-- vides (une 3.6 les ignore, et ignore le champ 11)
+function ns:GuildFeatMessage(feat, more, titleCode, gender, points)
 	local function N(v, lo, hi)
 		v = math.floor(tonumber(v) or 0)
 		return math.max(lo, math.min(hi, v))
@@ -280,11 +288,24 @@ function ns:GuildFeatMessage(feat, more, titleCode, gender)
 	local parts = { feat.kind, N(feat.id, 0, 9999999), N(feat.zone, 0, 9999999), N(feat.stars, 0, 3), class,
 		N(more, 0, ns.GFEAT_MORE_MAX) }
 	titleCode = tonumber(titleCode)
-	if titleCode and titleCode >= 1 and titleCode <= (ns.FEAT_TITLE_MAX or 255) then
+	local titled = titleCode and titleCode >= 1 and titleCode <= (ns.FEAT_TITLE_MAX or 255)
+	if titled then
 		parts[#parts + 1] = math.floor(titleCode)
 		parts[#parts + 1] = gender == "f" and "f" or "m"
 	end
+	points = tonumber(points)
+	if points and points >= ((ns.FEAT_RANKS and ns.FEAT_RANKS[1]) or 100) then
+		if not titled then parts[#parts + 1] = ""; parts[#parts + 1] = "" end
+		parts[#parts + 1] = N(points, 0, 99999)
+	end
 	return parts
+end
+
+-- Mes points de hauts faits (compte et personnage), ou nil
+local function MyPoints(self)
+	if not self.FeatPoints then return nil end
+	local ok, points = pcall(self.FeatPoints, self, nil)
+	return ok and tonumber(points) or nil
 end
 
 -- Mon titre affiché (code, forme), ou nil
@@ -309,7 +330,8 @@ function ns:GuildFeatsFlush(now)
 	if state.lastSent and now >= state.lastSent and now - state.lastSent < ns.GFEAT_GAP then return false end
 	if self.TrainerBlocked and self:TrainerBlocked() then return false end
 	if not self.TrainerSend then return false end
-	local parts = self:GuildFeatMessage(out.feat, out.count - 1, MyTitle(self))
+	local code, gender = MyTitle(self)
+	local parts = self:GuildFeatMessage(out.feat, out.count - 1, code, gender, MyPoints(self))
 	local queued = self:TrainerSend(ns.GFEAT_KIND, "GUILD", nil, unpack(parts))
 	state.out = nil
 	if queued then state.lastSent = now end
@@ -449,6 +471,8 @@ function ns:GuildFeatParse(text)
 	if ti and ti >= 1 and ti <= (ns.FEAT_TITLE_MAX or 255) and type(ns.FEAT_TITLES) == "table" and ns.FEAT_TITLES[ti] then
 		feat.ti, feat.tg = ti, fields[10] == "f" and "f" or "m"
 	end
+	-- 3.7.0 : points de hauts faits de l'expéditeur (champ 11, facultatif)
+	feat.fp = Digits(fields[11], 5)
 	return feat
 end
 
@@ -499,6 +523,10 @@ function ns:GuildFeatDescribe(feat, sender)
 	if type(feat) ~= "table" then return nil end
 	local who = SafeName(self.TrainerShortName and self:TrainerShortName(sender) or sender, 64)
 	if not who then return nil end
+	-- 3.7.0 : son rang de renommée après son nom, calculé de ses points (champ
+	-- 11) avec les seuils d'ici : « Dyokrion (Réputé) »
+	local rank = feat.fp and self.FeatRank and select(2, self:FeatRank(feat.fp)) or nil
+	if type(rank) == "string" then who = self:F("GFEAT_WHO_RANK", who, rank) end
 	local plainWho = who
 	-- le nom désarmé, puis le titre rendu ici (« Dyokrion, Maître des brillantes, »)
 	if feat.ti and self.FeatTitleWho then who = self:FeatTitleWho(who, feat.ti, feat.tg, true) end
@@ -887,6 +915,8 @@ function ns:GuildFeatsToastTick(now)
 		return false
 	end
 	if InCombat() then return false end
+	-- 3.7.0 : mode discret : un bandeau de guilde (regroupé) toutes les 10 min au plus ; le reste ne s'accumule pas
+	if ns.Quiet and self:Quiet() and state.shownAt and now - state.shownAt < (ns.QUIET_GUILD_GAP or 600) then state.toasts = {}; if self.BannerCancel then self:BannerCancel("guild") end; return false end
 	-- 3.0.1 : une seule place pour les bandeaux du haut (Banners.lua)
 	if self.BannerTurn and not self:BannerTurn("guild") then return false end
 	local best = 1
@@ -894,6 +924,7 @@ function ns:GuildFeatsToastTick(now)
 		if item.score > kept[best].score or (item.score == kept[best].score and item.at < kept[best].at) then best = index end
 	end
 	local item = table.remove(kept, best)
+	state.shownAt = now
 	return self:GuildFeatsShowToast(item) ~= nil
 end
 

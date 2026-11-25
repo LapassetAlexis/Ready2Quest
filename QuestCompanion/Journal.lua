@@ -153,6 +153,9 @@ if ns.AddOptionPage then
 				describe = function() return ns.L.OPT_ANNOUNCE_GROUP_DESC end },
 			{ key = "announceGuild", label = "OPT_ANNOUNCE_GUILD", kind = "bool",
 				describe = function() return ns.L.OPT_ANNOUNCE_GUILD_DESC end },
+			-- 3.7.0 : lignes de chat de l'étude, du lien et des paliers (TripRecap.lua)
+			{ key = "tripChat", label = "OPT_TRIP_CHAT", kind = "bool",
+				describe = function() return ns.L.OPT_TRIP_CHAT_DESC end },
 		},
 		-- bouton construit par Options.lua (L.OPT_ACTION_JOURNAL), action
 		-- traitée par le relais de RunOptionAction plus bas
@@ -492,6 +495,15 @@ function ns:JournalToastPush(entry)
 	if type(entry) ~= "table" then return false end
 	local key = entry.kind == "feat" and "featToast" or "journalToast"
 	if self:DB()[key] == false then return false end
+	-- 3.7.0 (Quiet.lua) : la fête à la taille de l'exploit. Moyen et grand :
+	-- la ligne de récompense (titre, paillettes, objets) ; grand : le grand
+	-- bandeau (un lot aussi) ; petit, ou mode discret : une pastille muette,
+	-- hors de cette file (elle ne retarde aucun bandeau). Rattrapage : jamais grand.
+	if entry.kind == "feat" then
+		if entry.id and not entry.retro and self.FeatRewardLine then entry.sub = self:FeatRewardLine(entry.id) or entry.sub end
+		if entry.size == "big" and not entry.retro then entry.big = true elseif entry.retro then entry.big = nil end
+		if self.FeatPillWanted and self:FeatPillWanted(entry) then return self:FeatPillPush(entry) end
+	end
 	table.insert(self.journalToasts, entry)
 	self:JournalFlush()
 	return true
@@ -676,6 +688,9 @@ function ns:ShowNextJournalToast()
 	frame:Show()
 	if self.BannerShown then self:BannerShown("journal", frame, "journalToastPoint", { point = "TOP", x = 0, y = -190 }) end
 	if shown and type(shown.onShow) == "function" then pcall(shown.onShow, self, shown) end
+	-- 3.7.0 : un lot à la taille du plus grand a aussi le grand effet (celui
+	-- d'un seul haut fait est posé par AzerothStyle.lua, qui reconnaît son nom)
+	if shown and shown.big and shown.count and frame.forgeBanner and self.BannerRewardFX then pcall(self.BannerRewardFX, self, frame) end
 	if Theme.FadeIn then Theme.FadeIn(frame, 0.2) end
 	if self.StyleShown then self:StyleShown(frame, { shield = "gold", play = true }) end
 	self.journalToastShownAt = ns.Now()

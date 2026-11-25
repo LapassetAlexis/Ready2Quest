@@ -96,7 +96,7 @@ do
 	local plate = f.featPlate
 	s.ok("plaque des points : découpe forgée (plaque), losange d'or", plate and plate.slice and plate.slice.art == Theme.ART.plate
 		and plate.diamond and Same(plate.diamond.vertex, Theme.GOLD))
-	s.ok("plaque des points : JRN_TOTAL_FEATS", plate and plate.text.text == NS:F("JRN_TOTAL_FEATS", NS:FeatPoints()),
+	s.ok("plaque des points : « <points> points · <rang> » (3.7.0)", plate and plate.text.text == NS:FeatPlateText(),
 		plate and plate.text.text)
 	s.ok("bas de colonne : plus les points (module actif : vide)", f.subtitle.text == "", f.subtitle.text)
 	-- la plaque sous la marque, la navigation descendue d'autant, rien ne se chevauche
@@ -108,7 +108,7 @@ do
 	local gear = f.settingsButton
 	s.ok("roue du socle sur sa petite plaque (pas la roue grise du client)", gear and gear.cogTexture == nil and gear.plate ~= nil)
 	s.ok("sans erreur", #(NS.errors or {}) == 0, Errors())
-	s.check("[JFG] carnet forgé : médaillon, points JRN_TOTAL_FEATS sur une plaque forgée sous la marque, colonne libre, roue du socle")
+	s.check("[JFG] carnet forgé : médaillon, points et rang sur une plaque forgée sous la marque, colonne libre, roue du socle")
 
 	s = Steps()
 	local data = NS:CompanionData()
@@ -139,14 +139,15 @@ do
 	s = Steps()
 	NS:DB().featsFilter = "all"
 	NS:SelectJournalKind("feats")
+	NS:JournalFeatsTab("dresseur")
 	local pane = f.feats
 	s.ok("plaque du total, en tête de page : FeatPoints", pane.pointsPlate and pane.pointsPlate.value.text == tostring(NS:FeatPoints())
 		and pane.pointsPlate.slice.art == Theme.ART.plate, pane.pointsPlate and pane.pointsPlate.value.text)
-	local _, _, _, tx = pane.totals:GetPoint(1)
+	local _, _, _, tx = pane.rankName:GetPoint(1)
 	local pk = NS.JOURNAL_FEATS_PLATE
-	s.ok("totaux décalés à droite de la plaque", tx and tx >= pk.w, tostring(tx))
+	s.ok("rang décalé à droite de la plaque", tx and tx >= pk.w, tostring(tx))
 	local losanges, shields = 0, 0
-	for _, row in ipairs(pane.rows) do
+	for _, row in ipairs(pane.list.rows) do
 		if row:IsShown() then
 			if Shown(row.diamond) then losanges = losanges + 1 end
 			if Shown(row.shield) then shields = shields + 1 end
@@ -320,7 +321,7 @@ do
 	for _, tex in ipairs(d and d.lights or {}) do if tex.texture == Theme.ART.dot.file then bulbs = bulbs + 1 end end
 	Check("[JFG] Voile d'hiver : bande du client refusée, fil lumineux et ampoules en matières forgées (jamais rien)",
 		d and d.forgeLights and d.wire and d.wire.texture == Theme.ART.line.file and bulbs >= 10 and Errors() == "",
-		tostring(bulbs) .. " " .. Errors())
+		tostring(bulbs))
 	Mock.world.textureRefused = nil
 	f:Hide()
 	Done()
